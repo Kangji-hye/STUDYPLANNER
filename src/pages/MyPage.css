@@ -1,0 +1,17 @@
+/* src/pages/MyPage.css */
+.mypage{ display: grid; gap: 14px; }
+.mypage-title{ margin: 0; font-size: 1.4rem; }
+.mypage-card{
+  background: var(--card);
+  border: 2px solid rgba(241,215,230,0.65);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.05);
+  display: grid;
+  gap: 10px;
+}
+.row{ display: flex; justify-content: space-between; align-items: center; }
+.label{ color: var(--muted); font-weight: 700; }
+.value{ font-weight: 800; }
+.mypage-actions{ display: flex; gap: 10px; }
+.mypage-actions button{ flex: 1; }

@@ -1,0 +1,28 @@
+/* src/layouts/AuthLayout.css */
+
+.auth-wrap{
+  /* #root의 margin(24+60=84) + #root padding(22+26=48) = 132px 만큼 빼기 */
+  min-height: calc(100dvh - 132px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* auth-card 바깥에서 스크롤 생기는 걸 방지 */
+  overflow: hidden;
+}
+
+.auth-card{
+  width: min(520px, 92vw);
+
+  /* 혹시 화면이 아주 작으면 카드 내부에서만 스크롤 */
+  max-height: calc(100dvh - 132px);
+  overflow: auto;
+
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(6px);
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 22px 18px;
+}
