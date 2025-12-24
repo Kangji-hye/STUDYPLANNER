@@ -35,7 +35,8 @@ body {
 #root {
   min-height: 100dvh;
   width: min(980px, 92vw);      
-  margin: 24px auto 60px;
+  /* margin: 24px auto 60px; */
+  margin: 0px auto;
   padding: 22px 18px 26px;
 }
 
@@ -311,7 +312,6 @@ li button:hover {
   white-space: nowrap;
 }
 
-
 /* 모바일에서 여백과 글씨 조정 */
 @media (max-width: 480px) {
   #root {
@@ -332,3 +332,5 @@ li button:hover {
   .app-title{ font-size: 1.5rem; }
   .weather{ font-size: 0.98rem; }
 }
+
+/* 아이패드 미니, 아이패드, 핸드폰, 노트북 반응형 테스트해서 추가작업 */

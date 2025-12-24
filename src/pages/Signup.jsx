@@ -12,7 +12,7 @@ const Signup = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="signup auth-page">
       <h2 className="auth-title">회원가입</h2>
 
       <form onSubmit={onSubmit} className="auth-form">

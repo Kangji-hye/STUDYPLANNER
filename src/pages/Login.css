@@ -7,7 +7,7 @@
 
 /* 로고 */
 .auth-logo{
-  width: min(280px, 70vw);
+  width: min(280px, 50vw);
   height: auto;
   display: block;
   margin-top: 4px;

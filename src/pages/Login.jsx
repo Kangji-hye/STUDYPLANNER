@@ -11,7 +11,7 @@ const Login = () => {
   };
 
   return (
-    <div className="auth-page">
+    <div className="login auth-page">
       {/* 로고 */}
       <img className="auth-logo" src="/logo.png" alt="로고" />
 
