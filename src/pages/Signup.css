@@ -1,8 +1,41 @@
-/* src/pages/Signup.css */
-/* Login.css와 거의 같게 두고, 필요한 경우만 덮어쓰기 */
-.auth-page{ display: grid; gap: 14px; }
-.auth-title{ margin: 0; font-size: 1.4rem; }
-.auth-form{ display: grid; gap: 12px; }
-.auth-label{ display: grid; gap: 8px; color: var(--text); font-weight: 700; }
-.auth-submit{ width: 100%; }
-.auth-foot{ margin: 0; color: var(--muted); font-size: 0.98rem; }
+/* 성별 선택 영역 */
+.gender-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* 버튼처럼 보이는 라벨 */
+.gender-wrap label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px 0;              /* 높이 줄이기 */
+  border: 1px solid var(--line);
+  border-radius: 8px;
+
+  font-size: 0.95rem;          /* 글자 약간 작게 */
+  font-weight: 500;            /* 두께 얇게 */
+  color: var(--muted);
+  cursor: pointer;
+
+  transition: all 0.12s ease;
+}
+
+/* 기본 라디오 숨기기 */
+.gender-wrap input[type="radio"] {
+  display: none;
+}
+
+/* 선택된 상태 */
+.gender-wrap label:has(input:checked) {
+  border-color: var(--primary);
+  background-color: rgba(255, 122, 162, 0.06);
+  color: var(--primary);
+}
+
+/* 호버 */
+.gender-wrap label:hover {
+  border-color: var(--primary);
+}

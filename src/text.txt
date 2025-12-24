@@ -1,5 +1,0 @@
-yarn json-server db.json --port 4000
-
-yarn add canvas-confetti
-
-yarn add react-router-dom

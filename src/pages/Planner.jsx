@@ -1,4 +1,4 @@
-// app.jsx
+// App.jsx
 import { useState, useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
@@ -11,37 +11,35 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
 
-  // 폭죽 중복 방지 (모두 완료 시 1회만)
-  const [celebrated, setCelebrated] = useState(false);
-
   // 완료 사운드
   const finishAudioRef = useRef(null);
 
-  // 최신 todos 참조용 (클릭 순간 판정 안정화)
+  // 최신 todos 참조용 
   const todosRef = useRef([]);
 
-  //날짜
- const formatToday = () => {
-  const today = new Date();
-  const days = ["일", "월", "화", "수", "목", "금", "토"];
+  // 날짜
+  const formatToday = () => {
+    const today = new Date();
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
 
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const date = String(today.getDate()).padStart(2, "0");
-  const day = days[today.getDay()];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const date = String(today.getDate()).padStart(2, "0");
+    const day = days[today.getDay()];
 
-  return `${year}-${month}-${date} (${day})`;
+    return `${year}-${month}-${date} (${day})`;
   };
 
+  // todosRef 
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
 
-  // 스탑워치 상태/레퍼런스 추가
+  // 스탑워치 상태/레퍼런스
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0); // 누적 시간(ms)
-  const startTimeRef = useRef(null);             // 마지막 tick 기준 시각
-  const timerRef = useRef(null);                 // interval id
+  const startTimeRef = useRef(null); // 마지막 tick 기준 시각
+  const timerRef = useRef(null); // interval id
 
   // 초기 todo 불러오기
   useEffect(() => {
@@ -112,17 +110,17 @@ function App() {
   };
 
   // 스탑워치 표시 포맷
-const formatTime = (ms) => {
-  const totalSeconds = Math.floor(ms / 1000);
+  const formatTime = (ms) => {
+    const totalSeconds = Math.floor(ms / 1000);
 
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
+    const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+    const seconds = String(totalSeconds % 60).padStart(2, "0");
 
-  // 1/100초 (두 자리)
-  const centiseconds = String(Math.floor((ms % 1000) / 10)).padStart(2, "0");
+    // 1/100초 (두 자리)
+    const centiseconds = String(Math.floor((ms % 1000) / 10)).padStart(2, "0");
 
-  return `${minutes}:${seconds}.${centiseconds}`;
-};
+    return `${minutes}:${seconds}.${centiseconds}`;
+  };
 
   // 스탑워치 시작
   const startStopwatch = () => {
@@ -132,12 +130,12 @@ const formatTime = (ms) => {
     startTimeRef.current = Date.now();
 
     timerRef.current = setInterval(() => {
-    const now = Date.now();
-    const diff = now - startTimeRef.current;
-    startTimeRef.current = now;
+      const now = Date.now();
+      const diff = now - startTimeRef.current;
+      startTimeRef.current = now;
 
-    setElapsedMs((prev) => prev + diff);
-  }, 50); 
+      setElapsedMs((prev) => prev + diff);
+    }, 50);
   };
 
   // 스탑워치 정지
@@ -159,7 +157,7 @@ const formatTime = (ms) => {
     setElapsedMs(0);
   };
 
-  // 완료 토글 (여기서 마지막 완료 판정)
+  // 완료 토글 (마지막 완료 "진입 순간"마다 폭죽/사운드)
   const onToggle = async (todo) => {
     const res = await fetch(`${BASE_URL}/${todo.id}`, {
       method: "PATCH",
@@ -169,38 +167,24 @@ const formatTime = (ms) => {
 
     const updated = await res.json();
 
-    // 토글 후 상태를 먼저 계산
+    // 토글 전(기준): 지금 상태에서 이미 전체 완료였는지
     const current = todosRef.current;
-    const nextTodos = current.map((t) => (t.id === todo.id ? updated : t));
+    const wasAllCompleted =
+      current.length > 0 && current.every((t) => t.completed);
 
+    // 토글 후(기준): 업데이트 반영한 다음 상태
+    const nextTodos = current.map((t) => (t.id === todo.id ? updated : t));
     setTodos(nextTodos);
 
-    const allCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
+    const isAllCompleted =
+      nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-    // 마지막 완료 클릭 순간
-    if (allCompleted && !celebrated) {
+    // ✅ "미완료 → 전체완료"로 들어가는 순간마다 매번 폭죽 + 사운드
+    if (!wasAllCompleted && isAllCompleted) {
       fireConfetti();
       playFinishSound();
-      setCelebrated(true);
-    }
-
-    // 다시 미완료가 생기면 리셋
-    if (!allCompleted && celebrated) {
-      setCelebrated(false);
     }
   };
-
-  // 삭제/추가 등으로 상태가 바뀌었을 때 안전 리셋
-  useEffect(() => {
-    if (todos.length === 0 && celebrated) {
-      setCelebrated(false);
-      return;
-    }
-    const allCompleted = todos.every((t) => t.completed);
-    if (!allCompleted && celebrated) {
-      setCelebrated(false);
-    }
-  }, [todos, celebrated]);
 
   const filteredTodos = todos.filter((t) => {
     if (filter === "completed") return t.completed;
@@ -213,25 +197,27 @@ const formatTime = (ms) => {
       <header className="top-header">
         <div className="top-row">
           <h1 className="app-title">초등 스터디 플래너</h1>
+
           {/* API 연결 할 것 */}
-          <div className="weather"><img src="/weather_sample.png" alt="날씨" /></div>
+          <div className="weather">
+            <img src="/weather_sample.png" alt="날씨" />
+          </div>
         </div>
 
         <div className="sub-row">
+
           {/* 사용자 이름에서 불러오기, 앞에 남/여 캐릭터 이미지 붙이기 */}
-          <div className="kid-name"><img src="/icon_boy.png" alt="남아" />제영이</div>
+          <div className="kid-name">
+            <img src="/icon_boy.png" alt="남아" />
+            제영이
+          </div>
           <div className="today">{formatToday()}</div>
         </div>
       </header>
 
-      {/* 전체 흐름에 방해가 되는 것 같아 일단 컨텐츠 제외
-      <div className="goal">
-        ★오늘의 다짐★
-        <input type="text" placeholder="빨리 숙제 끝내고 놀자!" />
-      </div> */}
-
       <div className="todo-bar">
         <button className="preset-btn">📂 겨울방학 숙제 불러오기</button>
+
         <input
           value={todo}
           onChange={handleChange}
@@ -243,7 +229,10 @@ const formatTime = (ms) => {
             }
           }}
         />
-        <button onClick={addTodo} disabled={!todo.trim()}>입력</button>
+
+        <button onClick={addTodo} disabled={!todo.trim()}>
+          입력
+        </button>
       </div>
 
       <ul>
@@ -260,15 +249,21 @@ const formatTime = (ms) => {
 
       <div className="finish">
         <span className="title">공부 다하면?</span>
-        <div><input type="text" placeholder="레고하기~" /></div>
+        <div>
+          <input type="text" placeholder="레고하기~" />
+        </div>
       </div>
 
       {/* 스탑워치 */}
       <div className="stopwatch">
         <span className="title">스탑워치</span>
         <div className="time">{formatTime(elapsedMs)}</div>
-        <button onClick={startStopwatch} disabled={isRunning}>시작</button>
-        <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
+        <button onClick={startStopwatch} disabled={isRunning}>
+          시작
+        </button>
+        <button onClick={stopStopwatch} disabled={!isRunning}>
+          멈춤
+        </button>
         <button onClick={resetStopwatch}>다시</button>
       </div>
     </div>
