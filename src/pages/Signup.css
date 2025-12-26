@@ -1,4 +1,5 @@
 /* 성별 선택 영역 */
+
 .gender-wrap {
   display: grid;
   grid-template-columns: 1fr 1fr;

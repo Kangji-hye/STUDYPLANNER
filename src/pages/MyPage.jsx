@@ -11,7 +11,7 @@ const MyPage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
-  // 생년월일 -> 만 나이 계산
+  // 생년월일 -> 만 나이
   const ageText = useMemo(() => {
     const birthdate = profile?.birthdate;
     if (!birthdate) return "";

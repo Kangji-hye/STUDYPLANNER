@@ -18,14 +18,13 @@
   padding: 22px 18px;
 }
 
-.login, 
+/* .login, 
 .signup
 { 
   width: min(520px, 60vw);
-}
+} */
 
-/* src/layouts/AuthLayout.css */
-/* 
+
 .auth-wrap{
 
   min-height: calc(100dvh - 132px);
@@ -53,4 +52,4 @@
   padding: 22px 18px;
 }
 
- */
+

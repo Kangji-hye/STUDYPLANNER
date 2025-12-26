@@ -150,12 +150,10 @@ button:hover {
   user-select: none;
 }
 
-/* hover 시 색상 변화로 '이동' 힌트 주기 */
 .app-title-link:hover {
   color: var(--primary);
 }
 
-/* 클릭하는 느낌 */
 .app-title-link:active {
   transform: translateY(1px);
 }

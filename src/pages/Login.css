@@ -2,7 +2,7 @@
 .auth-page{
   display: grid;
    gap: 4px;  /* 스크롤문제로  */
-  justify-items: center;  /* 가운데 정렬 */
+  justify-items: center;  
 }
 
 /* 로고 */
@@ -16,7 +16,7 @@
 .auth-title{
   margin: -20px 0 0 0;
   font-size: 1.4rem;
-  justify-self: start;    /* 타이틀은 왼쪽 느낌 */
+  justify-self: start;  
   width: 100%;
 }
 
@@ -37,7 +37,6 @@
   width: 100%;
 }
 
-/* 회원가입(왼쪽) / 아이디비번찾기(오른쪽) */
 .auth-links{
   width: 100%;
   display: flex;
@@ -50,3 +49,9 @@
 .auth-links a{
   color: var(--primary);
 }
+
+.auth-wide {
+  max-width: 760px;   
+  margin: 0 auto;
+}
+

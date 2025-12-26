@@ -1,6 +1,4 @@
 /* src/layouts/AppLayout.css */
-/* 지금 #root > div에 걸려 있는 카드 스타일을 레이아웃으로 옮겨서 재사용 */
-/* AuthLayout.css 맨 위에 추가 */
 /* #root{
   margin: 0 !important;
   padding: 0 !important;
