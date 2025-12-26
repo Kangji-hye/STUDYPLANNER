@@ -1,3 +1,5 @@
+/* index.css */
+
 :root {
   --bg: #fff7fb;          /* 아주 연한 핑크빛 배경 */
   --card: #ffffff;        /* 카드 배경 */
@@ -143,6 +145,21 @@ button:hover {
   white-space: nowrap;   /* 제목 줄바꿈 방지 */
 }
 
+.app-title-link {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* hover 시 색상 변화로 '이동' 힌트 주기 */
+.app-title-link:hover {
+  color: var(--primary);
+}
+
+/* 클릭하는 느낌 */
+.app-title-link:active {
+  transform: translateY(1px);
+}
+
 /* 오른쪽 날씨 영역 */
 .weather{
   display: flex;
@@ -188,7 +205,6 @@ ul {
 }
 
 li {
-  /* font-family: "Gamja Flower", "cursive";     구글 웹 폰트 */
   background: var(--card);
   border: 2px solid rgba(241,215,230,0.65);
   border-radius: 18px;
@@ -197,6 +213,7 @@ li {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
 }
 
 li span,
@@ -224,12 +241,40 @@ li button:hover {
   box-shadow: none;
 } */
 
-.delele{
+/* .delele{
   cursor: pointer;
   font-size: 80%;
   color: gray;
   padding-left:15px;
+} */
+
+/* .delele:hover {
+  color: #e11d48;      
+  font-size:100%;
+  font-weight: 800;
+} */
+
+.delele{
+  display: inline-flex;     /* ✅ 인라인이면서 flex */
+  align-items: center;      /* ✅ 세로 가운데 */
+  justify-content: center;
+  cursor: pointer;
+
+  font-size: 0.85em;        /* 80% 대신 가독성 좋은 em */
+  line-height: 1;           /* ✅ baseline 흔들림 방지 */
+  color: gray;
+
+  margin-left: 10px;        /* padding-left 대신 margin이 더 자연스러움 */
+  padding: 0px 6px;         /* ✅ 클릭 영역 확보(사용성↑) */
+  border-radius: 4px;
 }
+
+.delele:hover {
+  color: #e11d48;
+  background: rgba(225, 29, 72, 0.08);
+}
+
+
 
 .todo-input-box {
   display: flex;
@@ -252,6 +297,14 @@ li button:hover {
 
 .todo-input-row input {
   flex: 1;
+}
+
+/* 완료 버튼 */
+.todo-done-btn.done {
+  background: #f3f4f6;        /* 연한 회색 */
+  color: #9ca3af;             /* 텍스트도 흐리게 */
+  border: 2px solid #e5e7eb;
+  box-shadow: none;
 }
 
 /* 주요 버튼 영역 */

@@ -1,15 +1,28 @@
-// App.jsx
+// pages/planner.jsx
+
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
 
 // todos 서버
 const BASE_URL = "http://localhost:4000/todos";
 
+const EMOJI_POOL = [
+  "🚀", "🛸", "⚡", "🔥", "💖",
+  "🚗", "🏎️", "🚓", "🚒", "🚜",
+  "🦖", "🦕", "🦁", "🐯", "🦈",
+  "⚽", "🏀", "⚾", "🥅", "🏆",
+  "🛡️", "⚔️", "👑", "🍓", "✨",
+  "🦄", "🐰", "🐶", "🐱", "🌈",
+];
+
 function App() {
+  const navigate = useNavigate();
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [usedEmojis, setUsedEmojis] = useState([]);
 
   // 완료 사운드
   const finishAudioRef = useRef(null);
@@ -35,11 +48,6 @@ function App() {
     todosRef.current = todos;
   }, [todos]);
 
-  // 스탑워치 상태/레퍼런스
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedMs, setElapsedMs] = useState(0); // 누적 시간(ms)
-  const startTimeRef = useRef(null); // 마지막 tick 기준 시각
-  const timerRef = useRef(null); // interval id
 
   // 초기 todo 불러오기
   useEffect(() => {
@@ -51,12 +59,41 @@ function App() {
     fetchTodos();
   }, []);
 
+  // const getRandomEmoji = () => {
+  //   return EMOJI_POOL[Math.floor(Math.random() * EMOJI_POOL.length)];
+  // };
+
+  const getRandomEmoji = () => {
+    // 아직 안 쓴 이모지만 남김
+    const available = EMOJI_POOL.filter(
+      (emoji) => !usedEmojis.includes(emoji)
+    );
+
+    // 전부 다 썼으면 초기화
+    const pool = available.length > 0 ? available : EMOJI_POOL;
+
+    const selected = pool[Math.floor(Math.random() * pool.length)];
+
+    // 사용한 이모지 기록
+    setUsedEmojis((prev) =>
+      available.length > 0 ? [...prev, selected] : [selected]
+    );
+
+    return selected;
+  };
+
   // 사운드 public/finish.mp3
   useEffect(() => {
     finishAudioRef.current = new Audio("/finish.mp3");
     finishAudioRef.current.volume = 0.9;
     finishAudioRef.current.preload = "auto";
   }, []);
+
+  // 스탑워치 상태/레퍼런스
+  const [isRunning, setIsRunning] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0); // 누적 시간(ms)
+  const startTimeRef = useRef(null); // 마지막 tick 기준 시각
+  const timerRef = useRef(null); // interval id
 
   // 컴포넌트 언마운트 시 스탑워치 interval 정리
   useEffect(() => {
@@ -70,10 +107,16 @@ function App() {
   const addTodo = async () => {
     if (!todo.trim()) return;
 
+    // 랜덤이모지 추가
+    const emoji = getRandomEmoji();
+    const titleWithEmoji = `${emoji} ${todo.trim()}`;
+
     const res = await fetch(BASE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: todo, completed: false }),
+      body: JSON.stringify({ 
+        title: titleWithEmoji, 
+        completed: false }),
     });
 
     const newTodo = await res.json();
@@ -157,7 +200,6 @@ function App() {
     setElapsedMs(0);
   };
 
-  // 완료 토글 (마지막 완료 "진입 순간"마다 폭죽/사운드)
   const onToggle = async (todo) => {
     const res = await fetch(`${BASE_URL}/${todo.id}`, {
       method: "PATCH",
@@ -167,20 +209,17 @@ function App() {
 
     const updated = await res.json();
 
-    // 토글 전(기준): 지금 상태에서 이미 전체 완료였는지
     const current = todosRef.current;
     const wasAllCompleted =
       current.length > 0 && current.every((t) => t.completed);
 
-    // 토글 후(기준): 업데이트 반영한 다음 상태
     const nextTodos = current.map((t) => (t.id === todo.id ? updated : t));
     setTodos(nextTodos);
 
     const isAllCompleted =
       nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-    // ✅ "미완료 → 전체완료"로 들어가는 순간마다 매번 폭죽 + 사운드
-    if (!wasAllCompleted && isAllCompleted) {
+        if (!wasAllCompleted && isAllCompleted) {
       fireConfetti();
       playFinishSound();
     }
@@ -196,7 +235,14 @@ function App() {
     <div>
       <header className="top-header">
         <div className="top-row">
-          <h1 className="app-title">초등 스터디 플래너</h1>
+          {/* <h1 className="app-title">초등 스터디 플래너</h1> */}
+          <h1
+            className="app-title app-title-link"
+            title="마이페이지로 이동"
+            onClick={() => navigate("/mypage")}
+          >
+            초등 스터디 플래너
+          </h1>
 
           {/* API 연결 할 것 */}
           <div className="weather">

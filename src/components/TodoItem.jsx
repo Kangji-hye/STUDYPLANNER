@@ -5,7 +5,7 @@ import React from 'react'
 const TodoItem = ({ t, onToggle, onDelete }) => {
   return (
     <div>
-      <li>
+      <li onClick={() => onToggle(t)}>
         <div
           style={{
             display: "flex",
@@ -13,7 +13,6 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
             gap: "6px",
           }}
         >
-          {/* ⭐🏆👑 */}
           {t.completed && <span>⭐</span>}
 
           <span
@@ -23,14 +22,24 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
             }}
           >
             {t.title}
-            <span class="delele" onClick={(e) => {
+            <span className="delele" onClick={(e) => {
               e.stopPropagation();
               const ok = window.confirm("정말 삭제하시겠습니까?");
               if (ok) onDelete(t.id);
-            }}>x</span>
+            }} title="삭제">x</span>
           </span>
         </div>
-        <button onClick={() => onToggle(t)}>완료</button>
+        <button
+          className={`todo-done-btn ${t.completed ? "done" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation(); 
+            onToggle(t);
+          }}
+        >
+          완료
+        </button>
+
+        {/* <button onClick={() => onToggle(t)}>완료</button> */}
       </li>
     </div>
   )

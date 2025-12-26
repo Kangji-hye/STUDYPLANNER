@@ -9,8 +9,8 @@ const Signup = () => {
   const [password, setPassword] = useState("");
 
   const [nickname, setNickname] = useState("");
-  const [age, setAge] = useState("");
-  const [isMale, setIsMale] = useState(true); // 화면 상태는 isMale로 두고
+  const [birthdate, setBirthdate] = useState(""); // ✅ age → birthdate
+  const [isMale, setIsMale] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -21,20 +21,19 @@ const Signup = () => {
 
     const safeEmail = email.trim();
     const safeNickname = nickname.trim();
-    const safeAge = age.trim();
+    const safeBirthdate = birthdate.trim(); // ✅
 
     try {
       setLoading(true);
 
-      // 1) Supabase Auth 가입
+      // 1) Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: safeEmail,
         password,
         options: {
           data: {
             nickname: safeNickname,
-            age: safeAge,
-            // 메타데이터는 이름이 뭐든 상관없지만, 통일감 있게 맞춰둠
+            birthdate: safeBirthdate, // ✅
             is_male: isMale,
           },
         },
@@ -52,15 +51,14 @@ const Signup = () => {
       }
 
       // 2) profiles 테이블 저장
-      // 주의: DB 컬럼명이 is_mail 이므로 그대로 맞춰서 저장해야 함
       const { error: profileError } = await supabase
         .from("profiles")
         .upsert(
           {
             id: user.id,
             nickname: safeNickname,
-            age: safeAge,
-            is_mail: isMale, // ✅ 여기 DB 컬럼명과 동일하게
+            birthdate: safeBirthdate, // ✅
+            is_male: isMale,
           },
           { onConflict: "id" }
         );
@@ -109,10 +107,9 @@ const Signup = () => {
         />
 
         <input
-          type="text"
-          placeholder="나이"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
+          type="date"
+          value={birthdate}
+          onChange={(e) => setBirthdate(e.target.value)}
           required
         />
 

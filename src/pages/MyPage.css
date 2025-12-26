@@ -1,7 +1,16 @@
 /* src/pages/MyPage.css */
-.mypage{ display: grid; gap: 14px; }
-.mypage-title{ margin: 0; font-size: 1.4rem; }
-.mypage-card{
+
+.mypage {
+  display: grid;
+  gap: 14px;
+}
+
+.mypage-title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.mypage-card {
   background: var(--card);
   border: 2px solid rgba(241,215,230,0.65);
   border-radius: 18px;
@@ -10,8 +19,34 @@
   display: grid;
   gap: 10px;
 }
-.row{ display: flex; justify-content: space-between; align-items: center; }
-.label{ color: var(--muted); font-weight: 700; }
-.value{ font-weight: 800; }
-.mypage-actions{ display: flex; gap: 10px; }
-.mypage-actions button{ flex: 1; }
+
+/* ✅ 좌측 정렬 핵심 */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;           
+}
+
+/* 라벨은 고정 폭 */
+.label {
+  width: 120px;           
+  color: var(--muted);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* 값은 왼쪽 정렬 */
+.value {
+  font-weight: 400;
+  text-align: left;
+}
+
+/* 버튼 영역 */
+.mypage-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.mypage-actions button {
+  flex: 1;
+}
