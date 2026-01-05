@@ -8,6 +8,8 @@
   --line: #f1d7e6;        /* 연한 테두리 */
   --primary: #ff7aa2;     /* 포인트 핑크 */
   --primary-2: #ffb86b;   /* 포인트 오렌지 */
+  --primary-3: #4f8cff;   /* 포인트 블루 */
+  --primary-4: #ff9a76;   /* 포인트 소프트피치 */
   
   --shadow: 0 10px 30px rgba(0,0,0,0.06);
   
@@ -177,8 +179,18 @@ button:hover {
   font-size: 1.05rem;
   white-space: nowrap;
   font-weight: 600;
-  color: #3FA9F5;
+  /* color: #3FA9F5; */
   line-height: 1;
+}
+
+/* 남자 아이 색상 */
+.kid-name.kid-boy {
+  color: var(--primary-3);
+}
+
+/* 여자 아이 색상 */
+.kid-name.kid-girl {
+  color: var(--primary-4);
 }
 
 .kid-name img{

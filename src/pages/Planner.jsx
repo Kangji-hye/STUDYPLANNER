@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
+import supabase from "../supabaseClient";
 
 // 날씨 API 관련
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
@@ -28,8 +29,64 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
 
+  //프로필 닉네임 관련
+  // const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
+  const [profile, setProfile] = useState(() => {
+    try {
+      const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  
   // 날씨 API 관련
   const weatherCode = useWeatherYongin();
+
+  // ✅ 플래너에서 내 프로필 로딩
+  useEffect(() => {
+    const loadProfile = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        // 로그인 안 했으면 플래너를 막고 로그인으로 보내는 편이 UX가 안정적입니다.
+        navigate("/login");
+        return;
+      }
+
+      const user = userData.user;
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, nickname, birthdate, is_male")
+        .eq("id", user.id)
+        .single();
+
+      // profiles가 없거나 에러면, user_metadata를 임시로 쓰되 기본값을 줍니다.
+      const nextProfile = profileError
+        ? {
+            id: user.id,
+            nickname: user.user_metadata?.nickname ?? "닉네임",
+            birthdate: user.user_metadata?.birthdate ?? null,
+            is_male: user.user_metadata?.is_male ?? true,
+          }
+        : profileData;
+
+      setProfile(nextProfile);
+      try {
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+      } catch {}
+    };
+
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ 성별에 따른 아이콘 선택
+  const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
+  const kidAlt = profile?.is_male ? "남아" : "여아";
+  const kidName = profile?.nickname ?? "닉네임";
+  
 
   // 완료 사운드
   const finishAudioRef = useRef(null);
@@ -49,6 +106,8 @@ function App() {
 
     return `${year}-${month}-${date} (${day})`;
   };
+
+  
 
   // todosRef 
   useEffect(() => {
@@ -253,18 +312,20 @@ function App() {
           {/* 날씨 API 관련 */}
           <div className="weather">
             {/* <img src="/weather_sample.png" alt="날씨" /> */}
-            <div className="date-weather">
               <WeatherIcon code={weatherCode} size={52} />
-            </div>
           </div>
         </div>
 
         <div className="sub-row">
 
           {/* 사용자 이름에서 불러오기, 앞에 남/여 캐릭터 이미지 붙이기 */}
-          <div className="kid-name">
-            <img src="/icon_boy.png" alt="남아" />
-            제영이
+          <div
+            className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"}`}
+          >
+            {/* <img src="/icon_boy.png" alt="남아" />
+            제영이 */}
+            <img src={kidIconSrc} alt={kidAlt} />
+            {kidName}
           </div>
 
            <div className="date-stack">
