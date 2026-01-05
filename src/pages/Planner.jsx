@@ -5,6 +5,10 @@ import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
 
+// 날씨 API 관련
+import { useWeatherYongin } from "../hooks/useWeatherYongin";
+import WeatherIcon from "../components/WeatherIcon";
+
 // todos 서버
 const BASE_URL = "http://localhost:4000/todos";
 
@@ -23,6 +27,9 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
+
+  // 날씨 API 관련
+  const weatherCode = useWeatherYongin();
 
   // 완료 사운드
   const finishAudioRef = useRef(null);
@@ -71,7 +78,6 @@ function App() {
 
     // 전부 다 썼으면 초기화
     const pool = available.length > 0 ? available : EMOJI_POOL;
-
     const selected = pool[Math.floor(Math.random() * pool.length)];
 
     // 사용한 이모지 기록
@@ -244,9 +250,12 @@ function App() {
             초등 스터디 플래너
           </h1>
 
-          {/* API 연결 할 것 */}
+          {/* 날씨 API 관련 */}
           <div className="weather">
-            <img src="/weather_sample.png" alt="날씨" />
+            {/* <img src="/weather_sample.png" alt="날씨" /> */}
+            <div className="date-weather">
+              <WeatherIcon code={weatherCode} size={52} />
+            </div>
           </div>
         </div>
 
@@ -257,7 +266,13 @@ function App() {
             <img src="/icon_boy.png" alt="남아" />
             제영이
           </div>
-          <div className="today">{formatToday()}</div>
+
+           <div className="date-stack">
+            
+            <div className="today">{formatToday()}</div>
+          </div>
+
+          {/* <div className="today">{formatToday()}</div> */}
         </div>
       </header>
 

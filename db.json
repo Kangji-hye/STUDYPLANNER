@@ -3,12 +3,12 @@
     {
       "id": "1",
       "title": "🚗 받아쓰기",
-      "completed": false
+      "completed": true
     },
     {
       "id": "2",
       "title": "🐯 수학 문제 풀기",
-      "completed": false
+      "completed": true
     },
     {
       "id": "3",
@@ -18,12 +18,12 @@
     {
       "id": "4",
       "title": "🔥 독서 수첩",
-      "completed": false
+      "completed": true
     },
     {
       "id": "5",
       "title": "🏆 리딩레이스",
-      "completed": false
+      "completed": true
     },
     {
       "id": "6",
@@ -38,7 +38,7 @@
     {
       "id": "8",
       "title": "🚜 영어 쓰기(Litte Book 본문 1번, Assignment 1장)",
-      "completed": false
+      "completed": true
     },
     {
       "id": "9",
@@ -48,7 +48,7 @@
     {
       "id": "10",
       "title": "👑 성경 읽기 한 장(시편)",
-      "completed": false
+      "completed": true
     }
   ],
   "todosWinter": [
