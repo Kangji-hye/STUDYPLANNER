@@ -9,4 +9,5 @@ yarn add react-router-dom
 yarn add @supabase/supabase-js
 
 yarn add react-icons
-날씨
+
+yarn add react-calendar (미정)

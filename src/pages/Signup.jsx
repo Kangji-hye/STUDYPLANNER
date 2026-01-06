@@ -9,7 +9,7 @@ const Signup = () => {
   const [password, setPassword] = useState("");
 
   const [nickname, setNickname] = useState("");
-  const [birthdate, setBirthdate] = useState(""); // ✅ age → birthdate
+  const [birthdate, setBirthdate] = useState(""); 
   const [isMale, setIsMale] = useState(true);
 
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ const Signup = () => {
 
     const safeEmail = email.trim();
     const safeNickname = nickname.trim();
-    const safeBirthdate = birthdate.trim(); // ✅
+    const safeBirthdate = birthdate.trim(); 
 
     try {
       setLoading(true);
