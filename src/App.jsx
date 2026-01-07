@@ -1,32 +1,17 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import AuthLayout from "./layouts/AuthLayout";
 import AppLayout from "./layouts/AppLayout";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Find from "./pages/Find";
+import ResetPassword from "./pages/ResetPassword";
+
 import MyPage from "./pages/MyPage";
 import Planner from "./pages/Planner";
 
-import supabase from "./supabaseClient";
-
-const HomeRedirect = () => {
-  const [loading, setLoading] = useState(true);
-  const [hasSession, setHasSession] = useState(false);
-
-  useEffect(() => {
-    const run = async () => {
-      const { data } = await supabase.auth.getSession();
-      setHasSession(!!data?.session);
-      setLoading(false);
-    };
-    run();
-  }, []);
-
-  if (loading) return null;
-  return <Navigate to={hasSession ? "/planner" : "/login"} replace />;
-};
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
   return (
@@ -35,14 +20,32 @@ const App = () => {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+
+          {/* 비번 재설정 */}
+          <Route path="/find" element={<Find />} />
+          <Route path="/reset" element={<ResetPassword />} />
         </Route>
 
         <Route element={<AppLayout />}>
-          <Route path="/planner" element={<Planner />} />
-          <Route path="/mypage" element={<MyPage />} />
+          <Route
+            path="/planner"
+            element={
+              <ProtectedRoute>
+                <Planner />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mypage"
+            element={
+              <ProtectedRoute>
+                <MyPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
 
-        <Route path="/" element={<HomeRedirect />} />
+        <Route path="/" element={<Navigate to="/planner" replace />} />
       </Routes>
     </BrowserRouter>
   );

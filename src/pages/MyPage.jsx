@@ -1,10 +1,17 @@
 // src/pages/MyPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react"; // ✅ useRef 추가
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
+
+// 음악 리스트
+const FINISH_SOUNDS = [
+  { label: "기본 축하음", value: "/finish1.mp3" },
+  { label: "차분한 효과음", value: "/finish2.mp3" },
+  { label: "시끄러운 효과음", value: "/finish3.mp3" },
+];
 
 const MyPage = () => {
   const navigate = useNavigate();
@@ -14,10 +21,13 @@ const MyPage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
+  const previewAudioRef = useRef(null); // ✅ 미리듣기
+
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
     is_male: true,
+    finish_sound: "/finish.mp3", // ✅ 추가
   });
 
   const ageText = useMemo(() => {
@@ -50,7 +60,8 @@ const MyPage = () => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("id, nickname, birthdate, is_male")
+      // ✅ finish_sound 같이 조회
+      .select("id, nickname, birthdate, is_male, finish_sound")
       .eq("id", user.id)
       .single();
 
@@ -60,16 +71,17 @@ const MyPage = () => {
           nickname: user.user_metadata?.nickname ?? "닉네임",
           birthdate: user.user_metadata?.birthdate ?? "",
           is_male: user.user_metadata?.is_male ?? true,
+          finish_sound: "/finish.mp3",
         }
       : profileData;
 
     setProfile(nextProfile);
 
-    // ✅ 폼 초기값 세팅
     setForm({
       nickname: nextProfile.nickname ?? "",
       birthdate: nextProfile.birthdate ?? "",
       is_male: Boolean(nextProfile.is_male),
+      finish_sound: nextProfile.finish_sound ?? "/finish.mp3",
     });
 
     setLoading(false);
@@ -90,12 +102,30 @@ const MyPage = () => {
       return;
     }
 
-    // 캐시도 지우면 다음 로그인 때 깔끔합니다.
     try {
       localStorage.removeItem(PROFILE_CACHE_KEY);
     } catch {}
 
     navigate("/login");
+  };
+
+  // ✅ 미리듣기
+  const previewSound = async () => {
+    try {
+      const src = form.finish_sound || "/finish.mp3";
+      if (!previewAudioRef.current) {
+        previewAudioRef.current = new Audio(src);
+      } else {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.currentTime = 0;
+        previewAudioRef.current.src = src;
+      }
+      previewAudioRef.current.volume = 0.9;
+      await previewAudioRef.current.play();
+    } catch (e) {
+      console.log("미리듣기 실패:", e);
+      alert("브라우저 정책 때문에 자동 재생이 막힐 수 있어요. 버튼을 다시 눌러주세요.");
+    }
   };
 
   const onSave = async () => {
@@ -114,13 +144,13 @@ const MyPage = () => {
       nickname,
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
+      finish_sound: form.finish_sound || "/finish.mp3", // ✅ 저장
     };
 
-    // ✅ 있으면 업데이트, 없으면 생성(upsert)
     const { data, error } = await supabase
       .from("profiles")
       .upsert(payload, { onConflict: "id" })
-      .select("id, nickname, birthdate, is_male")
+      .select("id, nickname, birthdate, is_male, finish_sound")
       .single();
 
     setSaving(false);
@@ -133,16 +163,12 @@ const MyPage = () => {
 
     setProfile(data);
 
-    // 플래너가 즉시 반영되도록 캐시도 업데이트
     try {
       localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
     } catch {}
 
     alert("저장되었습니다.");
   };
-
-  // const profileLabel = form.is_male ? "남아" : "여아";
-  // const profileImgSrc = form.is_male ? "/icon_boy.png" : "/icon_girl.png";
 
   if (loading) {
     return (
@@ -173,7 +199,6 @@ const MyPage = () => {
           <span className="value">{userEmail || "-"}</span>
         </div>
 
-        {/* 닉네임 수정 */}
         <div className="row">
           <span className="label">닉네임</span>
           <span className="value">
@@ -185,7 +210,6 @@ const MyPage = () => {
           </span>
         </div>
 
-        {/* 생년월일 수정 */}
         <div className="row">
           <span className="label">생년월일</span>
           <span className="value">
@@ -202,12 +226,31 @@ const MyPage = () => {
           <span className="value">{ageText || "-"}</span>
         </div>
 
-        {/* 성별 수정 */}
+        {/* 완료 음악 선택 */}
+        <div className="row">
+          <span className="label">플랜 완료시 음악</span>
+          <span className="value mypage-sound">
+            <select
+              value={form.finish_sound || "/finish.mp3"}
+              onChange={(e) => setForm((p) => ({ ...p, finish_sound: e.target.value }))}
+            >
+              {FINISH_SOUNDS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+
+            <button type="button" className="ghost-btn" onClick={previewSound}>
+              ▶ 미리듣기
+            </button>
+          </span>
+        </div>
+
+        {/* 성별 */}
         <div className="row gender">
           <span className="label">프로필</span>
-
           <span className="value gender">
-            {/* 남자 선택 */}
             <label className="gender">
               <input
                 type="radio"
@@ -215,17 +258,10 @@ const MyPage = () => {
                 checked={form.is_male === true}
                 onChange={() => setForm((p) => ({ ...p, is_male: true }))}
               />
-
-              <img
-                src="/icon_boy.png"
-                alt="남자"
-                className="gender-icon"
-              />
-
+              <img src="/icon_boy.png" alt="남자" className="gender-icon" />
               <span className="gendertext">남자</span>
             </label>
 
-            {/* 여자 선택 */}
             <label className="gender">
               <input
                 type="radio"
@@ -233,22 +269,17 @@ const MyPage = () => {
                 checked={form.is_male === false}
                 onChange={() => setForm((p) => ({ ...p, is_male: false }))}
               />
-
-              <img
-                src="/icon_girl.png"
-                alt="여자"
-                className="gender-icon"
-              />
-
+              <img src="/icon_girl.png" alt="여자" className="gender-icon" />
               <span className="gendertext">여자</span>
             </label>
           </span>
         </div>
-
       </div>
 
       <div className="mypage-actions">
-        <button onClick={() => navigate("/planner")}>플래너로</button>
+        <button className="primary-btn" onClick={() => navigate("/planner")}>
+          플래너로
+        </button>
         <button onClick={onSave} disabled={saving}>
           {saving ? "저장 중..." : "저장"}
         </button>

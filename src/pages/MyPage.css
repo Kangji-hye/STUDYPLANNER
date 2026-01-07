@@ -88,3 +88,80 @@ label.gender {
   height: 28px;
   object-fit: contain;
 }
+
+
+/* 마이페이지 주요 이동 버튼 (플래너로) */
+.primary-btn {
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 10px 24px rgba(255, 122, 162, 0.4);
+}
+
+.primary-btn:hover {
+  filter: brightness(1.05);
+}
+
+.primary-btn:active {
+  transform: translateY(1px);
+}
+
+/* 완료 음악: 셀렉트 + 미리듣기 */
+.mypage-sound {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mypage-sound select {
+  width: 100%;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: #fff;
+  outline: none;
+}
+
+.mypage-sound select:focus {
+  border-color: rgba(255,122,162,0.55);
+  box-shadow: 0 0 0 6px rgba(255,122,162,0.14);
+}
+
+.ghost-btn {
+  background: #fff;
+  color: var(--text);
+  border: 2px solid var(--line);
+  box-shadow: none;
+  padding: 10px 12px;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+
+
+/* 공통 컨트롤 규격(셀렉트/버튼 높이 맞추기) */
+.mypage-sound select,
+.mypage-sound .ghost-btn {
+  height: 44px;                 /* ✅ 둘 다 같은 높이 */
+  border-radius: 14px;
+  font-size: 0.95rem;           /* ✅ 촌스러움 줄이는 포인트 */
+  line-height: 1;
+  font-family: "Gamja Flower", "cursive";
+}
+
+/* 셀렉트 스타일 정리 */
+.mypage-sound select {
+  flex: 1;                      
+  max-width: 280px;             
+  padding: 0 0 0 14px;    
+  /* border: 2px solid rgba(241,215,230,0.9); */
+  /* background: #fff; */
+  /* color: var(--text); */
+  /* outline: none; */
+  /* appearance: none;           */
+  /* -webkit-appearance: none; */
+  /* -moz-appearance: none; */
+  font-weight: 400;         
+  letter-spacing: -0.5px;
+}

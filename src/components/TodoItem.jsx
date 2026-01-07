@@ -5,7 +5,8 @@ import React from 'react'
 const TodoItem = ({ t, onToggle, onDelete }) => {
   return (
     <div>
-      <li onClick={() => onToggle(t)}>
+      {/* <li onClick={() => onToggle(t)}> */}
+      <li>
         <div
           style={{
             display: "flex",

@@ -1,0 +1,606 @@
+/* src/pages/Planner.css */
+
+/* 기본 레이아웃 */
+.planner {
+  /* width: min(960px, 92vw); */
+  margin: 0 auto;
+}
+
+.planner-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* 헤더 */
+.top-header {
+  margin-bottom: 14px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  cursor: default;
+  font-family: "Poor Story"; 
+}
+
+.app-title-link {
+  cursor: pointer;
+}
+
+.sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.kid-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-family: "Poor Story"; 
+}
+
+.kid-name img {
+  width: 32px;
+  height: 32px;
+}
+
+.today {
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+/* todo bar */
+.todo-bar-grid {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.todo-bar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.todo-bar-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+
+
+/* 버튼 */
+.preset-btn,
+.todo-add-btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.06s ease, opacity 0.2s ease;
+}
+
+.preset-btn:hover,
+.todo-add-btn:hover {
+  transform: translateY(-1px);
+}
+
+.preset-btn:disabled,
+.todo-add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* ===============================
+   todo 입력 영역
+
+/* 기본 상태(비활성) */
+.todo-add-btn {
+  background: #fff;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+
+/* 입력값 있을 때 활성 */
+.todo-add-btn.active {
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.28);
+}
+
+/* hover는 활성 상태에서만 */
+.todo-add-btn.active:hover {
+  filter: brightness(1.03);
+}
+
+/* disabled일 때는 확실히 비활성 느낌 */
+.todo-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/* 입력 */
+.todo-input {
+  flex: 1;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+  background: var(--card);
+}
+
+.todo-input:focus {
+  border-color: rgba(255, 122, 162, 0.8);
+  box-shadow: 0 0 0 4px rgba(255, 122, 162, 0.18);
+}
+
+/* todo list */
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+/* ✅ 좌측 전체삭제 / 우측 필터 */
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0;
+  gap: 10px;
+}
+
+/* 전체 삭제 버튼 */
+.danger-btn {
+  border: 1px solid #fca5a5;
+  background: #fff5f5;
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: background 0.15s ease, transform 0.05s ease, opacity 0.2s ease;
+}
+
+.danger-btn:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+
+
+/* finish 영역 */
+.finish {
+  margin: 16px 0;
+}
+
+.finish .title {
+  font-weight: 700;
+  font-family: "Poor Story"; 
+}
+
+.finish input {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+}
+
+
+/* ===============================
+   스탑워치 스타일 정리
+================================ */
+
+.stopwatch {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.stopwatch .title {
+  font-weight: 800;
+  /* color: var(--muted); */
+  font-family: "Poor Story"; 
+
+}
+
+.stopwatch .time {
+  font-size: 1rem;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  width:150px;
+  letter-spacing: -0.2px;
+  color: var(--primary); /* 핑크 */
+  margin: 6px 0;
+}
+
+.stopwatch button {
+  margin-right: 6px;
+  margin-top: 4px;
+  white-space: nowrap;
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  /* ✅ 멈춤/다시 스트로크(테두리) 복구 */
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+/* ✅ 시작 버튼만 핑크 활성 */
+.stopwatch button:first-of-type {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+}
+
+/* disabled 상태도 보기 좋게 */
+.stopwatch button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+
+/* 숫자 전용 폰트 */
+@font-face {
+  font-family: "TimerNumber";
+  src: local("JetBrains Mono");
+  unicode-range: U+0030-0039; /* 0–9 */
+}
+
+/* 한글 전용 폰트 */
+@font-face {
+  font-family: "TimerKorean";
+  src: local("Gamja Flower");
+  unicode-range: U+AC00-D7A3; /* 한글 */
+}
+
+.stopwatch .time {
+  font-family: "TimerNumber", "TimerKorean", sans-serif;
+}
+
+/* 모달 */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-weight: 900;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.modal-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-help {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.modal-primary {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+}
+
+.modal-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+/* ===============================
+   내 목록 + 전체삭제 미니 버튼
+================================ */
+.mylist-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 🔕 눈에 띄지 않는 전체삭제 버튼 */
+.mini-danger-btn {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.mini-danger-btn:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.04);
+}
+
+/* ===============================
+   필터 버튼 (좌측 정렬)
+================================ */
+.filter-bar {
+  display: flex;
+  justify-content: flex-start;
+  margin: 14px 0;
+}
+
+.filter-group-left {
+  display: flex;
+  gap: 8px;
+}
+
+/* 필터 버튼 기본 */
+.filter-btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--text);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* ✅ 현재 선택된 필터만 핑크 */
+.filter-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 6px 16px rgba(255, 122, 162, 0.25);
+}
+
+/* ===============================
+   기본 템플릿 버튼 (톤 다운)
+================================ */
+.preset-btn-ghost {
+  background: #fff;          /* 완전 흰색 */
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;          /* 강조 제거 */
+  opacity: 0.85;
+}
+
+.preset-btn-ghost:hover {
+  opacity: 1;
+  background: #fafafa;
+}
+
+.todo-bar-actions .preset-btn-ghost {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.todo-bar-actions .preset-btn-ghost:hover {
+  opacity: 1;
+  background: #fafafa;
+}
+
+/* ===============================
+   프라이머리(핑크) 버튼
+================================ */
+.preset-btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+}
+
+.preset-btn-primary:hover {
+  filter: brightness(1.02);
+}
+
+
+/* ===============================
+   ✅ 폴드/초소형 화면 대응(스탑워치)
+   - 깨짐 원인: 고정폭 + 가로배치 + 줄바꿈 불가
+   - 해결: wrap 허용 + 초소형에서는 그리드로 재배치
+================================ */
+
+/* 기본(데스크톱~일반 모바일): 가로 정렬 + 줄바꿈 허용 */
+.stopwatch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;     /* ✅ 좁으면 다음 줄로 */
+  min-width: 0;        /* ✅ 자식이 폭 침범 못하게 */
+}
+
+.stopwatch .title {
+  white-space: nowrap;
+}
+
+/* 시간 영역: 고정폭 대신 "최대 폭 제한 + 줄 안 깨짐" */
+.stopwatch .time {
+  width: auto;                 /* ✅ 기존 140/150 고정폭 제거 */
+  min-width: 160px;            /* ✅ 너무 좁아지는 건 방지 */
+  max-width: 100%;
+  white-space: nowrap;         /* ✅ 시간 문자열 줄바꿈 방지 */
+  overflow: hidden;            /* ✅ 혹시 길면 안전하게 */
+  text-overflow: ellipsis;
+}
+
+/* 버튼: 너무 커서 밀어내지 않도록 */
+.stopwatch button {
+  flex: 0 0 auto;
+}
+
+/* ✅ 폴드 외부화면/초소형(약 360px 이하) */
+@media (max-width: 360px) {
+  .stopwatch {
+    align-items: stretch;
+  }
+
+  /* 제목은 위 */
+  .stopwatch .title {
+    flex: 0 0 100%;
+  }
+
+  /* 시간은 한 줄 전체로 크게 */
+  .stopwatch .time {
+    flex: 0 0 100%;
+    text-align: center;
+    font-size: 1.05rem;     /* 너무 크면 1rem로 */
+    padding: 8px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.7);
+  }
+
+  /* 버튼은 2열 그리드처럼 배치 */
+  .stopwatch button {
+    flex: 1 1 calc(50% - 6px);
+    margin-right: 0;        /* 기존 margin-right 제거 */
+    text-align: center;
+  }
+
+  /* '다시'가 홀로 남는 느낌이면 2열 꽉 채우게 */
+  .stopwatch button:last-of-type {
+    flex-basis: 100%;
+  }
+}
+
+/* ===============================
+   ✅ 날씨/날짜/헤더 반응형(폴드 대응)
+================================ */
+
+/* 헤더 영역 기본 안전장치 */
+.top-row,
+.sub-row {
+  min-width: 0; /* ✅ 자식 요소가 폭을 밀어내는 문제 방지 */
+}
+
+.weather {
+  flex: 0 0 auto;
+}
+
+/* 날짜 컨테이너도 폭 침범 방지 */
+.date-stack {
+  min-width: 0;
+}
+
+.todo-list li button {
+    min-width: 66px;
+    font-size: 0.9rem;
+}
+
+
+/* ✅ 일반 모바일(361~480px)에서는 한 줄 유지하되, 넘치면 …로 안전하게 */
+@media (max-width: 480px) {
+  /* .app-title {
+    max-width: 100%;
+  } */
+
+  /* .today {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  } */
+
+  .todo-list li button {
+    min-width: 66px;
+    font-size: 0.9rem;
+}
+
+}
+
+/* ✅ 아주 좁은 화면(폴드 외부 화면 정도)에서는 세로 스택 */
+@media (max-width: 360px) {
+  .kid-name {
+    white-space: normal;      
+    word-break: keep-all;
+  }
+  .todo-bar-inputs {
+    flex-direction: column;  
+  }
+  .todo-input {
+    min-width: 0;          
+  }
+  .top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .sub-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+   .todo-list li button {
+    min-width: 66px;
+    /* height: 34px; */
+    font-size: 0.85rem;
+  }
+}
+
