@@ -127,10 +127,11 @@ const Signup = () => {
 
         <input
           type="text"
-          placeholder="닉네임"
+          placeholder="닉네임 (플래너 상단에 표시됩니다)"
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
+          maxLength={8}
         />
 
         <input

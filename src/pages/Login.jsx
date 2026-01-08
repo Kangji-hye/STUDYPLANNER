@@ -14,7 +14,7 @@ const Login = () => {
   const [rememberEmail, setRememberEmail] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Login.jsx (또는 로그인 페이지 컴포넌트)
+  // 카카오 로그인
   const loginWithKakao = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
@@ -29,8 +29,6 @@ const Login = () => {
       console.error(error);
     }
   };
-
- 
 
   // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
   useEffect(() => {
@@ -107,9 +105,10 @@ const Login = () => {
           {loading ? "로그인 중..." : "로그인"}
         </button>
 
-<button type="button" className="auth-submit" onClick={loginWithKakao}>
-  카카오로 로그인
-</button>
+        {/* 카카오 로그인 버튼 일단 막음 : 비즈니스로 변경 해야 한다고 함 */} 
+        <button type="button" className="auth-submit" onClick={loginWithKakao}>
+          카카오로 로그인
+        </button>
 
       </form>
 

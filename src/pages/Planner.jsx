@@ -26,6 +26,32 @@ function Planner() {
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
 
+  // 달력 팝오버(아이콘 근처 모달)
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
+  const calendarBtnRef = useRef(null);
+
+  // 선택된 날짜(달력에서 고른 날짜)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
+  const toggleCalendarNearIcon = () => {
+  const el = calendarBtnRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const top = rect.bottom + window.scrollY + 8;  // 아이콘 아래로 8px
+    const left = rect.left + window.scrollX;       // 아이콘 왼쪽 정렬
+
+    setCalendarPos({ top, left });
+    setShowCalendar((prev) => !prev);
+  };
+
   // 프로필
   const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
   const [profile, setProfile] = useState(() => {
@@ -233,33 +259,31 @@ function Planner() {
       localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
     } catch {}
 
-    //카카오 
+    // 카카오 로그인 관련
     if (!profileData) {
-    const { error: upsertErr } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: user.id,
-          nickname: nextProfile.nickname,
-          birthdate: nextProfile.birthdate,
-          is_male: nextProfile.is_male,
-          finish_sound: nextProfile.finish_sound,
-        },
-        { onConflict: "id" }
-      );
+      const { error: upsertErr } = await supabase
+        .from("profiles")
+        .upsert(
+          {
+            id: user.id,
+            nickname: nextProfile.nickname,
+            birthdate: nextProfile.birthdate,
+            is_male: nextProfile.is_male,
+            finish_sound: nextProfile.finish_sound,
+          },
+          { onConflict: "id" }
+        );
 
-    if (upsertErr) {
-      console.error("profiles upsert error:", upsertErr);
+      if (upsertErr) {
+        console.error("profiles upsert error:", upsertErr);
+      }
     }
-  }
 
     await fetchTodos(user.id);
     await fetchMySingleListInfo(user.id);
 
     setLoading(false);
   };
-
-
 
   useEffect(() => {
     loadAll();
@@ -305,10 +329,10 @@ function Planner() {
       if (upErr) throw upErr;
 
       await fetchTodos(me.id);
-      alert("방학 숙제를 불러왔습니다.");
+      alert("샘플 리스트를 불러왔습니다.");
     } catch (err) {
       console.error("importWinterTodos error:", err);
-      alert(err?.message ?? "방학 숙제 불러오기 중 오류가 발생했습니다.");
+      alert(err?.message ?? "샘플 리스트 불러오기 중 오류가 발생했습니다.");
     } finally {
       setImportingWinter(false);
     }
@@ -555,6 +579,8 @@ function Planner() {
     setTodos([]);
   };
 
+  
+
   // 하단 로그아웃
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -600,8 +626,16 @@ function Planner() {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
+          <button
+            className="preset-btn  preset-btn-primary"
+            onClick={importWinterTodos}
+            disabled={importingWinter}
+          >
+            {importingWinter ? "불러오는 중..." : "📌 샘플 리스트 불러오기"}
+          </button>
+        
           <div className="mylist-actions">
-            <button className="preset-btn preset-btn-primary" onClick={openMyListLoadModal}>
+            <button className="preset-btn preset-btn-ghost" onClick={openMyListLoadModal}>
               📂 내 목록 불러오기 {hasMyList ? "" : "(없음)"}
             </button>
           </div>
@@ -610,14 +644,7 @@ function Planner() {
             💾 내 목록 저장
           </button>
 
-          <button
-            className="preset-btn preset-btn-ghost"
-            onClick={importWinterTodos}
-            disabled={importingWinter}
-          >
-            {importingWinter ? "불러오는 중..." : "📦 방학 숙제 불러오기"}
-          </button>
-        
+          
           <button
             className="mini-danger-btn"
             title="현재 목록 전체 삭제"
@@ -685,7 +712,7 @@ function Planner() {
       <div className="finish">
         <span className="title">공부 다하면?</span>
         <div>
-          <input type="text" placeholder="레고하기~" />
+          <input type="text" placeholder="뭐하고 놀까~" />
         </div>
       </div>
 

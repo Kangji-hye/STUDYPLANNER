@@ -203,7 +203,8 @@ const MyPage = () => {
             <input
               value={form.nickname}
               onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
-              placeholder="닉네임 입력"
+              placeholder="닉네임(플래너 상단에 표시)"
+              maxLength={8}
             />
           </span>
         </div>

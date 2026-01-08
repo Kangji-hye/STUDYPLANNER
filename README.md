@@ -1,16 +1,30 @@
-# React + Vite
+# Study Planner
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 기반의 스터디 플래너 웹 애플리케이션입니다.  
+하루 단위 학습 관리에 집중하여, 할 일 관리·스탑워치·날짜 기반 리셋·완료 보상 기능을 제공합니다.
 
-Currently, two official plugins are available:
+## 주요 기능
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 오늘의 할 일 관리
+- 할 일 완료 시 시각 효과 및 사운드 제공
+- 스탑워치로 학습 시간 측정
+- 현재 날짜 및 날씨 표시
+- 모바일/소형 화면 대응 반응형 UI
 
-## React Compiler
+## 기술 스택
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+- React (Hooks 기반 상태 관리)
+- React Router
+- Supabase (인증 및 데이터 관리)
+- CSS (반응형 레이아웃)
 
-## Expanding the ESLint configuration
+## 프로젝트 목적
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+단순한 Todo 앱을 넘어,  
+아이의 눈 높이에 맞춘 UI로 직관적인 학습 플래너를 만드는 것을 목표로 합니다.
+
+## 실행 방법
+
+1. 저장소 클론
+2. 의존성 설치
+3. 개발 서버 실행
