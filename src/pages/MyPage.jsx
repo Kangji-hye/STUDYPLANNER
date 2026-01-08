@@ -1,5 +1,5 @@
 // src/pages/MyPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react"; // ✅ useRef 추가
+import { useEffect, useMemo, useRef, useState } from "react"; 
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
@@ -21,13 +21,13 @@ const MyPage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
-  const previewAudioRef = useRef(null); // ✅ 미리듣기
+  const previewAudioRef = useRef(null); 
 
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
     is_male: true,
-    finish_sound: "/finish.mp3", // ✅ 추가
+    finish_sound: "/finish.mp3", 
   });
 
   const ageText = useMemo(() => {
@@ -60,7 +60,6 @@ const MyPage = () => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      // ✅ finish_sound 같이 조회
       .select("id, nickname, birthdate, is_male, finish_sound")
       .eq("id", user.id)
       .single();
@@ -109,7 +108,6 @@ const MyPage = () => {
     navigate("/login");
   };
 
-  // ✅ 미리듣기
   const previewSound = async () => {
     try {
       const src = form.finish_sound || "/finish.mp3";
@@ -144,7 +142,7 @@ const MyPage = () => {
       nickname,
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
-      finish_sound: form.finish_sound || "/finish.mp3", // ✅ 저장
+      finish_sound: form.finish_sound || "/finish.mp3",
     };
 
     const { data, error } = await supabase

@@ -19,10 +19,8 @@ const EMOJI_POOL = [
 
 function Planner() {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
-
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -128,7 +126,6 @@ function Planner() {
   const centiseconds = Math.floor((ms % 1000) / 10);
 
   return `${minutes}분 ${String(seconds).padStart(2, "0")}초 ${String(centiseconds).padStart(2, "0")}`;
-  // return `${minutes}: ${String(seconds).padStart(2, "0")}, ${String(centiseconds).padStart(2, "0")}`;
   };
 
   const startStopwatch = () => {
@@ -236,18 +233,39 @@ function Planner() {
       localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
     } catch {}
 
+    //카카오 
+    if (!profileData) {
+    const { error: upsertErr } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          nickname: nextProfile.nickname,
+          birthdate: nextProfile.birthdate,
+          is_male: nextProfile.is_male,
+          finish_sound: nextProfile.finish_sound,
+        },
+        { onConflict: "id" }
+      );
+
+    if (upsertErr) {
+      console.error("profiles upsert error:", upsertErr);
+    }
+  }
+
     await fetchTodos(user.id);
     await fetchMySingleListInfo(user.id);
 
     setLoading(false);
   };
 
+
+
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ 기본 프리셋: 방학 숙제 템플릿 불러오기
+  // 템플릿 불러오기
   const importWinterTodos = async () => {
     if (!me?.id) return;
     if (importingWinter) return;
@@ -296,7 +314,7 @@ function Planner() {
     }
   };
 
-  // ✅ 모달
+  // 모달
   const openMyListSaveModal = () => {
     setMyListMode("save");
     setShowMyListModal(true);
@@ -312,7 +330,7 @@ function Planner() {
     setShowMyListModal(false);
   };
 
-  // ✅ 내 목록 저장(이름 없이 고정: "내 목록")
+  // 내 목록 저장
   const saveMySingleList = async () => {
     if (!me?.id) return;
 
@@ -370,7 +388,7 @@ function Planner() {
     }
   };
 
-  // 내 목록 불러오기(1개)
+  // 내 목록 불러오기
   const importMySingleList = async () => {
     if (!me?.id) return;
 
@@ -431,24 +449,6 @@ function Planner() {
     } finally {
       setBusyMyList(false);
     }
-  };
-
-  //  전체 삭제
-  const deleteAllTodos = async () => {
-    if (!me?.id) return;
-
-    const ok = window.confirm(
-      "정말 모든 할 일을 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
-    );
-    if (!ok) return;
-
-    const { error } = await supabase.from("todos").delete().eq("user_id", me.id);
-    if (error) {
-      console.error("deleteAllTodos error:", error);
-      alert(error.message ?? "전체 삭제 중 오류가 발생했습니다.");
-      return;
-    }
-    setTodos([]);
   };
 
   // todos CRUD
@@ -537,6 +537,33 @@ function Planner() {
 
   if (loading) return <div className="planner-loading">로딩중...</div>;
 
+  //  전체 삭제
+  const deleteAllTodos = async () => {
+    if (!me?.id) return;
+
+    const ok = window.confirm(
+      "정말 모든 할 일을 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
+    );
+    if (!ok) return;
+
+    const { error } = await supabase.from("todos").delete().eq("user_id", me.id);
+    if (error) {
+      console.error("deleteAllTodos error:", error);
+      alert(error.message ?? "전체 삭제 중 오류가 발생했습니다.");
+      return;
+    }
+    setTodos([]);
+  };
+
+  // 하단 로그아웃
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    try {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+    } catch {}
+    navigate("/login");
+  };
+
   return (
     <div className="planner">
       <header className="top-header">
@@ -549,19 +576,23 @@ function Planner() {
             초등 스터디 플래너
           </h1>
 
-          <div className="weather">
+          <div className="weather" title="오늘의 날씨">
             <WeatherIcon code={weatherCode} size={52} />
           </div>
         </div>
 
         <div className="sub-row">
-          <div className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"}`}>
+          <div
+            className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"} clickable`}
+            onClick={() => navigate("/mypage")}
+            title="마이페이지로 이동"
+          >
             <img src={kidIconSrc} alt={kidAlt} />
             {kidName}
           </div>
 
           <div className="date-stack">
-            <div className="today">{formatToday()}</div>
+            <div className="today" title="오늘 날짜와 요일">{formatToday()}</div>
           </div>
         </div>
       </header>
@@ -718,6 +749,19 @@ function Planner() {
           </div>
         </div>
       )}
+
+      <footer className="planner-footer-simple">
+        <div className="footer-links">
+          {/* <span onClick={() => navigate("/planner")}>플래너홈</span> */}
+          <span onClick={() => navigate("/mypage")}>마이페이지</span>
+          <span onClick={handleLogout}>로그아웃</span>
+        </div>
+
+        <div className="footer-copy">
+          © {new Date().getFullYear()} Study Planner
+        </div>
+      </footer>
+
     </div>
   );
 }

@@ -1,4 +1,4 @@
-/* 성별 선택 영역 */
+/* pages/Signup.css */
 
 .gender-wrap {
   display: grid;
@@ -6,37 +6,36 @@
   gap: 8px;
 }
 
-/* 버튼처럼 보이는 라벨 */
 .gender-wrap label {
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 8px 0;              /* 높이 줄이기 */
+  padding: 8px 0;            
   border: 1px solid var(--line);
   border-radius: 8px;
-
-  font-size: 0.95rem;          /* 글자 약간 작게 */
-  font-weight: 500;            /* 두께 얇게 */
+  font-size: 0.95rem;        
+  font-weight: 500;           
   color: var(--muted);
   cursor: pointer;
-
   transition: all 0.12s ease;
 }
 
-/* 기본 라디오 숨기기 */
 .gender-wrap input[type="radio"] {
   display: none;
 }
 
-/* 선택된 상태 */
 .gender-wrap label:has(input:checked) {
   border-color: var(--primary);
   background-color: rgba(255, 122, 162, 0.06);
   color: var(--primary);
 }
 
-/* 호버 */
 .gender-wrap label:hover {
   border-color: var(--primary);
+}
+
+.pw-hint {
+  margin: -6px 0 6px;
+  font-size: 0.9rem;
+  color: #e11d48; 
 }

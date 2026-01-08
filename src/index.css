@@ -178,8 +178,8 @@ button:hover {
 
 .kid-name{
   display: flex;
-  align-items: center;   /* 세로 중앙 정렬 */
-  gap: 10px;             /* 이미지가 커졌으니 간격도 살짝 증가 */
+  align-items: center;   
+  gap: 10px;            
   font-size: 1.05rem;
   white-space: nowrap;
   font-weight: 600;
@@ -200,8 +200,8 @@ button:hover {
 .kid-name img{
   width: 40px;
   height: 40px;
-  display: block;        /* 이미지 아래 여백 제거 */
-  object-fit: contain;   /* 원본 비율 유지 */
+  display: block;       
+  object-fit: contain;  
 }
 
 .today{
@@ -269,17 +269,17 @@ li button:hover {
 } */
 
 .delele{
-  display: inline-flex;     /* ✅ 인라인이면서 flex */
-  align-items: center;      /* ✅ 세로 가운데 */
+  display: inline-flex;   
+  align-items: center;    
   justify-content: center;
   cursor: pointer;
 
-  font-size: 0.85em;        /* 80% 대신 가독성 좋은 em */
-  line-height: 1;           /* ✅ baseline 흔들림 방지 */
+  font-size: 0.85em;      
+  line-height: 1;        
   color: gray;
 
-  margin-left: 10px;        /* padding-left 대신 margin이 더 자연스러움 */
-  padding: 0px 6px;         /* ✅ 클릭 영역 확보(사용성↑) */
+  margin-left: 10px;    
+  padding: 0px 6px;      
   border-radius: 4px;
 }
 
@@ -313,10 +313,10 @@ li button:hover {
   flex: 1;
 }
 
-/* 완료 버튼 */
+/* 완료 버튼 : 흐리고 연하게  */
 .todo-done-btn.done {
-  background: #f3f4f6;        /* 연한 회색 */
-  color: #9ca3af;             /* 텍스트도 흐리게 */
+  background: #f3f4f6;     
+  color: #9ca3af;        
   border: 2px solid #e5e7eb;
   box-shadow: none;
 }
@@ -352,14 +352,11 @@ li button:hover {
   /* border-bottom: 1px dashed var(--line) */
 }
 
-
 /* .stopwatch span {
   padding: 0 10px;
   white-space: nowrap;  
 } */
 
-
-/* 모바일에서 여백과 글씨 조정 */
 @media (max-width: 480px) {
   #root {
     width: 94vw;
@@ -379,5 +376,3 @@ li button:hover {
   .app-title{ font-size: 1.5rem; }
   .weather{ font-size: 0.98rem; }
 }
-
-/* 아이패드 미니, 아이패드, 핸드폰, 노트북 반응형 테스트해서 추가작업 */

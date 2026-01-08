@@ -81,8 +81,6 @@
   cursor: pointer;
 }
 
-
-/* 로그인 버튼 핑크색 */
 .auth-submit {
   background: linear-gradient(135deg, var(--primary), #ff5f8f);
   color: #fff;
@@ -99,4 +97,13 @@
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.remember-row{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-top: 4px;
 }
