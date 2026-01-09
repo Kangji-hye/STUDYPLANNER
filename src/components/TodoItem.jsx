@@ -1,8 +1,37 @@
 //components/Todoitem.jsx
 
-import React from 'react'
+import React, { useEffect, useRef } from "react";
 
 const TodoItem = ({ t, onToggle, onDelete }) => {
+
+  const doneAudioRef = useRef(null);
+
+    useEffect(() => {
+      doneAudioRef.current = new Audio("/done.mp3");
+      doneAudioRef.current.preload = "auto";
+
+      // 컴포넌트 언마운트 때 정리(선택)
+      return () => {
+        if (doneAudioRef.current) {
+          doneAudioRef.current.pause();
+          doneAudioRef.current = null;
+        }
+      };
+    }, []);
+
+  const playDoneSound = () => {
+    const audio = doneAudioRef.current;
+    if (!audio) return;
+
+    // 연속 클릭 시에도 처음부터 또 나게
+    audio.currentTime = 0;
+
+    // 브라우저 정책상 사용자 클릭 이벤트 안에서는 재생이 잘 됨
+    audio.play().catch(() => {
+      // 무음모드/자동재생 정책 등으로 실패할 수 있어 조용히 무시
+    });
+  };
+
   return (
     <div>
       <li>
@@ -29,17 +58,20 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
             }} title="삭제">x</span>
           </span>
         </div>
+
         <button
           className={`todo-done-btn ${t.completed ? "done" : ""}`}
           onClick={(e) => {
-            e.stopPropagation(); 
+            e.stopPropagation();
+            if (!t.completed) {
+              playDoneSound();
+            }
             onToggle(t);
           }}
         >
           완료
         </button>
 
-        {/* <button onClick={() => onToggle(t)}>완료</button> */}
       </li>
     </div>
   )
