@@ -12,42 +12,46 @@ import MyPage from "./pages/MyPage";
 import Planner from "./pages/Planner";
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import { SoundSettingsProvider } from "./context/SoundSettingsContext";
+
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+    <SoundSettingsProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* 비번 재설정 */}
-          <Route path="/find" element={<Find />} />
-          <Route path="/reset" element={<ResetPassword />} />
-        </Route>
+            {/* 비번 재설정 */}
+            <Route path="/find" element={<Find />} />
+            <Route path="/reset" element={<ResetPassword />} />
+          </Route>
 
-        <Route element={<AppLayout />}>
-          <Route
-            path="/planner"
-            element={
-              <ProtectedRoute>
-                <Planner />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mypage"
-            element={
-              <ProtectedRoute>
-                <MyPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/planner"
+              element={
+                <ProtectedRoute>
+                  <Planner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mypage"
+              element={
+                <ProtectedRoute>
+                  <MyPage />
+                </ProtectedRoute>
+              }
+            />
+          </Route>
 
-        <Route path="/" element={<Navigate to="/planner" replace />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="/" element={<Navigate to="/planner" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </SoundSettingsProvider>
   );
 };
 

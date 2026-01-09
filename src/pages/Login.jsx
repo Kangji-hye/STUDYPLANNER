@@ -105,10 +105,9 @@ const Login = () => {
           {loading ? "로그인 중..." : "로그인"}
         </button>
 
-        {/* 카카오 로그인 버튼 일단 막음 : 비즈니스로 변경 해야 한다고 함 */} 
-        <button type="button" className="auth-submit" onClick={loginWithKakao}>
+        {/* <button type="button" className="auth-submit" onClick={loginWithKakao}>
           카카오로 로그인
-        </button>
+        </button> */}
 
       </form>
 

@@ -11,3 +11,5 @@ yarn add @supabase/supabase-js
 yarn add react-icons
 
 yarn add react-calendar (미정)
+
+yarn dev --host (PC켜져있어야 함)

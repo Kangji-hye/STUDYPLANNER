@@ -577,8 +577,12 @@
 }
 
 
+
+
+
 /* 일반 모바일(361~480px)에서는 한 줄 유지하되, 넘치면 …로  */
 @media (max-width: 480px) {
+  
   /* .app-title {
     max-width: 100%;
   } */
@@ -598,6 +602,7 @@
 
 /* 아주 좁은 화면(폴드 외부 화면 정도)에서는 세로 스택 */
 @media (max-width: 360px) {
+
   .kid-name {
     white-space: normal;      
     word-break: keep-all;

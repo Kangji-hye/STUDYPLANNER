@@ -15,7 +15,7 @@
   
   line-height: 1.6;
   font-weight: 400;
-  font-size: 25px;
+  font-size: 1rem;  /* 25px-> 16px(1rem) */
 
   color: var(--text);
   background-color: var(--bg);
@@ -360,7 +360,7 @@ li button:hover {
 @media (max-width: 480px) {
   #root {
     width: 94vw;
-    margin-top: 16px;
+    /* margin-top: 16px; */
     padding: 14px 12px 20px;
   }
 

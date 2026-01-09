@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
-
+import { useSoundSettings } from "../context/SoundSettingsContext";
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
 // 음악 리스트
@@ -16,6 +16,7 @@ const FINISH_SOUNDS = [
 const MyPage = () => {
   const navigate = useNavigate();
 
+  const { sfxEnabled, setSfxEnabled, finishEnabled, setFinishEnabled } = useSoundSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -109,6 +110,7 @@ const MyPage = () => {
   };
 
   const previewSound = async () => {
+    //  미리듣기는 "플랜 완료 음악 on/off" 설정과 무관하게 항상 재생되게 했음
     try {
       const src = form.finish_sound || "/finish.mp3";
       if (!previewAudioRef.current) {
@@ -220,14 +222,14 @@ const MyPage = () => {
           </span>
         </div>
 
-        <div className="row">
+        {/* <div className="row">
           <span className="label">나이(만)</span>
           <span className="value">{ageText || "-"}</span>
-        </div>
+        </div> */}
 
         {/* 완료 음악 선택 */}
         <div className="row">
-          <span className="label">플랜 완료시 음악</span>
+          <span className="label">플랜 모두 완료시 음악</span>
           <span className="value mypage-sound">
             <select
               value={form.finish_sound || "/finish.mp3"}
@@ -240,9 +242,46 @@ const MyPage = () => {
               ))}
             </select>
 
-            <button type="button" className="ghost-btn" onClick={previewSound}>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={previewSound}
+              title="선택한 음악을 미리 들어볼 수 있어요"
+            >
               ▶ 미리듣기
             </button>
+          </span>
+        </div>
+
+        {/* 효과음끄기추가 */}
+        <div className="row">
+          <span className="label">하나 효과음</span>
+          <span className="value mypage-sound">
+            <label className="sound-toggle">
+              <input
+                type="checkbox"
+                checked={sfxEnabled}
+                onChange={(e) => setSfxEnabled(e.target.checked)}
+              />
+              <span className="sound-toggle-text">
+                {sfxEnabled ? "켜짐" : "꺼짐"}
+              </span>
+            </label>
+          </span>
+        </div>
+
+        {/* 완료 음악 플레이 선택 */}
+        <div className="row">
+          <span className="label">모두 효과음</span>
+          <span className="value mypage-sound">
+            <label className="sound-toggle">
+              <input
+                type="checkbox"
+                checked={finishEnabled}
+                onChange={(e) => setFinishEnabled(e.target.checked)}
+              />
+              <span className="sound-toggle-text">{finishEnabled ? "켜짐" : "꺼짐"}</span>
+            </label>
           </span>
         </div>
 

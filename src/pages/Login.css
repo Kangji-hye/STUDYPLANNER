@@ -105,3 +105,20 @@
   color: var(--muted);
   margin-top: 4px;
 }
+
+.remember-row input{
+  width: auto;
+  margin: 0 0 0 10px;
+  /* accent-color: var(--primary); */
+}
+
+@media (max-width: 360px) {
+  input{
+    width:100%;
+  }
+
+  input, button{
+    font-size: 0.8rem;
+  }
+  }
+}
