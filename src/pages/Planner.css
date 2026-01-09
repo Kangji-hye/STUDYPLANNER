@@ -2,7 +2,6 @@
 
 /* 기본 레이아웃 */
 .planner {
-  /* width: min(960px, 92vw); */
   margin: 0 auto;
 }
 
@@ -24,10 +23,10 @@
 }
 
 .app-title {
-  font-size: 1.3rem;
+  font-size: 1.3rem; /* 플래너 내 제목은 기존 값 유지(원하면 변수로도 가능) */
   font-weight: 800;
   cursor: default;
-  font-family: "Poor Story"; 
+  font-family: "Poor Story";
 }
 
 .app-title-link {
@@ -46,15 +45,14 @@
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  font-family: "Poor Story"; 
+  font-family: "Poor Story";
+  font-size: var(--fs-kid);
 }
 
 .kid-name img {
   width: 32px;
   height: 32px;
 }
-
-
 
 /* 닉네임 클릭 가능 표시 */
 .kid-name.clickable{
@@ -65,7 +63,6 @@
   text-decoration: underline;
   opacity: 0.9;
 }
-
 
 .today {
   font-size: 0.95rem;
@@ -101,6 +98,7 @@
   box-shadow: var(--shadow);
   cursor: pointer;
   transition: transform 0.06s ease, opacity 0.2s ease;
+  font-size: var(--fs-button);
 }
 
 .preset-btn:hover,
@@ -114,9 +112,6 @@
   cursor: not-allowed;
   transform: none;
 }
-
-/* ===============================
-   todo 입력 영역
 
 /* 기본 상태(비활성) */
 .todo-add-btn {
@@ -156,6 +151,7 @@
   padding: 12px 14px;
   outline: none;
   background: var(--card);
+  font-size: var(--fs-input);
 }
 
 .todo-input:focus {
@@ -189,6 +185,7 @@
   cursor: pointer;
   font-weight: 700;
   transition: background 0.15s ease, transform 0.05s ease, opacity 0.2s ease;
+  font-size: var(--fs-small);
 }
 
 .danger-btn:hover {
@@ -203,7 +200,7 @@
 
 .finish .title {
   font-weight: 700;
-  font-family: "Poor Story"; 
+  font-family: "Poor Story";
 }
 
 .finish input {
@@ -212,6 +209,7 @@
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
+  font-size: var(--fs-input);
 }
 
 /* ===============================
@@ -223,13 +221,17 @@
   border-radius: 16px;
   background: var(--card);
   box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .stopwatch .title {
   font-weight: 800;
-  /* color: var(--muted); */
-  font-family: "Poor Story"; 
-
+  font-family: "Poor Story";
+  white-space: nowrap;
 }
 
 .stopwatch .time {
@@ -238,22 +240,31 @@
   font-weight: 600;
   width:150px;
   letter-spacing: -0.2px;
-  color: var(--primary); /* 핑크 */
+  color: var(--primary);
   margin: 6px 0;
+
+  width: auto;
+  min-width: 134px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* 버튼: 너무 커서 밀어내지 않도록 */
 .stopwatch button {
+  flex: 0 0 auto;
   margin-right: 6px;
   margin-top: 4px;
   white-space: nowrap;
   border-radius: 14px;
   padding: 10px 12px;
 
-  /* 멈춤/다시 스트로크(테두리) 복구 */
   background: #fff;
   color: var(--text);
   border: 1px solid var(--line);
   box-shadow: none;
+  font-size: var(--fs-small);
 }
 
 /* 시작 버튼만 핑크 활성 */
@@ -270,19 +281,18 @@
   cursor: not-allowed;
 }
 
-
 /* 숫자 전용 폰트 */
 @font-face {
   font-family: "TimerNumber";
   src: local("JetBrains Mono");
-  unicode-range: U+0030-0039; /* 0–9 */
+  unicode-range: U+0030-0039;
 }
 
 /* 한글 전용 폰트 */
 @font-face {
   font-family: "TimerKorean";
   src: local("Gamja Flower");
-  unicode-range: U+AC00-D7A3; /* 한글 */
+  unicode-range: U+AC00-D7A3;
 }
 
 .stopwatch .time {
@@ -336,7 +346,7 @@
 }
 
 .modal-help {
-  font-size: 0.9rem;
+  font-size: var(--fs-modal-help);
   color: var(--muted);
   line-height: 1.4;
 }
@@ -348,6 +358,7 @@
   cursor: pointer;
   color: #fff;
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  font-size: var(--fs-button);
 }
 
 .modal-primary:disabled {
@@ -359,7 +370,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-modal-help);
 }
 
 /* ===============================
@@ -371,7 +382,6 @@
   gap: 6px;
 }
 
-/* 🔕 눈에 띄지 않는 전체삭제 버튼 */
 .mini-danger-btn {
   border: 1px dashed var(--line);
   background: transparent;
@@ -379,7 +389,7 @@
   padding: 6px 8px;
   border-radius: 10px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--fs-small);
   opacity: 0.5;
   transition: opacity 0.15s ease, background 0.15s ease;
 }
@@ -403,7 +413,6 @@
   gap: 8px;
 }
 
-/* 필터 버튼 기본 */
 .filter-btn {
   border: 1px solid var(--line);
   background: var(--card);
@@ -413,9 +422,9 @@
   font-weight: 400;
   color: var(--text);
   transition: background 0.15s ease, color 0.15s ease;
+  font-size: var(--fs-small);
 }
 
-/* 현재 선택된 필터만 핑크 */
 .filter-btn.active {
   background: var(--primary);
   color: #fff;
@@ -427,10 +436,10 @@
    기본 템플릿 버튼 (톤 다운)
 ================================ */
 .preset-btn-ghost {
-  background: #fff;          /* 완전 흰색 */
+  background: #fff;
   color: var(--text);
   border: 1px solid var(--line);
-  box-shadow: none;          /* 강조 제거 */
+  box-shadow: none;
   opacity: 0.85;
 }
 
@@ -467,66 +476,6 @@
   filter: brightness(1.02);
 }
 
-
-.stopwatch {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;   
-  min-width: 0;      
-}
-
-.stopwatch .title {
-  white-space: nowrap;
-}
-
-.stopwatch .time {
-  width: auto;              
-  min-width: 134px;          
-  max-width: 100%;
-  white-space: nowrap;        
-  overflow: hidden;         
-  text-overflow: ellipsis;
-}
-
-/* 버튼: 너무 커서 밀어내지 않도록 */
-.stopwatch button {
-  flex: 0 0 auto;
-}
-
-/* ✅ 폴드 외부화면/초소형(약 360px 이하) */
-@media (max-width: 360px) {
-  .stopwatch {
-    align-items: stretch;
-  }
-
-  /* 제목은 위 */
-  .stopwatch .title {
-    flex: 0 0 100%;
-  }
-
-  /* 시간은 한 줄 전체로 크게 */
-  .stopwatch .time {
-    flex: 0 0 100%;
-    text-align: center;
-    font-size: 1.05rem;     /* 너무 크면 1rem로 */
-    padding: 8px 10px;
-    border: 1px dashed var(--line);
-    border-radius: 14px;
-    background: rgba(255,255,255,0.7);
-  }
-  /* 버튼은 2열 그리드처럼 배치 */
-  .stopwatch button {
-    flex: 1 1 calc(50% - 6px);
-    margin-right: 0;        /* 기존 margin-right 제거 */
-    text-align: center;
-  }
-
-  .stopwatch button:last-of-type {
-    flex-basis: 100%;
-  }
-}
-
 .top-row,
 .sub-row {
   min-width: 0;
@@ -541,8 +490,8 @@
 }
 
 .todo-list li button {
-    min-width: 66px;
-    font-size: 0.9rem;
+  min-width: 66px;
+  font-size: var(--fs-small);
 }
 
 /* 푸터 */
@@ -550,7 +499,7 @@
   margin-top: 18px;
   padding-bottom: 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-footer);
   color: var(--muted);
 }
 
@@ -572,61 +521,67 @@
 }
 
 .footer-copy{
-  font-size: 10px;
+  font-size: var(--fs-footer-copy);
   opacity: 0.6;
 }
 
-
-
-
-
-/* 일반 모바일(361~480px)에서는 한 줄 유지하되, 넘치면 …로  */
-@media (max-width: 480px) {
-  
-  /* .app-title {
-    max-width: 100%;
-  } */
-
-  /* .today {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  } */
-
-  .todo-list li button {
-    min-width: 66px;
-    font-size: 0.9rem;
-}
-
-}
-
-/* 아주 좁은 화면(폴드 외부 화면 정도)에서는 세로 스택 */
+/* ✅ 폴드 외부화면/초소형(약 360px 이하) */
 @media (max-width: 360px) {
+  .stopwatch {
+    align-items: stretch;
+  }
+
+  .stopwatch .title {
+    flex: 0 0 100%;
+  }
+
+  .stopwatch .time {
+    flex: 0 0 100%;
+    text-align: center;
+    font-size: 1.05rem;
+    padding: 8px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.7);
+  }
+
+  .stopwatch button {
+    flex: 1 1 calc(50% - 6px);
+    margin-right: 0;
+    text-align: center;
+  }
+
+  .stopwatch button:last-of-type {
+    flex-basis: 100%;
+  }
 
   .kid-name {
-    white-space: normal;      
+    white-space: normal;
     word-break: keep-all;
   }
+
   .todo-bar-inputs {
-    flex-direction: column;  
+    flex-direction: column;
   }
+
   .todo-input {
-    min-width: 0;          
+    min-width: 0;
   }
+
   .top-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
+
   .sub-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-   .todo-list li button {
+
+  .todo-list li button {
     min-width: 66px;
-    /* height: 34px; */
-    font-size: 0.85rem;
+    font-size: var(--fs-small);
   }
 }
-

@@ -12,17 +12,83 @@
   --primary-4: #ff9a76;   /* 포인트 소프트피치 */
   
   --shadow: 0 10px 30px rgba(0,0,0,0.06);
+
+  /* ===== Font Scale ===== */
+  --fs-base: 1.5rem;
+  --fs-title: 1.4rem;
+  --fs-app-title: 1.6rem;
+
+  --fs-weather: 1.05rem;
+  --fs-kid: 1.05rem;
+  --fs-today: 1.02rem;
+
+  --fs-list: 1.1rem;
+
+  --fs-input: 1.05rem;
+  --fs-button: 1.02rem;
+
+  --fs-small: 0.9rem;
+  --fs-list-btn: 0.95rem;
+
+  --fs-modal-help: 0.9rem;
+
+  --fs-footer: 12px;
+  --fs-footer-copy: 10px;
   
+  font-size: var(--fs-base);
+
   line-height: 1.6;
   font-weight: 400;
-  font-size: 1rem;  /* 25px-> 16px(1rem) */
-
   color: var(--text);
   background-color: var(--bg);
 
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+
+@media (max-width: 428px) {
+  :root {
+    --fs-base: 1.08rem;
+
+    --fs-title: 1.15rem;
+    --fs-app-title: 1.22rem;
+
+    --fs-weather: 0.86rem;
+    --fs-kid: 0.9rem;
+    --fs-today: 0.86rem;
+
+    --fs-list: 0.95rem;
+
+    --fs-input: 0.92rem;
+    --fs-button: 0.92rem;
+
+    --fs-small: 0.82rem;
+    --fs-list-btn: 0.82rem;
+
+    --fs-modal-help: 0.82rem;
+
+    --fs-footer: 11px;
+    --fs-footer-copy: 9px;
+  }
+}
+
+/* ✅ 더 작은 폭(폴드 외부화면/초소형)에서는 한 번 더 조이기 */
+@media (max-width: 360px) {
+  :root {
+    --fs-base: 1.0rem;
+    --fs-title: 1.08rem;
+    --fs-app-title: 1.15rem;
+
+    --fs-input: 0.88rem;
+    --fs-button: 0.88rem;
+
+    --fs-small: 0.78rem;
+    --fs-list: 0.9rem;
+    --fs-weather: 0.82rem;
+    --fs-today: 0.82rem;
+  }
 }
 
 * { box-sizing: border-box; }

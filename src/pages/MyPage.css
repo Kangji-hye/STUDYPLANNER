@@ -7,7 +7,7 @@
 
 .mypage-title {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: var(--fs-title);
 }
 
 .mypage-card {
@@ -24,39 +24,43 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 14px;           
+  gap: 14px;
 }
 
 /* 라벨은 고정 폭 */
 .label {
-  width: 120px;           
+  width: 150px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 600;
   flex-shrink: 0;
+  font-size: var(--fs-small);
 }
 
 /* 값은 왼쪽 정렬 */
 .value {
   font-weight: 400;
   text-align: left;
+  font-size: var(--fs-input);
 }
 
 /* 버튼 영역 */
 .mypage-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .mypage-actions button {
   flex: 1;
+  min-width: 140px;
 }
 
 .gender{
-display: flex;
-align-items: center;
-gap: 5px;
-
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
+
 .gender input{
   width: 20px;
 }
@@ -68,6 +72,7 @@ label.gender{
 
 .gendertext{
   text-align: left;
+  font-size: var(--fs-input);
 }
 
 .value.gender {
@@ -81,6 +86,7 @@ label.gender {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  font-size: var(--fs-input);
 }
 
 .gender-icon {
@@ -111,6 +117,7 @@ label.gender {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .mypage-sound select {
@@ -121,6 +128,7 @@ label.gender {
   border: 2px solid var(--line);
   background: #fff;
   outline: none;
+  min-width: 160px;
 }
 
 .mypage-sound select:focus {
@@ -128,7 +136,7 @@ label.gender {
   box-shadow: 0 0 0 6px rgba(255,122,162,0.14);
 }
 
-.ghost-btn {
+/* .ghost-btn {
   background: #fff;
   color: var(--text);
   border: 2px solid var(--line);
@@ -136,30 +144,128 @@ label.gender {
   padding: 10px 12px;
   border-radius: 14px;
   white-space: nowrap;
+} */
+
+/* 미리듣기 버튼 – 입력과 확실히 구분되지만 과하지 않게 */
+/* 미리듣기 버튼 – 배경색 확실 / 입력과 완전 분리 */
+.ghost-btn {
+  background: #eef6ff;                 /* 연한 블루 배경 */
+  color: #1e3a8a;                      /* 버튼임이 느껴지는 텍스트 */
+  border: 1.5px solid #bfdbfe;         /* 인풋보다 얇고 명확 */
+  /* box-shadow: 0 6px 14px rgba(59, 130, 246, 0.15); */
+  padding: 10px 14px;
+  border-radius: 14px;
+  white-space: nowrap;
+  font-weight: 600;
 }
+
+/* hover */
+.ghost-btn:hover {
+  background: #e0efff;
+  border-color: #93c5fd;
+}
+
+/* active */
+.ghost-btn:active {
+  transform: translateY(1px);
+}
+
+
 
 /* 공통 컨트롤 규격(셀렉트/버튼 높이 맞추기) */
 .mypage-sound select,
 .mypage-sound .ghost-btn {
-  height: 44px;                 
+  height: 44px;
   border-radius: 14px;
-  font-size: 0.95rem;       
+  font-size: var(--fs-small);
   line-height: 1;
   font-family: "Gamja Flower", "cursive";
 }
 
 /* 셀렉트 스타일 정리 */
 .mypage-sound select {
-  flex: 1;                      
-  max-width: 280px;             
-  padding: 0 0 0 14px;    
-  /* border: 2px solid rgba(241,215,230,0.9); */
-  /* background: #fff; */
-  /* color: var(--text); */
-  /* outline: none; */
-  /* appearance: none;           */
-  /* -webkit-appearance: none; */
-  /* -moz-appearance: none; */
-  font-weight: 400;         
+  flex: 1;
+  max-width: 280px;
+  padding: 10px 0 10px 14px;
+  font-weight: 400;
   letter-spacing: -0.5px;
+}
+
+/* 체크박스(소리 토글 같은 용도) */
+.sound-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===== 모바일 반응형 보강: 좁아지면 자동 줄바꿈/세로정렬 ===== */
+@media (max-width: 480px) {
+  .mypage {
+    gap: 10px;
+  }
+
+  .mypage-card {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  span input{
+    color: black
+  }
+
+  .label {
+    width: auto;
+    min-width: 0;
+  }
+
+  .value {
+    width: 100%;
+  }
+
+  .value.gender {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .mypage-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mypage-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mypage-sound {
+    /* flex-direction: column; */
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .mypage-sound select {
+    width: 100%;
+    max-width: none;
+    color: black
+  }
+
+  .mypage-sound .ghost-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .mypage-title {
+    font-size: 1.2rem; /* 아주 작은 화면에서만 살짝 */
+  }
+
+  .mypage-sound select,
+  .mypage-sound .ghost-btn {
+    height: 42px;
+  }
 }

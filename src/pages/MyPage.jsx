@@ -229,7 +229,7 @@ const MyPage = () => {
 
         {/* 완료 음악 선택 */}
         <div className="row">
-          <span className="label">플랜 모두 완료시 음악</span>
+          <span className="label">모두 완료시 폭죽 효과음</span>
           <span className="value mypage-sound">
             <select
               value={form.finish_sound || "/finish.mp3"}
@@ -253,9 +253,26 @@ const MyPage = () => {
           </span>
         </div>
 
+
+        {/* 완료 음악 플레이 선택 */}
+        <div className="row">
+          <span className="label">위 효과음 설정</span>
+          <span className="value mypage-sound">
+            <label className="sound-toggle">
+              <input
+                type="checkbox"
+                checked={finishEnabled}
+                onChange={(e) => setFinishEnabled(e.target.checked)}
+              />
+              <span className="sound-toggle-text">{finishEnabled ? "켜짐" : "꺼짐"}</span>
+            </label>
+          </span>
+        </div>
+
+        
         {/* 효과음끄기추가 */}
         <div className="row">
-          <span className="label">하나 효과음</span>
+          <span className="label">완료 버튼 효과음</span>
           <span className="value mypage-sound">
             <label className="sound-toggle">
               <input
@@ -266,21 +283,6 @@ const MyPage = () => {
               <span className="sound-toggle-text">
                 {sfxEnabled ? "켜짐" : "꺼짐"}
               </span>
-            </label>
-          </span>
-        </div>
-
-        {/* 완료 음악 플레이 선택 */}
-        <div className="row">
-          <span className="label">모두 효과음</span>
-          <span className="value mypage-sound">
-            <label className="sound-toggle">
-              <input
-                type="checkbox"
-                checked={finishEnabled}
-                onChange={(e) => setFinishEnabled(e.target.checked)}
-              />
-              <span className="sound-toggle-text">{finishEnabled ? "켜짐" : "꺼짐"}</span>
             </label>
           </span>
         </div>

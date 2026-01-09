@@ -1,8 +1,9 @@
 /* src/pages/Login.css */
+
 .auth-page{
   display: grid;
-   gap: 4px;  /* 스크롤문제로  */
-  justify-items: center;  
+  gap: 4px;
+  justify-items: center;
 }
 
 /* 로고 */
@@ -15,8 +16,8 @@
 
 .auth-title{
   margin: -20px 0 0 0;
-  font-size: 1.4rem;
-  justify-self: start;  
+  font-size: var(--fs-title);
+  justify-self: start;
   width: 100%;
 }
 
@@ -31,8 +32,8 @@
   gap: 8px;
   color: var(--text);
   font-weight: 700;
+  font-size: var(--fs-small);
 }
-
 
 .auth-links{
   width: 100%;
@@ -48,12 +49,11 @@
 }
 
 .auth-wide {
-  max-width: 760px;   
+  max-width: 760px;
   margin: 0 auto;
 }
 
-
-/* Login.css에 추가 */
+/* 에러 박스 */
 .auth-error {
   margin-top: 10px;
   padding: 10px 12px;
@@ -76,15 +76,17 @@
   border: 1px solid rgba(225, 29, 72, 0.2);
   color: #b91c1c;
   cursor: pointer;
+  font-size: var(--fs-small);
 }
 
 .auth-submit {
-    width: 100%;
+  width: 100%;
   background: linear-gradient(135deg, var(--primary), #ff5f8f);
   color: #fff;
   border: none;
   font-weight: 400;
   box-shadow: 0 8px 18px rgba(255, 122, 162, 0.35);
+  font-size: var(--fs-button);
 }
 
 .auth-submit:hover {
@@ -101,7 +103,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.9rem;
+  font-size: var(--fs-small);
   color: var(--muted);
   margin-top: 4px;
 }
@@ -109,7 +111,6 @@
 .remember-row input{
   width: auto;
   margin: 0 0 0 10px;
-  /* accent-color: var(--primary); */
 }
 
 @media (max-width: 360px) {
@@ -118,7 +119,6 @@
   }
 
   input, button{
-    font-size: 0.8rem;
-  }
+    font-size: var(--fs-small);
   }
 }
