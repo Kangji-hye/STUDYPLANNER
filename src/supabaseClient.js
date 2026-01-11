@@ -2,7 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Supabase 프로젝트 설정 정보
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_API_URL;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // SUPABASE_ANON_KEY는 외부에 접근을 하면 안되는 키다. 

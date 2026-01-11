@@ -329,10 +329,10 @@ function Planner() {
       if (upErr) throw upErr;
 
       await fetchTodos(me.id);
-      alert("샘플 리스트를 불러왔습니다.");
+      alert("방학 숙제를 불러왔습니다.");
     } catch (err) {
       console.error("importWinterTodos error:", err);
-      alert(err?.message ?? "샘플 리스트 불러오기 중 오류가 발생했습니다.");
+      alert(err?.message ?? "방학 숙제 불러오기 중 오류가 발생했습니다.");
     } finally {
       setImportingWinter(false);
     }
@@ -624,12 +624,13 @@ function Planner() {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
+          
           <button
             className="preset-btn  preset-btn-primary"
             onClick={importWinterTodos}
             disabled={importingWinter}
           >
-            {importingWinter ? "불러오는 중..." : "📌 샘플 리스트 불러오기"}
+            {importingWinter ? "불러오는 중..." : "📂 방학 숙제 불러오기"}
           </button>
         
           <div className="mylist-actions">
@@ -642,9 +643,8 @@ function Planner() {
             💾 내 목록 저장
           </button>
 
-          
           <button
-            className="mini-danger-btn"
+            className="preset-btn preset-btn-ghost mini-danger-btn" 
             title="현재 목록 전체 삭제"
             onClick={deleteAllTodos}
           >
@@ -656,7 +656,7 @@ function Planner() {
           <input
             value={todo}
             onChange={handleChange}
-            placeholder="새로운 내용 입력"
+            placeholder="새로운 내용을 입력하세요"
             className="todo-input"
             onKeyDown={(e) => {
               if (e.key === "Enter" && todo.trim()) addTodo();
@@ -778,7 +778,7 @@ function Planner() {
       <footer className="planner-footer-simple">
         <div className="footer-links">
           {/* <span onClick={() => navigate("/planner")}>플래너홈</span> */}
-          <span onClick={() => navigate("/mypage")}>마이페이지</span>
+          <span onClick={() => navigate("/mypage")}>마이페이지</span> | 
           <span onClick={handleLogout}>로그아웃</span>
         </div>
 

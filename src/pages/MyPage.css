@@ -170,8 +170,6 @@ label.gender {
   transform: translateY(1px);
 }
 
-
-
 /* 공통 컨트롤 규격(셀렉트/버튼 높이 맞추기) */
 .mypage-sound select,
 .mypage-sound .ghost-btn {

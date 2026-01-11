@@ -470,6 +470,7 @@
   color: #fff;
   border: 1px solid rgba(0,0,0,0.02);
   box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+  /* letter-spacing: -0.8px; */
 }
 
 .preset-btn-primary:hover {
@@ -525,7 +526,15 @@
   opacity: 0.6;
 }
 
-/* ✅ 폴드 외부화면/초소형(약 360px 이하) */
+@media (max-width: 480px) {
+  todo-bar-inputs {
+    flex-direction: column;
+  }
+  .todo-bar-inputs input{
+    padding-right:0;
+  }
+}
+/* 폴드 외부화면/초소형(약 360px 이하) */
 @media (max-width: 360px) {
   .stopwatch {
     align-items: stretch;
