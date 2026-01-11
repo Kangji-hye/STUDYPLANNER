@@ -73,6 +73,8 @@ const Login = () => {
     <div className="auth-page">
       <h2 className="auth-title">로그인</h2>
 
+      <img src="/logo.png" alt="로고" className="auth-logo" />
+
       <form onSubmit={onSubmit} className="auth-form">
         <input
           type="email"
