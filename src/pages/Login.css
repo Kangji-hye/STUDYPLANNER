@@ -6,6 +6,11 @@
   justify-items: center;
 }
 
+
+.auth-logo{
+  display: none;
+}
+
 /* 로고 */
 .auth-logo{
   width: min(280px, 50vw);
@@ -111,6 +116,22 @@
 .remember-row input{
   width: auto;
   margin: 0 0 0 10px;
+}
+
+/* 태블릿/모바일에서만 로고 보이게 */
+@media (max-width: 1024px){
+  .auth-logo{
+    display: block;
+     width: min(220px, 46vw);
+    height: auto;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 480px){
+  .auth-logo{
+   width: min(180px, 60vw);  
+  }
 }
 
 @media (max-width: 360px) {
