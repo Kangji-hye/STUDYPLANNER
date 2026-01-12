@@ -644,7 +644,7 @@ function Planner() {
           </button>
 
           <button
-            className="preset-btn preset-btn-ghost mini-danger-btn" 
+            className="preset-btn mini-danger-btn" 
             title="현재 목록 전체 삭제"
             onClick={deleteAllTodos}
           >

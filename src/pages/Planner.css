@@ -65,7 +65,8 @@
 }
 
 .today {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-family: "Poor Story";
   color: var(--muted);
 }
 
@@ -166,7 +167,7 @@
   margin: 10px 0;
 }
 
-/* ✅ 좌측 전체삭제 / 우측 필터 */
+/*  좌측 전체삭제 / 우측 필터 */
 .filter-bar {
   display: flex;
   justify-content: space-between;

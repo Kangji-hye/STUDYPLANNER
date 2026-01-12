@@ -4,7 +4,7 @@
   --bg: #fff7fb;          /* 아주 연한 핑크빛 배경 */
   --card: #ffffff;        /* 카드 배경 */
   --text: #2b2b2b;        /* 본문 글자 */
-  --muted: #6b7280;       /* 보조 글자 */
+  --muted: #50555f;       /* 보조 글자 */
   --line: #f1d7e6;        /* 연한 테두리 */
   --primary: #ff7aa2;     /* 포인트 핑크 */
   --primary-2: #ffb86b;   /* 포인트 오렌지 */
@@ -389,7 +389,7 @@ li button:hover {
     --fs-input: 1.0rem;    /* input, select */
     --fs-button: 0.98rem;  /* 버튼 */
     --fs-small: 0.9rem;    /* 라벨, 보조 텍스트 */
-    --fs-kid: 1.4rem;
+    --fs-kid: 1.5rem;
 
     width: 94vw;
     /* margin-top: 16px; */
