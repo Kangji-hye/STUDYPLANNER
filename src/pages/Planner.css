@@ -23,7 +23,7 @@
 }
 
 .app-title {
-  font-size: 1.3rem; /* 플래너 내 제목은 기존 값 유지(원하면 변수로도 가능) */
+  /* font-size: 1.3rem;  */
   font-weight: 800;
   cursor: default;
   font-family: "Poor Story";
@@ -201,6 +201,7 @@
 .finish .title {
   font-weight: 700;
   font-family: "Poor Story";
+  font-size: 1.25rem;
 }
 
 .finish input {
@@ -232,6 +233,7 @@
   font-weight: 800;
   font-family: "Poor Story";
   white-space: nowrap;
+  font-size: 1.3rem;
 }
 
 .stopwatch .time {
@@ -533,7 +535,23 @@
   .todo-bar-inputs input{
     padding-right:0;
   }
+ .finish .title {
+    font-size: 1.35rem;
+  }
+  .stopwatch .title {
+    font-size: 1.45rem;
+  }
+  .stopwatch .time {
+    flex: 0 0 100%;
+    text-align: center;
+    font-size: 1.3rem;
+    padding: 8px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.7);
+  }
 }
+
 /* 폴드 외부화면/초소형(약 360px 이하) */
 @media (max-width: 360px) {
   .stopwatch {
@@ -544,7 +562,7 @@
     flex: 0 0 100%;
   }
 
-  .stopwatch .time {
+  /* .stopwatch .time {
     flex: 0 0 100%;
     text-align: center;
     font-size: 1.05rem;
@@ -552,7 +570,7 @@
     border: 1px dashed var(--line);
     border-radius: 14px;
     background: rgba(255,255,255,0.7);
-  }
+  } */
 
   .stopwatch button {
     flex: 1 1 calc(50% - 6px);

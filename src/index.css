@@ -170,7 +170,7 @@ button:hover {
 .app-title{
   margin: 0;
   padding: 0;
-  font-size: 1.6rem;    
+  font-size: var(--fs-app-title);
   line-height: 1.15;
   white-space: nowrap;   /* 제목 줄바꿈 방지 */
 }
@@ -389,6 +389,7 @@ li button:hover {
     --fs-input: 1.0rem;    /* input, select */
     --fs-button: 0.98rem;  /* 버튼 */
     --fs-small: 0.9rem;    /* 라벨, 보조 텍스트 */
+    --fs-kid: 1.4rem;
 
     width: 94vw;
     /* margin-top: 16px; */
@@ -419,7 +420,7 @@ li button:hover {
     font-size: 1rem;
   }
 
-  .app-title{ font-size: 1.5rem; }
+  .app-title{ font-size: 1.8rem; }
   .weather{ font-size: 0.98rem; }
 }
 
@@ -428,12 +429,10 @@ li button:hover {
     --fs-base: 1.08rem;
 
     --fs-title: 1.15rem;
-    --fs-app-title: 1.22rem;
-
+    --fs-app-title: 1.4rem;
     --fs-weather: 0.86rem;
     --fs-kid: 0.9rem;
     --fs-today: 0.86rem;
-
     --fs-list: 0.95rem;
 
     --fs-input: 0.92rem;
@@ -454,7 +453,6 @@ li button:hover {
   :root {
     --fs-base: 1.0rem;
     --fs-title: 1.08rem;
-    --fs-app-title: 1.15rem;
 
     --fs-input: 0.88rem;
     --fs-button: 0.88rem;
