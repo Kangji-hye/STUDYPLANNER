@@ -3,19 +3,37 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 
 const SoundSettingsContext = createContext(null);
 
+const SFX_KEY = "sfxEnabled";
+const FINISH_KEY = "finishEnabled";
+
 export const SoundSettingsProvider = ({ children }) => {
-  // 기본값: 켜짐(true). 저장값이 있으면 그걸 우선.
   const [sfxEnabled, setSfxEnabled] = useState(() => {
-    const saved = localStorage.getItem("sfxEnabled");
+    const saved = localStorage.getItem(SFX_KEY);
+    return saved === null ? true : saved === "true";
+  });
+
+  const [finishEnabled, setFinishEnabled] = useState(() => {
+    const saved = localStorage.getItem(FINISH_KEY);
     return saved === null ? true : saved === "true";
   });
 
   useEffect(() => {
-    localStorage.setItem("sfxEnabled", String(sfxEnabled));
+    localStorage.setItem(SFX_KEY, String(sfxEnabled));
   }, [sfxEnabled]);
 
+  useEffect(() => {
+    localStorage.setItem(FINISH_KEY, String(finishEnabled));
+  }, [finishEnabled]);
+
   return (
-    <SoundSettingsContext.Provider value={{ sfxEnabled, setSfxEnabled }}>
+    <SoundSettingsContext.Provider
+      value={{
+        sfxEnabled,
+        setSfxEnabled,
+        finishEnabled,
+        setFinishEnabled,
+      }}
+    >
       {children}
     </SoundSettingsContext.Provider>
   );

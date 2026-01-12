@@ -1,5 +1,5 @@
 // src/pages/MyPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react"; 
+import { useEffect, useRef, useState } from "react"; 
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
@@ -30,20 +30,6 @@ const MyPage = () => {
     is_male: true,
     finish_sound: "/finish.mp3", 
   });
-
-  const ageText = useMemo(() => {
-    const birthdate = profile?.birthdate;
-    if (!birthdate) return "";
-
-    const today = new Date();
-    const birth = new Date(birthdate);
-
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return `${age}살`;
-  }, [profile?.birthdate]);
 
   const loadMyProfile = async () => {
     setLoading(true);
@@ -222,11 +208,6 @@ const MyPage = () => {
           </span>
         </div>
 
-        {/* <div className="row">
-          <span className="label">나이(만)</span>
-          <span className="value">{ageText || "-"}</span>
-        </div> */}
-
         {/* 완료 음악 선택 */}
         <div className="row">
           <span className="label">모두 완료시 폭죽 효과음</span>
@@ -253,7 +234,6 @@ const MyPage = () => {
           </span>
         </div>
 
-
         {/* 완료 음악 플레이 선택 */}
         <div className="row">
           <span className="label">위 효과음 설정</span>
@@ -264,12 +244,13 @@ const MyPage = () => {
                 checked={finishEnabled}
                 onChange={(e) => setFinishEnabled(e.target.checked)}
               />
-              <span className="sound-toggle-text">{finishEnabled ? "켜짐" : "꺼짐"}</span>
+              <span className="sound-toggle-text">
+                {finishEnabled ? "켜짐" : "꺼짐"}
+              </span>
             </label>
           </span>
         </div>
 
-        
         {/* 효과음끄기추가 */}
         <div className="row">
           <span className="label">완료 버튼 효과음</span>

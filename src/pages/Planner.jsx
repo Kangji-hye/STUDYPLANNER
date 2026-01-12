@@ -7,6 +7,7 @@ import supabase from "../supabaseClient";
 import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
+import { useSoundSettings } from "../context/SoundSettingsContext";
 
 const EMOJI_POOL = [
   "🚀", "🛸", "⚡", "🔥", "💖",
@@ -25,6 +26,7 @@ function Planner() {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
+  const { sfxEnabled, finishEnabled } = useSoundSettings();
 
   // 달력 팝오버(아이콘 근처 모달)
   const [showCalendar, setShowCalendar] = useState(false);
@@ -118,6 +120,8 @@ function Planner() {
 
   // 사운드
   const playFinishSound = async () => {
+    if (!finishEnabled) return;
+
     const audio = finishAudioRef.current;
     if (!audio) return;
     try {
@@ -543,7 +547,7 @@ function Planner() {
     const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
     if (!wasAllCompleted && isAllCompleted) {
       fireConfetti();
-      playFinishSound();
+       if (finishEnabled) playFinishSound();
     }
   };
 
@@ -677,7 +681,7 @@ function Planner() {
 
       <ul className="todo-list">
         {filteredTodos.map((t) => (
-          <TodoItem key={t.id} t={t} onToggle={onToggle} onDelete={onDelete} />
+          <TodoItem key={t.id} t={t} onToggle={onToggle} onDelete={onDelete} sfxEnabled={sfxEnabled}/>
         ))}
       </ul>
 

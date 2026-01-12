@@ -1,7 +1,7 @@
 //components/Todoitem.jsx
 
 import React, { useEffect, useRef } from "react";
-const TodoItem = ({ t, onToggle, onDelete }) => {
+const TodoItem = ({ t, onToggle, onDelete, sfxEnabled }) => {
   const doneAudioRef = useRef(null);
 
     useEffect(() => {
@@ -18,6 +18,7 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
     }, []);
 
   const playDoneSound = () => {
+    if (!sfxEnabled) return;
     const audio = doneAudioRef.current;
     if (!audio) return;
     audio.currentTime = 0;
@@ -64,6 +65,15 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
         >
           완료
         </button>
+
+        {/* <button
+          onClick={() => {
+            playDoneSound();
+            onToggle(t);
+          }}
+        >
+          완료
+        </button> */}
 
       </li>
     </div>

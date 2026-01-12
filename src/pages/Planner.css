@@ -54,7 +54,6 @@
   height: 32px;
 }
 
-/* 닉네임 클릭 가능 표시 */
 .kid-name.clickable{
   cursor: pointer;
 }
@@ -68,6 +67,7 @@
   font-size: 1rem;
   font-family: "Poor Story";
   color: var(--muted);
+  font-weight: 800;
 }
 
 /* todo bar */
@@ -254,6 +254,24 @@
   text-overflow: ellipsis;
 }
 
+/* 숫자 전용 폰트 */
+@font-face {
+  font-family: "TimerNumber";
+  src: local("JetBrains Mono");
+  unicode-range: U+0030-0039;
+}
+
+/* 한글 전용 폰트 */
+@font-face {
+  font-family: "TimerKorean";
+  src: local("Gamja Flower");
+  unicode-range: U+AC00-D7A3;
+}
+
+.stopwatch .time {
+  font-family: "TimerNumber", "TimerKorean", sans-serif;
+}
+
 /* 버튼: 너무 커서 밀어내지 않도록 */
 .stopwatch button {
   flex: 0 0 auto;
@@ -284,23 +302,6 @@
   cursor: not-allowed;
 }
 
-/* 숫자 전용 폰트 */
-@font-face {
-  font-family: "TimerNumber";
-  src: local("JetBrains Mono");
-  unicode-range: U+0030-0039;
-}
-
-/* 한글 전용 폰트 */
-@font-face {
-  font-family: "TimerKorean";
-  src: local("Gamja Flower");
-  unicode-range: U+AC00-D7A3;
-}
-
-.stopwatch .time {
-  font-family: "TimerNumber", "TimerKorean", sans-serif;
-}
 
 /* 모달 */
 .modal-backdrop {
