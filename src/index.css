@@ -400,6 +400,21 @@ li button:hover {
     border-radius: 18px;
   }
 
+ body {
+    font-family: -apple-system, BlinkMacSystemFont,
+      "Apple SD Gothic Neo",
+      "Noto Sans KR",
+      "Malgun Gothic",
+      system-ui, sans-serif;
+  }
+
+  .todo-item {
+    font-family: -apple-system, BlinkMacSystemFont,
+      "Apple SD Gothic Neo",
+      "Noto Sans KR",
+      system-ui, sans-serif;
+  }
+
   input, button {
     font-size: 1rem;
   }
