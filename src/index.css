@@ -10,8 +10,10 @@
   --primary-2: #ffb86b;   /* 포인트 오렌지 */
   --primary-3: #4f8cff;   /* 포인트 블루 */
   --primary-4: #ff9a76;   /* 포인트 소프트피치 */
-  
-  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+
+  --shadow: 
+  0 3px 8px rgba(0,0,0,0.45),
+  0 20px 45px rgba(0,0,0,0.25);
 
   /* ===== Font Scale ===== */
   --fs-base: 1.5rem;

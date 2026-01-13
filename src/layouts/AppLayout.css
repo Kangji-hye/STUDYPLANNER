@@ -18,9 +18,3 @@
   box-shadow: var(--shadow);
 }
 
-@media (max-width: 480px) {
-  .app-shell{
-    margin: 5px auto 30px;
-    padding: 18px 14px 22px;
-  }
-}

@@ -27,19 +27,16 @@
 
 .auth-wrap{
 
+  /* min-height: calc(100dvh - 132px); */
   min-height: calc(100dvh - 132px);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-
   overflow: hidden;
 }
 
 .auth-card{
   width: min(520px, 92vw);
-
 
   max-height: calc(100dvh - 132px);
   overflow: auto;
