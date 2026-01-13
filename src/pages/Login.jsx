@@ -15,20 +15,28 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   // 구글 로그인
- const googleLogin = async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/planner`,
-      queryParams: { access_type: "offline", prompt: "consent" },
-    },
-  });
+  // Login.jsx
+  const getRedirectTo = () => {
+    // 배포/터널 주소가 있으면 그걸 우선 사용
+    const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+    return `${base}/planner`;
+  };
+
+  const googleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: getRedirectTo(),
+        queryParams: { access_type: "offline", prompt: "consent" },
+      },
+    });
 
     if (error) {
       console.error("google oauth error:", error);
       alert(error.message);
     }
   };
+  
 
   // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
   useEffect(() => {
