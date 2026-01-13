@@ -14,19 +14,19 @@ const Login = () => {
   const [rememberEmail, setRememberEmail] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // 카카오 로그인
-  const loginWithKakao = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: {
-        redirectTo: `${window.location.origin}/planner`,
-         scopes: "profile_nickname profile_image",
-      },
-    });
+  // 구글 로그인
+ const googleLogin = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/planner`,
+      queryParams: { access_type: "offline", prompt: "consent" },
+    },
+  });
 
     if (error) {
+      console.error("google oauth error:", error);
       alert(error.message);
-      console.error(error);
     }
   };
 
@@ -35,7 +35,9 @@ const Login = () => {
     try {
       const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
       if (saved) setEmail(saved);
-    } catch {}
+    } catch (err) {
+    console.warn("이메일 로컬스토리지 읽기 실패", err);
+    }
   }, []);
 
   const onSubmit = async (e) => {
@@ -48,7 +50,9 @@ const Login = () => {
     try {
       if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, safeEmail);
       else localStorage.removeItem(REMEMBER_EMAIL_KEY);
-    } catch {}
+    } catch(err) {
+      console.warn("이메일 로컬스토리지 저장 실패", err);
+    }     
 
     try {
       setLoading(true);
@@ -107,9 +111,10 @@ const Login = () => {
           {loading ? "로그인 중..." : "로그인"}
         </button>
 
-        {/* <button type="button" className="auth-submit" onClick={loginWithKakao}>
-          카카오로 로그인
-        </button> */}
+        <button type="button" className="google-login-btn" onClick={googleLogin}>
+          <img src="/google-icon.svg" alt="Google" />
+          <span>구글로 로그인</span>
+        </button>
 
       </form>
 

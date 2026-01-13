@@ -7,8 +7,9 @@ import supabase from "../supabaseClient";
 import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
-import { useSoundSettings } from "../context/SoundSettingsContext";
+// import { useSoundSettings } from "../context/SoundSettingsContext";
 
+// 이모지 풀
 const EMOJI_POOL = [
   "🚀", "🛸", "⚡", "🔥", "💖",
   "🚗", "🏎️", "🚓", "🚒", "🚜",
@@ -26,33 +27,7 @@ function Planner() {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
-  const { sfxEnabled, finishEnabled } = useSoundSettings();
-
-  // 달력 팝오버(아이콘 근처 모달)
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0 });
-  const calendarBtnRef = useRef(null);
-
-  // 선택된 날짜(달력에서 고른 날짜)
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  });
-
-  const toggleCalendarNearIcon = () => {
-  const el = calendarBtnRef.current;
-    if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    const top = rect.bottom + window.scrollY + 8;  // 아이콘 아래로 8px
-    const left = rect.left + window.scrollX;       // 아이콘 왼쪽 정렬
-
-    setCalendarPos({ top, left });
-    setShowCalendar((prev) => !prev);
-  };
+  // const { sfxEnabled } = useSoundSettings();
 
   // 프로필
   const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
@@ -77,7 +52,7 @@ function Planner() {
     todosRef.current = todos;
   }, [todos]);
 
-  // 방학 숙제
+  // 방학 숙제 불러오기 상태
   const [importingWinter, setImportingWinter] = useState(false);
 
   // 내 목록 모달
@@ -120,8 +95,6 @@ function Planner() {
 
   // 사운드
   const playFinishSound = async () => {
-    if (!finishEnabled) return;
-
     const audio = finishAudioRef.current;
     if (!audio) return;
     try {
@@ -228,72 +201,83 @@ function Planner() {
   };
 
   // 초기 로딩
-  const loadAll = async () => {
-    setLoading(true);
-
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      setLoading(false);
-      navigate("/login");
-      return;
-    }
-
-    const user = userData.user;
-    setMe(user);
-
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, nickname, birthdate, is_male, finish_sound")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const nextProfile =
-      profileError || !profileData
-        ? {
-            id: user.id,
-            nickname: user.user_metadata?.nickname ?? "닉네임",
-            birthdate: user.user_metadata?.birthdate ?? null,
-            is_male: user.user_metadata?.is_male ?? true,
-            finish_sound: user.user_metadata?.finish_sound ?? "/finish.mp3",
-          }
-        : profileData;
-
-    setProfile(nextProfile);
-    try {
-      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
-    } catch {}
-
-    // 카카오 로그인 관련
-    if (!profileData) {
-      const { error: upsertErr } = await supabase
-        .from("profiles")
-        .upsert(
-          {
-            id: user.id,
-            nickname: nextProfile.nickname,
-            birthdate: nextProfile.birthdate,
-            is_male: nextProfile.is_male,
-            finish_sound: nextProfile.finish_sound,
-          },
-          { onConflict: "id" }
-        );
-
-      if (upsertErr) {
-        console.error("profiles upsert error:", upsertErr);
-      }
-    }
-
-    await fetchTodos(user.id);
-    await fetchMySingleListInfo(user.id);
-
-    setLoading(false);
-  };
-
   useEffect(() => {
-    loadAll();
-  }, []);
+    let mounted = true;
 
-  // 템플릿 불러오기
+    const loadAll = async () => {
+      if (!mounted) return;
+      setLoading(true);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        if (!mounted) return;
+        setLoading(false);
+        navigate("/login");
+        return;
+      }
+
+      const user = userData.user;
+      if (mounted) setMe(user);
+
+      // 프로필 불러오기
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, nickname, birthdate, is_male, finish_sound")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const nextProfile =
+        profileError || !profileData
+          ? {
+              id: user.id,
+              nickname: user.user_metadata?.nickname ?? "닉네임",
+              birthdate: user.user_metadata?.birthdate ?? null,
+              is_male: user.user_metadata?.is_male ?? true,
+              finish_sound: user.user_metadata?.finish_sound ?? "/finish.mp3",
+            }
+          : profileData;
+
+      // 프로필 상태 및 캐시 업데이트
+      if (mounted) setProfile(nextProfile);
+      try {
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+      } catch (err) {
+        console.warn("프로필 캐시 저장 실패", err);
+      }
+
+      // 카카오/소셜 로그인으로 profiles row가 없을 때 대비
+      if (!profileData) {
+        const { error: upsertErr } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: user.id,
+              nickname: nextProfile.nickname,
+              birthdate: nextProfile.birthdate,
+              is_male: nextProfile.is_male,
+              finish_sound: nextProfile.finish_sound,
+            },
+            { onConflict: "id" }
+          );
+
+        if (upsertErr) console.error("profiles upsert error:", upsertErr);
+      }
+
+      await fetchTodos(user.id);
+      await fetchMySingleListInfo(user.id);
+
+      if (!mounted) return;
+      setLoading(false);
+    };
+
+    loadAll();
+
+    return () => {
+      mounted = false;
+    };
+  }, [navigate]);
+
+
   const importWinterTodos = async () => {
     if (!me?.id) return;
     if (importingWinter) return;
@@ -510,7 +494,7 @@ function Planner() {
       return;
     }
 
-    setTodos((prev) => [data, ...prev]);
+    setTodos((prev) => [...prev, data]);
     setTodo("");
   };
 
@@ -547,7 +531,7 @@ function Planner() {
     const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
     if (!wasAllCompleted && isAllCompleted) {
       fireConfetti();
-       if (finishEnabled) playFinishSound();
+      playFinishSound();
     }
   };
 
@@ -588,7 +572,9 @@ function Planner() {
     await supabase.auth.signOut();
     try {
       localStorage.removeItem(PROFILE_CACHE_KEY);
-    } catch {}
+    } catch (err) {
+      console.warn("프로필 캐시 삭제 실패", err);
+    }
     navigate("/login");
   };
 
@@ -681,7 +667,7 @@ function Planner() {
 
       <ul className="todo-list">
         {filteredTodos.map((t) => (
-          <TodoItem key={t.id} t={t} onToggle={onToggle} onDelete={onDelete} sfxEnabled={sfxEnabled}/>
+          <TodoItem key={t.id} t={t} onToggle={onToggle} onDelete={onDelete} />
         ))}
       </ul>
 

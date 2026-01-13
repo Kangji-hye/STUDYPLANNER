@@ -3,20 +3,20 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
-import { useSoundSettings } from "../context/SoundSettingsContext";
+// import { useSoundSettings } from "../context/SoundSettingsContext";
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
 // 음악 리스트
 const FINISH_SOUNDS = [
-  { label: "기본 축하음", value: "/finish1.mp3" },
-  { label: "차분한 효과음", value: "/finish2.mp3" },
-  { label: "시끄러운 효과음", value: "/finish3.mp3" },
+  { label: "요란한 축하", value: "/finish1.mp3" },
+  { label: "환호성과 박수", value: "/finish2.mp3" },
+  { label: "웅장한 빵빠레", value: "/finish3.mp3" },
 ];
 
 const MyPage = () => {
   const navigate = useNavigate();
 
-  const { sfxEnabled, setSfxEnabled, finishEnabled, setFinishEnabled } = useSoundSettings();
+  // const { sfxEnabled, setSfxEnabled, finishEnabled, setFinishEnabled } = useSoundSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userEmail, setUserEmail] = useState("");
@@ -90,29 +90,35 @@ const MyPage = () => {
 
     try {
       localStorage.removeItem(PROFILE_CACHE_KEY);
-    } catch {}
+    } catch (err) {
+      console.warn("프로필 캐시 삭제 실패", err);
+  }
 
     navigate("/login");
   };
 
-  const previewSound = async () => {
-    //  미리듣기는 "플랜 완료 음악 on/off" 설정과 무관하게 항상 재생되게 했음
-    try {
-      const src = form.finish_sound || "/finish.mp3";
-      if (!previewAudioRef.current) {
-        previewAudioRef.current = new Audio(src);
-      } else {
-        previewAudioRef.current.pause();
-        previewAudioRef.current.currentTime = 0;
-        previewAudioRef.current.src = src;
-      }
-      previewAudioRef.current.volume = 0.9;
-      await previewAudioRef.current.play();
-    } catch (e) {
-      console.log("미리듣기 실패:", e);
-      alert("브라우저 정책 때문에 자동 재생이 막힐 수 있어요. 버튼을 다시 눌러주세요.");
+ const previewSound = async () => {
+  try {
+    const src = form.finish_sound || "/finish.mp3";
+
+    if (!previewAudioRef.current) {
+      previewAudioRef.current = new Audio(src);
+    } else {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      previewAudioRef.current.src = src;
     }
-  };
+
+    previewAudioRef.current.volume = 0.9;
+    await previewAudioRef.current.play();
+  } catch (err) {
+    console.warn("미리듣기 재생 실패", err);
+    alert(
+      "브라우저 정책으로 인해 소리가 바로 재생되지 않을 수 있어요.\n" +
+      "효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요."
+    );
+  }
+};
 
   const onSave = async () => {
     if (!profile?.id) return;
@@ -151,7 +157,9 @@ const MyPage = () => {
 
     try {
       localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
-    } catch {}
+    } catch (err) {
+     console.warn("프로필 캐시 저장 실패", err);
+    }
 
     alert("저장되었습니다.");
   };
@@ -210,7 +218,7 @@ const MyPage = () => {
 
         {/* 완료 음악 선택 */}
         <div className="row">
-          <span className="label">모두 완료시 폭죽 효과음</span>
+          <span className="label">모두 완료 효과음</span>
           <span className="value mypage-sound">
             <select
               value={form.finish_sound || "/finish.mp3"}
@@ -231,40 +239,6 @@ const MyPage = () => {
             >
               ▶ 미리듣기
             </button>
-          </span>
-        </div>
-
-        {/* 완료 음악 플레이 선택 */}
-        <div className="row">
-          <span className="label">위 효과음 설정</span>
-          <span className="value mypage-sound">
-            <label className="sound-toggle">
-              <input
-                type="checkbox"
-                checked={finishEnabled}
-                onChange={(e) => setFinishEnabled(e.target.checked)}
-              />
-              <span className="sound-toggle-text">
-                {finishEnabled ? "켜짐" : "꺼짐"}
-              </span>
-            </label>
-          </span>
-        </div>
-
-        {/* 효과음끄기추가 */}
-        <div className="row">
-          <span className="label">완료 버튼 효과음</span>
-          <span className="value mypage-sound">
-            <label className="sound-toggle">
-              <input
-                type="checkbox"
-                checked={sfxEnabled}
-                onChange={(e) => setSfxEnabled(e.target.checked)}
-              />
-              <span className="sound-toggle-text">
-                {sfxEnabled ? "켜짐" : "꺼짐"}
-              </span>
-            </label>
           </span>
         </div>
 
