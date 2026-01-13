@@ -15,7 +15,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   // 구글 로그인
-  // Login.jsx
   const getRedirectTo = () => {
     // 배포/터널 주소가 있으면 그걸 우선 사용
     const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
@@ -36,7 +35,6 @@ const Login = () => {
       alert(error.message);
     }
   };
-  
 
   // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
   useEffect(() => {
