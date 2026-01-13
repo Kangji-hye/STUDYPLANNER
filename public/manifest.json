@@ -5,18 +5,20 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ff7aa2",
+  "background_color": "#fff7fb",
   "theme_color": "#ff7aa2",
   "icons": [
     {
       "src": "/pwa-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/pwa-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/pwa-512x512-maskable.png",
