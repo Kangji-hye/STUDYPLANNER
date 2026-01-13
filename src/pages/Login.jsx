@@ -80,8 +80,12 @@ const Login = () => {
 
   return (
     <div className="auth-page">
-      <h2 className="auth-title">로그인</h2>
+      <h1 className="service-title">초등 스터디 플래너</h1>
+      <p className="service-desc">
+        매일의 학습을 스스로 계획하고 기록해요
+      </p>
 
+      {/* <h2 className="auth-title">로그인</h2> */}
       <img src="/logo.png" alt="로고" className="auth-logo" />
 
       <form onSubmit={onSubmit} className="auth-form">
