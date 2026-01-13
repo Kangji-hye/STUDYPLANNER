@@ -507,22 +507,42 @@
   font-size: var(--fs-footer);
   color: var(--muted);
 }
-
 .footer-links{
   display: flex;
   justify-content: center;
   gap: 12px;
   margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+/* 기본 상태: 전부 그레이 */
+.footer-links a,
+.footer-links span{
+  opacity: 0.6;
+  color: #555;
+  cursor: pointer;
 }
 
 .footer-links span{
-  cursor: pointer;
-  opacity: 0.7;
+    opacity: 0.3;
+  color: #555;}
+
+/* 마이페이지만 핑크 */
+.footer-links .footer-link-primary{
+  color: var(--primary);
+  opacity: 1;
+  font-weight: 500;
 }
 
-.footer-links span:hover{
-  opacity: 1;
+/* hover 효과도 마이페이지에만 */
+.footer-links .footer-link-primary:hover{
   text-decoration: underline;
+}
+
+/* 로그아웃은 hover해도 색 유지 */
+.footer-links a:not(.footer-link-primary):hover{
+  text-decoration: underline;
+  opacity: 0.7;
 }
 
 .footer-copy{

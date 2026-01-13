@@ -307,7 +307,8 @@
 }
 
 @media (max-height: 520px) {
-    width: 75%;
+  .auth-logo {
+    width: 70%;
     max-width: 70px;
     margin-bottom: 6px;
   }

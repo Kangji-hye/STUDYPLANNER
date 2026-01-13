@@ -767,9 +767,9 @@ function Planner() {
 
       <footer className="planner-footer-simple">
         <div className="footer-links">
-          {/* <span onClick={() => navigate("/planner")}>플래너홈</span> */}
-          <span onClick={() => navigate("/mypage")}>마이페이지</span> | 
-          <span onClick={handleLogout}>로그아웃</span>
+          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>마이페이지</a> 
+          <span>|</span> 
+          <a onClick={handleLogout}>로그아웃</a>
         </div>
 
         <div className="footer-copy">
