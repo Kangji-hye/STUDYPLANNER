@@ -15,25 +15,25 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   // 구글 로그인
-  const getRedirectTo = () => {
-    const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
-    return `${base}/planner`;
-  };
+  // const getRedirectTo = () => {
+  //   const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+  //   return `${base}/planner`;
+  // };
 
-  const googleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: getRedirectTo(),
-        queryParams: { access_type: "offline", prompt: "consent" },
-      },
-    });
+  // const googleLogin = async () => {
+  //   const { error } = await supabase.auth.signInWithOAuth({
+  //     provider: "google",
+  //     options: {
+  //       redirectTo: getRedirectTo(),
+  //       queryParams: { access_type: "offline", prompt: "consent" },
+  //     },
+  //   });
 
-    if (error) {
-      console.error("google oauth error:", error);
-      alert(error.message);
-    }
-  };
+  //   if (error) {
+  //     console.error("google oauth error:", error);
+  //     alert(error.message);
+  //   }
+  // };
 
   // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
   useEffect(() => {
@@ -116,10 +116,10 @@ const Login = () => {
           {loading ? "로그인 중..." : "로그인"}
         </button>
 
-        <button type="button" className="google-login-btn" onClick={googleLogin}>
+        {/* <button type="button" className="google-login-btn" onClick={googleLogin}>
           <img src="/google-icon.svg" alt="Google" />
           <span>구글로 로그인</span>
-        </button>
+        </button> */}
 
       </form>
 
