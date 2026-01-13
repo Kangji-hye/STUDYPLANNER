@@ -49,8 +49,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-
-
 * { box-sizing: border-box; }
 
 body {
@@ -67,7 +65,7 @@ body {
   width: min(980px, 92vw);      
   /* margin: 24px auto 60px; */
   margin: 0px auto;
-  padding: 22px 18px 26px;
+  /* padding: 22px 18px 26px; */
 }
 
 /* .preset-btn,
@@ -95,7 +93,8 @@ a:hover {
   border: 2px solid rgba(255,255,255,0.6);
   border-radius: 22px;
   box-shadow: var(--shadow);
-  padding: 18px;
+  /* padding: 18px; */
+  padding: 30px;
 }
 
 input {
