@@ -150,10 +150,10 @@ const Login = () => {
           <span>구글로 로그인</span>
         </button>
 
-        <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
+        {/* <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
           <img src="/kakao-icon.svg" alt="Kakao" />
           <span>카카오로 로그인</span>
-        </button>
+        </button> */}
 
       </form>
 
