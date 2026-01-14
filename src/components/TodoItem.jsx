@@ -64,7 +64,7 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
             onToggle(t);
           }}
         >
-          {t.completed ? "취소" : "등록"}
+          {t.completed ? "취소" : "완료"}
         </button>
 
       </li>
