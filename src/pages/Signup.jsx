@@ -170,12 +170,14 @@ const Signup = () => {
         >
           {loading ? "가입 중..." : "가입하기"}
         </button>
-        
       </form>
 
       <p className="auth-foot">
         이미 계정이 있나요? <Link to="/login">로그인</Link>
       </p>
+
+      
+        
     </div>
   );
 };

@@ -10,6 +10,7 @@ import ResetPassword from "./pages/ResetPassword";
 
 import MyPage from "./pages/MyPage";
 import Planner from "./pages/Planner";
+import AuthCallback from "./pages/AuthCallback";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
@@ -28,6 +29,8 @@ const App = () => {
             <Route path="/find" element={<Find />} />
             <Route path="/reset" element={<ResetPassword />} />
           </Route>
+
+           <Route path="/auth/callback" element={<AuthCallback />} />
 
           <Route element={<AppLayout />}>
             <Route
@@ -49,6 +52,7 @@ const App = () => {
           </Route>
 
           <Route path="/" element={<Navigate to="/planner" replace />} />
+
         </Routes>
       </BrowserRouter>
     </SoundSettingsProvider>

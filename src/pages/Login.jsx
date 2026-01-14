@@ -35,6 +35,31 @@ const Login = () => {
     }
   };
 
+  // 카카오 로그인
+  const getBaseUrl = () => {
+    return import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+  };
+
+  // OAuth는 콜백 라우트로 보내는 걸 추천
+  const getOAuthRedirectTo = () => {
+    const base = getBaseUrl();
+    return `${base}/auth/callback?next=/planner`;
+  };
+
+  const kakaoLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "kakao",
+      options: {
+        redirectTo: getOAuthRedirectTo(),
+      },
+    });
+
+    if (error) {
+      console.error("kakao oauth error:", error);
+      alert(error.message);
+    }
+  };
+
   // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
   useEffect(() => {
     try {
@@ -123,6 +148,11 @@ const Login = () => {
         <button type="button" className="google-login-btn" onClick={googleLogin}>
           <img src="/google-icon.svg" alt="Google" />
           <span>구글로 로그인</span>
+        </button>
+
+        <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
+          <img src="/kakao-icon.svg" alt="Kakao" />
+          <span>카카오로 로그인</span>
         </button>
 
       </form>
