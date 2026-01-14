@@ -1,15 +1,10 @@
 /* src/layouts/AppLayout.css */
-/* #root{
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-} */
 
 .app-shell{
-  /* width: min(980px, 92vw); */
-  /* width: min(980px); */
-  margin: 24px auto 60px;
-  padding: 22px 18px 26px;
+  /* margin: 24px auto 60px; */
+  margin: 10px auto 60px;
+  /* padding: 22px 18px 26px; */
+  padding: 0 18px 26px;
 
   background: rgba(255,255,255,0.75);
   backdrop-filter: blur(6px);
@@ -18,3 +13,9 @@
   box-shadow: var(--shadow);
 }
 
+@media (max-width: 480px) {
+  .app-shell{
+    margin: 5px auto 30px;
+    padding: 18px 14px 22px;
+  }
+}

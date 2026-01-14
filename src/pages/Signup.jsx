@@ -127,7 +127,7 @@ const Signup = () => {
 
         <input
           type="text"
-          placeholder="닉네임 (플래너 상단에 표시됩니다)"
+          placeholder="닉네임 (플래너 표시)"
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
@@ -170,6 +170,7 @@ const Signup = () => {
         >
           {loading ? "가입 중..." : "가입하기"}
         </button>
+        
       </form>
 
       <p className="auth-foot">

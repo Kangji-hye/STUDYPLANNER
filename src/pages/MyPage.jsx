@@ -11,6 +11,7 @@ const FINISH_SOUNDS = [
   { label: "요란한 축하", value: "/finish1.mp3" },
   { label: "환호성과 박수", value: "/finish2.mp3" },
   { label: "웅장한 빵빠레", value: "/finish3.mp3" },
+  { label: "띵띵 스웨덴 리믹스", value: "/finish4.mp3" },
 ];
 
 const MyPage = () => {

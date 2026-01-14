@@ -19,24 +19,18 @@
   --fs-base: 1.5rem;
   --fs-title: 1.4rem;
   --fs-app-title: 1.6rem;
-
   --fs-weather: 1.05rem;
   --fs-kid: 1.05rem;
   --fs-today: 1.02rem;
-
   --fs-list: 1.1rem;
-
   --fs-input: 1.05rem;
   --fs-button: 1.02rem;
-
   --fs-small: 0.9rem;
   --fs-list-btn: 0.95rem;
-
   --fs-modal-help: 0.9rem;
-
   --fs-footer: 0.8rem;
   --fs-footer-copy: 0.8rem;
-  
+
   font-size: var(--fs-base);
 
   line-height: 1.6;
@@ -65,7 +59,7 @@ body {
   width: min(980px, 92vw);      
   /* margin: 24px auto 60px; */
   margin: 0px auto;
-  /* padding: 22px 18px 26px; */
+  padding: 22px 18px 26px;
 }
 
 /* .preset-btn,
