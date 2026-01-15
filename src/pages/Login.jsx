@@ -146,14 +146,14 @@ const Login = () => {
         </button>
 
         <div className="oauth-buttons">
-          <button type="button" className="google-login-btn" onClick={googleLogin}>
-            <img src="/google-icon.svg" alt="Google" />
-            <span>구글로 로그인</span>
-          </button>
-
           <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
             <img src="/kakao-icon.svg" alt="Kakao" />
             <span>카카오 로그인</span>
+          </button>
+
+          <button type="button" className="google-login-btn" onClick={googleLogin}>
+            <img src="/google-icon.svg" alt="Google" />
+            <span>구글로 로그인</span>
           </button>
         </div>
       </form>
