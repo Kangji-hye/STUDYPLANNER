@@ -390,7 +390,7 @@ li button:hover {
     --fs-input: 1.0rem;    /* input, select */
     --fs-button: 0.98rem;  /* 버튼 */
     --fs-small: 0.9rem;    /* 라벨, 보조 텍스트 */
-    --fs-kid: 1.5rem;
+    --fs-kid: 1.2rem;
 
     width: 94vw;
     /* margin-top: 16px; */
