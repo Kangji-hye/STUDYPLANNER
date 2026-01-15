@@ -225,29 +225,17 @@ function Planner() {
 
   // 초기 로딩
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  const loadAll = async () => {
-    if (!mounted) return;
-    setLoading(true);
+    const loadAll = async () => {
+      if (!mounted) return;
+      setLoading(true);
 
-      // 카캌오 로그인 관련, 리다이렉트 직후 세션이 붙을 시간을 잠깐 준다
-      const session = await waitForAuthSession({ timeoutMs: 5000 });
-
-      // 세션이 끝까지 없으면 로그인으로
-      if (!session?.user) {
-        if (!mounted) return;
-        setLoading(false);
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      // 확정 사용자 정보(검증)
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         if (!mounted) return;
         setLoading(false);
-        navigate("/login", { replace: true });
+        navigate("/login");
         return;
       }
 
