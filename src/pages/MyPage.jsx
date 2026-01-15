@@ -186,7 +186,18 @@ const MyPage = () => {
 
   return (
     <div className="mypage">
-      <h2 className="mypage-title">마이페이지</h2>
+      <div className="mypage-header">
+        <h2 className="mypage-title">마이페이지</h2>
+
+        <div className="mypage-qr-box">
+          <img
+            src="/qr.png"
+            alt="플래너 QR 코드"
+            className="mypage-qr"
+          />
+          <span className="mypage-qr-caption">스터디플래너</span>
+        </div>
+      </div>
 
       <div className="mypage-card">
         <div className="row">
