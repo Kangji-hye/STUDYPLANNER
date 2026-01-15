@@ -20,7 +20,7 @@
   --fs-title: 1.4rem;
   --fs-app-title: 1.6rem;
   --fs-weather: 1.05rem;
-  --fs-kid: 1.05rem;
+  --fs-kid: 1.1rem;
   --fs-today: 1.02rem;
   --fs-list: 1.1rem;
   --fs-input: 1.05rem;
@@ -401,14 +401,15 @@ li button:hover {
     padding: 14px;
     border-radius: 18px;
   }
-
- body {
+  
+  body {
     font-family: -apple-system, BlinkMacSystemFont,
       "Apple SD Gothic Neo",
       "Noto Sans KR",
       "Malgun Gothic",
       system-ui, sans-serif;
   }
+  .app-title{ font-size: 1.6rem; }
 
   .todo-item {
     font-family: -apple-system, BlinkMacSystemFont,
@@ -421,7 +422,6 @@ li button:hover {
     font-size: 1rem;
   }
 
-  .app-title{ font-size: 1.8rem; }
   .weather{ font-size: 0.98rem; }
 }
 

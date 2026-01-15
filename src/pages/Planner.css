@@ -557,9 +557,6 @@
 }
 
 @media (max-width: 480px) {
-  .app-title {
-    font-size: 1.3rem; 
-  }
   .todo-bar-inputs {
     flex-direction: column;
   }
