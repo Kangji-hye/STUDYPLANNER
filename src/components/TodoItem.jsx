@@ -37,7 +37,7 @@ const TodoItem = ({ t, onToggle, onDelete }) => {
         >
           {t.completed && <span>⭐</span>}
 
-          <span
+          <span className="todo-text"
             style={{
               textDecoration: t.completed ? "line-through" : "none",
               color: t.completed ? "#9ca3af" : "#2b2b2b",

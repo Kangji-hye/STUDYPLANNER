@@ -307,7 +307,12 @@ li button:hover {
   background: rgba(225, 29, 72, 0.08);
 }
 
-
+/* 공백없는 할일 텍스트 자동줄바꿈 */
+.todo-text {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap:anywhere
+}
 
 .todo-input-box {
   display: flex;
@@ -331,6 +336,7 @@ li button:hover {
 .todo-input-row input {
   flex: 1;
 }
+
 
 /* 완료 버튼 : 흐리고 연하게  */
 .todo-done-btn.done {
