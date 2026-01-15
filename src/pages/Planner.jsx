@@ -19,6 +19,29 @@ const EMOJI_POOL = [
   "🦄", "🐰", "🐶", "🐱", "🌈",
 ];
 
+// ✅ (1) EMOJI_POOL 아래, Planner() 위에 추가
+async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
+  // 이미 세션이 있으면 즉시 반환
+  const { data: s1 } = await supabase.auth.getSession();
+  if (s1?.session) return s1.session;
+
+  // 소셜 로그인 직후: auth state change를 잠깐 기다림
+  return await new Promise((resolve) => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        data.subscription.unsubscribe();
+        resolve(session);
+      }
+    });
+
+    setTimeout(() => {
+      data.subscription.unsubscribe();
+      resolve(null);
+    }, timeoutMs);
+  });
+}
+
+
 function Planner() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -202,17 +225,29 @@ function Planner() {
 
   // 초기 로딩
   useEffect(() => {
-    let mounted = true;
+  let mounted = true;
 
-    const loadAll = async () => {
-      if (!mounted) return;
-      setLoading(true);
+  const loadAll = async () => {
+    if (!mounted) return;
+    setLoading(true);
 
+      // 카캌오 로그인 관련, 리다이렉트 직후 세션이 붙을 시간을 잠깐 준다
+      const session = await waitForAuthSession({ timeoutMs: 5000 });
+
+      // 세션이 끝까지 없으면 로그인으로
+      if (!session?.user) {
+        if (!mounted) return;
+        setLoading(false);
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      // 확정 사용자 정보(검증)
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         if (!mounted) return;
         setLoading(false);
-        navigate("/login");
+        navigate("/login", { replace: true });
         return;
       }
 
