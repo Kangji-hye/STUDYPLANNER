@@ -1,10 +1,10 @@
-<!-- public/kakao-icon.svg : 말풍선만, 꽉 찬 버전 -->
+<!-- public/kakao-icon.svg : 말풍선만 / 우측 +2px, 위쪽 -3px (누적 보정) -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
   <!-- 배경 -->
   <rect width="100" height="100" rx="22" fill="#FEE500"></rect>
 
-  <!-- 카카오 말풍선 -->
-  <path d="M50 22
+  <!-- 카카오 말풍선 (미세 위치 보정 완료) -->
+  <path transform="translate(2 -3)" d="M50 22
        C28 22 10 36 10 52
        c0 10 7 18 18 23
        l-4 13
