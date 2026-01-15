@@ -10,7 +10,6 @@ const ResetPassword = () => {
   const [pw2, setPw2] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ 링크로 들어왔는지(세션이 있는지) 확인
   useEffect(() => {
     const check = async () => {
       const { data } = await supabase.auth.getSession();

@@ -151,18 +151,23 @@ const Login = () => {
             <span>구글로 로그인</span>
           </button>
 
-          {/* <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
+          <button type="button" className="kakao-login-btn" onClick={kakaoLogin}>
             <img src="/kakao-icon.svg" alt="Kakao" />
             <span>카카오 로그인</span>
-          </button> */}
+          </button>
         </div>
-
-
       </form>
 
-      <p className="auth-foot">
-        계정이 없나요? <Link to="/signup">회원가입</Link>
-      </p>
+      <div className="auth-foot-row">
+        <Link to="/signup" className="auth-foot-link">
+          회원가입
+        </Link>
+
+        <Link to="/find" className="auth-foot-link">
+          비밀번호찾기
+        </Link>
+      </div>
+
     </div>
   );
 };

@@ -9,13 +9,9 @@
 /* 기본 순서 */
 .service-title { order: 1; }
 .service-desc  { order: 2; }
-.auth-title    { order: 3; }
-.auth-logo     { order: 4; }
-.auth-form     { order: 5; }
-.auth-foot     { order: 6; }
-
-
-
+.auth-logo     { order: 3; }
+.auth-form     { order: 4; }
+.auth-foot-row { order: 5; }
 
 .service-title {
   margin: 0;
@@ -189,6 +185,26 @@
   flex: 1 1 100%;
 }
 
+.auth-foot-row{
+  width: 100%;
+  display: flex;
+  justify-content: space-between; /* 왼쪽 / 오른쪽 */
+  align-items: center;
+  margin-top: 14px;
+  padding: 0 6px;
+}
+
+/* 링크 스타일 */
+.auth-foot-link{
+  font-size: 0.95rem;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.auth-foot-link:hover{
+  text-decoration: underline;
+}
+
 @media (max-width: 1024px){
   .auth-logo{
     display: block;
@@ -323,5 +339,13 @@
 
   .service-title {
     font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 420px){
+  .auth-foot-row{
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
   }
 }
