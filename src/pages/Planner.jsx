@@ -7,7 +7,6 @@ import supabase from "../supabaseClient";
 import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
-// import { useSoundSettings } from "../context/SoundSettingsContext";
 
 // 이모지 풀
 const EMOJI_POOL = [
@@ -19,13 +18,10 @@ const EMOJI_POOL = [
   "🦄", "🐰", "🐶", "🐱", "🌈",
 ];
 
-// ✅ (1) EMOJI_POOL 아래, Planner() 위에 추가
 async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
-  // 이미 세션이 있으면 즉시 반환
   const { data: s1 } = await supabase.auth.getSession();
   if (s1?.session) return s1.session;
 
-  // 소셜 로그인 직후: auth state change를 잠깐 기다림
   return await new Promise((resolve) => {
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
@@ -41,7 +37,6 @@ async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
   });
 }
 
-
 function Planner() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -50,7 +45,6 @@ function Planner() {
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
-  // const { sfxEnabled } = useSoundSettings();
 
   // 프로필
   const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
@@ -80,10 +74,93 @@ function Planner() {
 
   // 내 목록 모달
   const [showMyListModal, setShowMyListModal] = useState(false);
-  const [myListMode, setMyListMode] = useState("load"); // 'save' | 'load'
+  const [myListMode, setMyListMode] = useState("load");
   const [loadReplace, setLoadReplace] = useState(false);
   const [busyMyList, setBusyMyList] = useState(false);
   const [hasMyList, setHasMyList] = useState(false);
+
+  // ============================
+  // 오늘 함께 해낸 친구들(명예의 전당)
+  // ============================
+  const [hof, setHof] = useState([]);
+  const [hofLoading, setHofLoading] = useState(false);
+
+  // KST 기준 YYYY-MM-DD (한국 날짜 고정)
+  const getKstDayKey = () => {
+    const parts = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const d = parts.find((p) => p.type === "day")?.value;
+    return `${y}-${m}-${d}`;
+  };
+
+  const fetchHallOfFame = async (dayKey) => {
+    setHofLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("hall_of_fame")
+        .select("user_id, nickname, finished_at")
+        .eq("day_key", dayKey)
+        .order("finished_at", { ascending: true });
+
+      if (error) throw error;
+      setHof(data ?? []);
+    } catch (err) {
+      console.error("fetchHallOfFame error:", err);
+      setHof([]);
+    } finally {
+      setHofLoading(false);
+    }
+  };
+
+  // 오늘 완료 기록(중복은 day_key+user_id 유니크로 자동 방지)
+  const recordTodayCompletion = async () => {
+    if (!me?.id) return;
+
+    const dayKey = getKstDayKey();
+    const nickname = profile?.nickname ?? "익명";
+
+    try {
+      // 이미 있으면 무시(= 최초 완료 시간 유지)
+      const { error } = await supabase
+        .from("hall_of_fame")
+        .upsert(
+          [
+            {
+              day_key: dayKey,
+              user_id: me.id,
+              nickname,
+              finished_at: new Date().toISOString(),
+            },
+          ],
+          { onConflict: "day_key,user_id", ignoreDuplicates: true }
+        );
+
+      if (error) throw error;
+
+      await fetchHallOfFame(dayKey);
+    } catch (err) {
+      console.error("recordTodayCompletion error:", err);
+    }
+  };
+
+  const removeTodayCompletion = async () => {
+    if (!me?.id) return;
+
+    const dayKey = getKstDayKey();
+    try {
+      await supabase.from("hall_of_fame").delete().eq("day_key", dayKey).eq("user_id", me.id);
+      await fetchHallOfFame(dayKey);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // 날짜
   const formatToday = () => {
@@ -102,7 +179,9 @@ function Planner() {
     const pool = available.length > 0 ? available : EMOJI_POOL;
     const selected = pool[Math.floor(Math.random() * pool.length)];
 
-    setUsedEmojis((prev) => (available.length > 0 ? [...prev, selected] : [selected]));
+    setUsedEmojis((prev) =>
+      available.length > 0 ? [...prev, selected] : [selected]
+    );
     return selected;
   };
 
@@ -129,11 +208,11 @@ function Planner() {
   };
 
   useEffect(() => {
-  const src = profile?.finish_sound || "/finish.mp3";
-  finishAudioRef.current = new Audio(src);
-  finishAudioRef.current.volume = 0.9;
-  finishAudioRef.current.preload = "auto";
-}, [profile?.finish_sound]);
+    const src = profile?.finish_sound || "/finish.mp3";
+    finishAudioRef.current = new Audio(src);
+    finishAudioRef.current.volume = 0.9;
+    finishAudioRef.current.preload = "auto";
+  }, [profile?.finish_sound]);
 
   // 스탑워치
   const [isRunning, setIsRunning] = useState(false);
@@ -146,12 +225,14 @@ function Planner() {
   }, []);
 
   const formatTime = (ms) => {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  const centiseconds = Math.floor((ms % 1000) / 10);
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const centiseconds = Math.floor((ms % 1000) / 10);
 
-  return `${minutes}분 ${String(seconds).padStart(2, "0")}초 ${String(centiseconds).padStart(2, "0")}`;
+    return `${minutes}분 ${String(seconds).padStart(2, "0")}초 ${String(
+      centiseconds
+    ).padStart(2, "0")}`;
   };
 
   const startStopwatch = () => {
@@ -187,13 +268,11 @@ function Planner() {
   const fetchTodos = async (userId) => {
     const { data, error } = await supabase
       .from("todos")
-      .select("id, user_id, title, completed, created_at, template_item_key, source_set_item_key")
-      // .eq("user_id", userId)
-      // .order("created_at", { ascending: false });
+      .select(
+        "id, user_id, title, completed, created_at, template_item_key, source_set_item_key"
+      )
       .eq("user_id", userId)
-      // template_item_key 나중
       .order("template_item_key", { ascending: true, nullsFirst: true })
-      // 내 입력은 최신이 위로 보이게
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -225,16 +304,15 @@ function Planner() {
 
   // 초기 로딩
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  const loadAll = async () => {
-    if (!mounted) return;
-    setLoading(true);
+    const loadAll = async () => {
+      if (!mounted) return;
+      setLoading(true);
 
-      // 카캌오 로그인 관련, 리다이렉트 직후 세션이 붙을 시간을 잠깐 준다
+      // 카카오 로그인
       const session = await waitForAuthSession({ timeoutMs: 5000 });
 
-      // 세션이 끝까지 없으면 로그인으로
       if (!session?.user) {
         if (!mounted) return;
         setLoading(false);
@@ -242,7 +320,6 @@ function Planner() {
         return;
       }
 
-      // 확정 사용자 정보(검증)
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
         if (!mounted) return;
@@ -301,6 +378,9 @@ function Planner() {
       await fetchTodos(user.id);
       await fetchMySingleListInfo(user.id);
 
+      // ✅ 오늘 함께 해낸 친구들 불러오기
+      await fetchHallOfFame(getKstDayKey());
+
       if (!mounted) return;
       setLoading(false);
     };
@@ -311,7 +391,6 @@ function Planner() {
       mounted = false;
     };
   }, [navigate]);
-
 
   const importWinterTodos = async () => {
     if (!me?.id) return;
@@ -342,12 +421,10 @@ function Planner() {
         return;
       }
 
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, {
-          onConflict: "user_id,template_item_key",
-          ignoreDuplicates: true,
-        });
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        onConflict: "user_id,template_item_key",
+        ignoreDuplicates: true,
+      });
 
       if (upErr) throw upErr;
 
@@ -478,12 +555,10 @@ function Planner() {
         return;
       }
 
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, {
-          onConflict: "user_id,source_set_item_key",
-          ignoreDuplicates: true,
-        });
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        onConflict: "user_id,source_set_item_key",
+        ignoreDuplicates: true,
+      });
 
       if (upErr) throw upErr;
 
@@ -520,7 +595,9 @@ function Planner() {
           source_set_item_key: null,
         },
       ])
-      .select("id, user_id, title, completed, created_at, template_item_key, source_set_item_key")
+      .select(
+        "id, user_id, title, completed, created_at, template_item_key, source_set_item_key"
+      )
       .single();
 
     if (error) {
@@ -551,7 +628,9 @@ function Planner() {
       .from("todos")
       .update({ completed: !item.completed })
       .eq("id", item.id)
-      .select("id, user_id, title, completed, created_at, template_item_key, source_set_item_key")
+      .select(
+        "id, user_id, title, completed, created_at, template_item_key, source_set_item_key"
+      )
       .single();
 
     if (error) {
@@ -567,6 +646,11 @@ function Planner() {
     if (!wasAllCompleted && isAllCompleted) {
       fireConfetti();
       playFinishSound();
+      recordTodayCompletion(); // ✅ 오늘 함께 해낸 친구들에 등록
+    }
+
+    if (wasAllCompleted && !isAllCompleted) {
+      removeTodayCompletion();
     }
   };
 
@@ -588,9 +672,7 @@ function Planner() {
   const deleteAllTodos = async () => {
     if (!me?.id) return;
 
-    const ok = window.confirm(
-      "정말 모든 할 일을 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
-    );
+    const ok = window.confirm("정말 모든 할 일을 삭제할까요?\n이 작업은 되돌릴 수 없습니다.");
     if (!ok) return;
 
     const { error } = await supabase.from("todos").delete().eq("user_id", me.id);
@@ -600,6 +682,8 @@ function Planner() {
       return;
     }
     setTodos([]);
+
+    await removeTodayCompletion();
   };
 
   // 하단 로그아웃
@@ -641,7 +725,9 @@ function Planner() {
           </div>
 
           <div className="date-stack">
-            <div className="today" title="오늘 날짜와 요일">{formatToday()}</div>
+            <div className="today" title="오늘 날짜와 요일">
+              {formatToday()}
+            </div>
           </div>
         </div>
       </header>
@@ -649,7 +735,6 @@ function Planner() {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
-          
           <button
             className="preset-btn  preset-btn-primary"
             onClick={importWinterTodos}
@@ -657,7 +742,7 @@ function Planner() {
           >
             {importingWinter ? "불러오는 중..." : "📂 방학 숙제 불러오기"}
           </button>
-        
+
           <div className="mylist-actions">
             <button className="preset-btn preset-btn-ghost" onClick={openMyListLoadModal}>
               📂 내 목록 불러오기 {hasMyList ? "" : "(없음)"}
@@ -669,7 +754,7 @@ function Planner() {
           </button>
 
           <button
-            className="preset-btn mini-danger-btn" 
+            className="preset-btn mini-danger-btn"
             title="현재 목록 전체 삭제"
             onClick={deleteAllTodos}
           >
@@ -687,9 +772,6 @@ function Planner() {
               if (e.key === "Enter" && todo.trim()) addTodo();
             }}
           />
-          {/* <button className="todo-add-btn" onClick={addTodo} disabled={!todo.trim()}>
-            입력
-          </button> */}
           <button
             className={`todo-add-btn ${todo.trim() ? "active" : ""}`}
             onClick={addTodo}
@@ -739,6 +821,31 @@ function Planner() {
         </div>
       </div>
 
+      {/* 오늘 함께 해낸 친구들 */}
+      <div className="hof-card">
+        <div className="hof-head">
+          <span className="hof-title">오늘 함께 해낸 친구들</span>
+          <span className="hof-sub">{getKstDayKey()}</span>
+        </div>
+
+        {hofLoading ? (
+          <div className="hof-empty">불러오는 중...</div>
+        ) : hof.length === 0 ? (
+          <div className="hof-empty">첫 번째로 이름을 올려볼까?</div>
+        ) : (
+          <div className="hof-list">
+            {hof.map((x, idx) => (
+              <div key={`${x.user_id}-${x.finished_at}`} className="hof-row">
+                <span className="hof-rank">
+                  {idx === 0 ? "👑" : idx === 1 ? "🥇" : idx === 2 ? "🥈" : "⭐"}
+                </span>
+                <span className="hof-name">{x.nickname}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="stopwatch">
         <span className="title">스탑워치</span>
         <div className="time">{formatTime(elapsedMs)}</div>
@@ -777,9 +884,7 @@ function Planner() {
               </div>
             ) : (
               <div className="modal-body">
-                <div className="modal-help">
-                  저장된 내 목록을 현재 플래너로 가져옵니다.
-                </div>
+                <div className="modal-help">저장된 내 목록을 현재 플래너로 가져옵니다.</div>
 
                 <label className="modal-check">
                   <input
@@ -802,16 +907,15 @@ function Planner() {
 
       <footer className="planner-footer-simple">
         <div className="footer-links">
-          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>마이페이지</a> 
-          <span>|</span> 
+          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
+            마이페이지
+          </a>
+          <span>|</span>
           <a onClick={handleLogout}>로그아웃</a>
         </div>
 
-        <div className="footer-copy">
-          © {new Date().getFullYear()} Study Planner
-        </div>
+        <div className="footer-copy">© {new Date().getFullYear()} Study Planner</div>
       </footer>
-
     </div>
   );
 }

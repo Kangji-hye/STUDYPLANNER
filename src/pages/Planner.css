@@ -201,13 +201,18 @@
 
 /* finish 영역 */
 .finish {
-  margin: 16px 0;
+  background: var(--bg);
+  margin:20px 0 10px 0;
+  padding:10px 20px 20px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  /* border-bottom: 1px dashed var(--line) */
 }
 
 .finish .title {
   font-weight: 700;
   font-family: "Poor Story";
-  font-size: 1.25rem;
+  font-size: 1.05rem;
 }
 
 .finish input {
@@ -239,7 +244,7 @@
   font-weight: 800;
   font-family: "Poor Story";
   white-space: nowrap;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
 }
 
 .stopwatch .time {
@@ -556,6 +561,69 @@
   opacity: 0.6;
 }
 
+/* ===== 오늘 함께 해낸 친구들(명예의 전당) ===== */
+.hof-card{
+  margin: 16px 0 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.85);
+  border: 1px dashed var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hof-head{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hof-title{
+  font-family: "Poor Story";
+  font-weight: 900;
+  font-size: 1.2rem;
+}
+
+.hof-sub{
+  font-size: var(--fs-small);
+  color: var(--muted);
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.hof-empty{
+  color: var(--muted);
+  font-size: var(--fs-small);
+  padding: 8px 2px 2px;
+}
+
+.hof-list{
+  display: grid;
+  gap: 8px;
+}
+
+.hof-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(241,215,230,0.7);
+}
+
+.hof-rank{
+  width: 28px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.hof-name{
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+
 @media (max-width: 480px) {
   .todo-bar-inputs {
     flex-direction: column;
@@ -578,6 +646,11 @@
     border-radius: 14px;
     background: rgba(255,255,255,0.7);
   }
+}
+
+@media (max-width: 480px){
+  .hof-title{ font-size: 1.25rem; }
+  .hof-name{ font-size: 1.1rem; }
 }
 
 /* 폴드 외부화면/초소형(약 360px 이하) */

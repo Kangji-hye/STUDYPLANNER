@@ -62,17 +62,6 @@ body {
   padding: 22px 18px 26px;
 }
 
-/* .preset-btn,
-.stopwatch .title,
-.finish .title,
-.top-header,
-.top-row,
-.sub-row{
- /*  font-family: "Do Hyeon"; 
-font-family: "Poor Story"; 
-font-weight: 800;  
-} */
-
 a {
   color: var(--primary);
   text-decoration: none;
@@ -367,20 +356,6 @@ li button:hover {
 /* .goal{} */
 
 .fillter button{margin-right:10px}
-
-.finish{
-  background: var(--bg);
-  margin:20px 0 10px 0;
-  padding:10px 20px 20px 20px;
-  border: 1px dashed var(--line);
-  border-radius: 16px;
-  /* border-bottom: 1px dashed var(--line) */
-}
-
-/* .stopwatch span {
-  padding: 0 10px;
-  white-space: nowrap;  
-} */
 
 
 @media (max-width: 480px) {
