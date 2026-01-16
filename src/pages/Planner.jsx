@@ -8,7 +8,9 @@ import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 
+// =======================
 // 이모지 풀
+// =======================
 const EMOJI_POOL = [
   "🚀", "🛸", "⚡", "🔥", "💖",
   "🚗", "🏎️", "🚓", "🚒", "🚜",
@@ -18,7 +20,9 @@ const EMOJI_POOL = [
   "🦄", "🐰", "🐶", "🐱", "🌈",
 ];
 
+// =======================
 // KST 기준 YYYY-MM-DD
+// =======================
 const toKstDayKey = (dateObj = new Date()) => {
   const parts = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "Asia/Seoul",
@@ -52,19 +56,20 @@ async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
   });
 }
 
+// =======================
 // 달력 그리드
+// =======================
 const buildMonthGrid = (year, monthIndex) => {
   const first = new Date(year, monthIndex, 1);
   const last = new Date(year, monthIndex + 1, 0);
 
-  const startDay = first.getDay(); // 0(일)~6(토)
+  const startDay = first.getDay();
   const totalDays = last.getDate();
 
   const cells = [];
   for (let i = 0; i < startDay; i++) cells.push(null);
   for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, monthIndex, d));
   while (cells.length % 7 !== 0) cells.push(null);
-
   return cells;
 };
 
@@ -80,11 +85,15 @@ function Planner() {
   const [filter, setFilter] = useState("all");
   const [usedEmojis, setUsedEmojis] = useState([]);
 
+  // =======================
   // 데일리: 선택 날짜
+  // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
+  // =======================
   // 달력 모달
+  // =======================
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
@@ -95,7 +104,9 @@ function Planner() {
     [calMonth.y, calMonth.m]
   );
 
-  // 프로필
+  // =======================
+  // 프로필(캐시)
+  // =======================
   const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
   const [profile, setProfile] = useState(() => {
     try {
@@ -118,19 +129,51 @@ function Planner() {
     todosRef.current = todos;
   }, [todos]);
 
-  // 방학 숙제 불러오기 상태
-  const [importingWinter, setImportingWinter] = useState(false);
+  // =======================
+  // 샘플 숙제 불러오기 모달 (테이블 3개 버전)
+  // =======================
+  const [showSampleModal, setShowSampleModal] = useState(false);
+  const [sampleModeReplace, setSampleModeReplace] = useState(false); // true면 교체
+  const [importingSample, setImportingSample] = useState(false);
 
+  // ✅ 여기서 key는 "테이블 종류"로 고정
+  const SAMPLE_SETS = [
+    { key: "vacation", label: "방학 샘플" },
+    { key: "weekday", label: "평일 샘플" },
+    { key: "weekend", label: "주말 샘플" },
+  ];
+
+  const SAMPLE_TABLE_BY_KEY = {
+    vacation: "todo_templates_vacation",
+    weekday: "todo_templates_weekday",
+    weekend: "todo_templates_weekend",
+  };
+
+  const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
+
+  const openSampleModal = () => {
+    setSampleModeReplace(false);
+    setSelectedSampleKey(SAMPLE_SETS[0].key);
+    setShowSampleModal(true);
+  };
+
+  const closeSampleModal = () => {
+    if (importingSample) return;
+    setShowSampleModal(false);
+  };
+
+  // =======================
   // 내 목록 모달
+  // =======================
   const [showMyListModal, setShowMyListModal] = useState(false);
   const [myListMode, setMyListMode] = useState("load");
   const [loadReplace, setLoadReplace] = useState(false);
   const [busyMyList, setBusyMyList] = useState(false);
   const [hasMyList, setHasMyList] = useState(false);
 
-  // ============================
+  // =======================
   // 명예의 전당(선택 날짜 기준)
-  // ============================
+  // =======================
   const [hof, setHof] = useState([]);
   const [hofLoading, setHofLoading] = useState(false);
 
@@ -164,8 +207,8 @@ function Planner() {
           [{ day_key: dayKey, user_id: me.id, nickname, finished_at: new Date().toISOString() }],
           { onConflict: "day_key,user_id", ignoreDuplicates: true }
         );
-      if (error) throw error;
 
+      if (error) throw error;
       await fetchHallOfFame(dayKey);
     } catch (err) {
       console.error("recordCompletionForDay error:", err);
@@ -189,7 +232,9 @@ function Planner() {
     }
   };
 
-  // 선택 날짜 표시
+  // =======================
+  // 날짜 표시
+  // =======================
   const formatSelectedKorean = () => {
     const d = selectedDate;
     const days = ["일", "월", "화", "수", "목", "금", "토"];
@@ -200,7 +245,9 @@ function Planner() {
     return `${y}-${m}-${dd} (${day})`;
   };
 
+  // =======================
   // 랜덤 이모지
+  // =======================
   const getRandomEmoji = () => {
     const available = EMOJI_POOL.filter((emoji) => !usedEmojis.includes(emoji));
     const pool = available.length > 0 ? available : EMOJI_POOL;
@@ -210,7 +257,9 @@ function Planner() {
     return selected;
   };
 
-  // 폭죽
+  // =======================
+  // 폭죽 & 사운드
+  // =======================
   const fireConfetti = () => {
     confetti({
       particleCount: 140,
@@ -220,7 +269,6 @@ function Planner() {
     });
   };
 
-  // 사운드
   const playFinishSound = async () => {
     const audio = finishAudioRef.current;
     if (!audio) return;
@@ -239,9 +287,9 @@ function Planner() {
     finishAudioRef.current.preload = "auto";
   }, [profile?.finish_sound]);
 
-  // ============================
-  // 날짜별 todos 조회/CRUD
-  // ============================
+  // =======================
+  // 날짜별 todos 조회
+  // =======================
   const fetchTodos = async (userId, dayKey) => {
     const { data, error } = await supabase
       .from("todos")
@@ -249,6 +297,7 @@ function Planner() {
       .eq("user_id", userId)
       .eq("day_key", dayKey)
       .order("template_item_key", { ascending: true, nullsFirst: true })
+      .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -277,7 +326,9 @@ function Planner() {
     return { id: data?.id ?? null };
   };
 
+  // =======================
   // 초기 로딩
+  // =======================
   useEffect(() => {
     let mounted = true;
 
@@ -362,21 +413,42 @@ function Planner() {
     if (!me?.id) return;
     fetchTodos(me.id, selectedDayKey);
     fetchHallOfFame(selectedDayKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [selectedDayKey, me?.id]);
 
-  // 방학 숙제 불러오기(선택 날짜에 넣기)
-  const importWinterTodos = async () => {
+  // =======================
+  // 샘플 숙제 불러오기 실행(테이블 3개에서 조회)
+  // =======================
+  const importSampleTodos = async () => {
     if (!me?.id) return;
-    if (importingWinter) return;
+    if (importingSample) return;
+
+    const tableName = SAMPLE_TABLE_BY_KEY[selectedSampleKey];
+    if (!tableName) {
+      alert("샘플 테이블 설정이 올바르지 않습니다.");
+      return;
+    }
 
     try {
-      setImportingWinter(true);
+      setImportingSample(true);
 
+      // 교체 모드면: 해당 날짜 todos 싹 삭제 + 명예의 전당도 내려가기
+      if (sampleModeReplace) {
+        const { error: delErr } = await supabase
+          .from("todos")
+          .delete()
+          .eq("user_id", me.id)
+          .eq("day_key", selectedDayKey);
+
+        if (delErr) throw delErr;
+
+        await removeCompletionForDay(selectedDayKey);
+      }
+
+     //템플릿 조회: todo_templates_xxx 테이블에서 직접 읽음
       const { data: templates, error: tplErr } = await supabase
-        .from("todo_templates")
+        .from(tableName)
         .select("item_key, title, sort_order")
-        .eq("template_key", "winter")
         .order("sort_order", { ascending: true });
 
       if (tplErr) throw tplErr;
@@ -385,37 +457,52 @@ function Planner() {
         .map((x) => ({
           user_id: me.id,
           day_key: selectedDayKey,
-          template_item_key: `winter:${String(x.item_key ?? "").trim()}`,
+         
+          template_item_key: `${selectedSampleKey}:${String(x.item_key ?? "").trim()}`,
           title: String(x.title ?? "").trim(),
           completed: false,
         }))
         .filter((x) => x.template_item_key && x.title);
 
-      const { error: upErr } = await supabase
+      if (rows.length === 0) {
+        alert("샘플 템플릿이 비어있습니다. Supabase 샘플 테이블을 확인해주세요.");
+        return;
+      }
+
+       const { error: upErr } = await supabase
         .from("todos")
-        .upsert(rows, { onConflict: "user_id,day_key,template_item_key", ignoreDuplicates: true });
+        .upsert(rows, {
+          onConflict: "user_id,day_key,template_item_key",
+          ignoreDuplicates: true,
+        });
 
       if (upErr) throw upErr;
 
       await fetchTodos(me.id, selectedDayKey);
-      alert("방학 숙제를 불러왔습니다.");
+      alert(sampleModeReplace ? "샘플 숙제로 교체했습니다." : "샘플 숙제를 추가했습니다.");
+      setShowSampleModal(false);
     } catch (err) {
-      console.error("importWinterTodos error:", err);
-      alert(err?.message ?? "방학 숙제 불러오기 중 오류가 발생했습니다.");
+      console.error("importSampleTodos error:", err);
+      alert(err?.message ?? "샘플 숙제 불러오기 중 오류가 발생했습니다.");
     } finally {
-      setImportingWinter(false);
+      setImportingSample(false);
     }
   };
+  
 
+  // =======================
   // 내 목록 모달
+  // =======================
   const openMyListSaveModal = () => {
     setMyListMode("save");
     setShowMyListModal(true);
   };
+
   const openMyListLoadModal = () => {
     setMyListMode("load");
     setShowMyListModal(true);
   };
+
   const closeMyListModal = () => {
     if (busyMyList) return;
     setShowMyListModal(false);
@@ -424,6 +511,12 @@ function Planner() {
   // 내 목록 저장
   const saveMySingleList = async () => {
     if (!me?.id) return;
+
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
     const currentTodos = todosRef.current ?? [];
     if (currentTodos.length === 0) {
@@ -475,6 +568,12 @@ function Planner() {
   // 내 목록 불러오기(선택 날짜에 넣기)
   const importMySingleList = async () => {
     if (!me?.id) return;
+
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
     try {
       setBusyMyList(true);
@@ -531,7 +630,9 @@ function Planner() {
     }
   };
 
-  // CRUD
+  // =======================
+  // todos CRUD
+  // =======================
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
@@ -612,7 +713,9 @@ function Planner() {
     return todos;
   }, [filter, todos]);
 
-  // 스탑워치(기존 방식 유지)
+  // =======================
+  // 스탑워치
+  // =======================
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
@@ -659,15 +762,19 @@ function Planner() {
     setElapsedMs(0);
   };
 
+  // =======================
   // 아이콘/닉네임
+  // =======================
   const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // ✅ 여기서야 비로소 early return (훅 선언 다 끝난 뒤)
+  // ✅ 여기서야 비로소 early return
   if (loading) return <div className="planner-loading">로딩중...</div>;
 
+  // =======================
   // 선택 날짜 전체 삭제
+  // =======================
   const deleteAllTodos = async () => {
     if (!me?.id) return;
 
@@ -692,8 +799,10 @@ function Planner() {
 
   // 로그아웃
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch {}
+   await supabase.auth.signOut({ scope: "local" });
+    try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) {
+    console.warn("프로필 캐시 삭제 실패", e);
+    } 
     navigate("/login");
   };
 
@@ -703,7 +812,9 @@ function Planner() {
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
     setShowCalendarModal(true);
   };
+
   const closeCalendar = () => setShowCalendarModal(false);
+
   const chooseDate = (d) => {
     if (!d) return;
     setSelectedDate(d);
@@ -747,11 +858,7 @@ function Planner() {
             <div className="today-row" title="선택한 날짜">
               <span className="today">{formatSelectedKorean()}</span>
 
-              <button
-                type="button"
-                className="cal-btn"
-                onClick={openCalendar}
-              >
+              <button type="button" className="cal-btn" onClick={openCalendar} title="달력 열기">
                 <svg
                   className="cal-btn-ico"
                   width="16"
@@ -778,12 +885,14 @@ function Planner() {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
+          {/* ✅ 샘플 불러오기 버튼(모달 오픈) */}
           <button
+            type="button"
             className="preset-btn preset-btn-primary"
-            onClick={importWinterTodos}
-            disabled={importingWinter}
+            onClick={openSampleModal}
+            disabled={importingSample}
           >
-            {importingWinter ? "불러오는 중..." : "📂 방학 숙제 불러오기"}
+            {importingSample ? "불러오는 중..." : "📂 샘플 숙제 불러오기"}
           </button>
 
           <div className="mylist-actions">
@@ -914,6 +1023,64 @@ function Planner() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ✅ 샘플 숙제 불러오기 모달 */}
+      {showSampleModal && (
+        <div className="modal-backdrop" onClick={closeSampleModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="modal-title">샘플 숙제 불러오기</div>
+              <button className="modal-close" onClick={closeSampleModal} disabled={importingSample}>✕</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-help">
+                선택한 날짜({selectedDayKey})에 샘플 숙제를 불러옵니다.
+              </div>
+
+              <div style={{ display: "grid", gap: "8px" }}>
+                {SAMPLE_SETS.map((s) => (
+                  <label
+                    key={s.key}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "10px 12px",
+                      border: "1px solid var(--line)",
+                      borderRadius: "14px",
+                      background: "#fff",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="sample_set"
+                      checked={selectedSampleKey === s.key}
+                      onChange={() => setSelectedSampleKey(s.key)}
+                    />
+                    <span style={{ fontWeight: 700 }}>{s.label}</span>
+                  </label>
+                ))}
+              </div>
+
+              <label className="modal-check">
+                <input
+                  type="checkbox"
+                  checked={sampleModeReplace}
+                  onChange={(e) => setSampleModeReplace(e.target.checked)}
+                  disabled={importingSample}
+                />
+                기존 목록을 비우고 불러오기(교체)
+              </label>
+
+              <button className="modal-primary" onClick={importSampleTodos} disabled={importingSample}>
+                {importingSample ? "불러오는 중..." : sampleModeReplace ? "교체해서 불러오기" : "추가로 불러오기"}
+              </button>
+            </div>
           </div>
         </div>
       )}
