@@ -20,6 +20,9 @@ const EMOJI_POOL = [
   "🦄", "🐰", "🐶", "🐱", "🌈",
 ];
 
+// 첫 진입 샘플 주입 여부(로컬에서 1회만)
+const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
+
 // =======================
 // KST 기준 YYYY-MM-DD
 // =======================
@@ -83,13 +86,22 @@ function Planner() {
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [reorderMode, setReorderMode] = useState(false);
   const [usedEmojis, setUsedEmojis] = useState([]);
+
 
   // =======================
   // 데일리: 선택 날짜
   // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
+
+  
+  // 선택된 날짜가 "오늘(KST)"인지 확인
+  const isTodaySelected = () => {
+    return selectedDayKey === toKstDayKey(new Date());
+  };
+
 
   // =======================
   // 달력 모달
@@ -260,14 +272,62 @@ function Planner() {
   // =======================
   // 폭죽 & 사운드
   // =======================
+  // const fireConfetti = () => {
+  //   confetti({
+  //     particleCount: 140,
+  //     spread: 90,
+  //     origin: { y: 0.62 },
+  //     colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
+  //   });
+  // };
+
+  // 폭죽 애니메이션 화려하게
   const fireConfetti = () => {
-    confetti({
-      particleCount: 140,
+  // 모션 줄이기 설정 존중
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.65 } });
+      return;
+    }
+
+    const base = {
+      startVelocity: 40,   // 과하지 않게
       spread: 90,
-      origin: { y: 0.62 },
+      ticks: 220,          // 꼬리 너무 길지 않게
+      scalar: 1.2,        // 살짝만 크게
+      gravity: 0.95,
+      zIndex: 9999,
       colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
+    };
+
+    // 가운데 한 번
+    confetti({
+       ...base,
+      particleCount: 250,   
+      spread: 105,
+      origin: { x: 0.5, y: 0.64 },
     });
+
+    // 살짝 시간차 두고 좌/우 보조
+    setTimeout(() => {
+      confetti({
+        ...base,
+        particleCount: 50,
+        origin: { x: 0.25, y: 0.7 },
+        angle: 60,
+      });
+
+      confetti({
+        ...base,
+        particleCount: 50,
+        origin: { x: 0.75, y: 0.7 },
+        angle: 120,
+      });
+    }, 120);
   };
+
+
+
+
 
   const playFinishSound = async () => {
     const audio = finishAudioRef.current;
@@ -293,21 +353,75 @@ function Planner() {
   const fetchTodos = async (userId, dayKey) => {
     const { data, error } = await supabase
       .from("todos")
-      .select("id, user_id, day_key, title, completed, created_at, template_item_key, source_set_item_key")
+      .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
       .eq("user_id", userId)
       .eq("day_key", dayKey)
-      .order("template_item_key", { ascending: true, nullsFirst: true })
+      // .order("template_item_key", { ascending: true, nullsFirst: true })
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("fetchTodos error:", error);
       alert(error.message);
-      return;
+      return [];
     }
-    setTodos(data ?? []);
+    const rows = data ?? [];
+    setTodos(rows);
+    return rows;
   };
 
+  //처음 들어온 사용자에게 샘플 3개 자동 주입
+  // 처음 들어온 사용자에게 샘플 3개 자동 주입 (StrictMode 2회 실행에도 안전)
+  const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
+    const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
+
+    try {
+      // 이미 할 일이 있으면 아무 것도 안 함
+      if (existingCount > 0) return;
+
+      // 이미 샘플 넣은 적이 있으면 또 넣지 않음
+      const alreadySeeded = localStorage.getItem(seededKey) === "true";
+      if (alreadySeeded) return;
+
+      // ✅ 핵심: insert 전에 먼저 "seeded"를 찍어서
+      // StrictMode로 loadAll이 2번 돌더라도 두 번째 실행을 즉시 차단
+      localStorage.setItem(seededKey, "true");
+
+      const samples = [
+        "오늘의 할 일을 추가해 보세요",
+        "완료 버튼을 눌러 보세요 ⭐",
+        "전체 삭제로 정리할 수 있어요",
+      ];
+
+      const rows = samples.map((text) => ({
+        user_id: userId,
+        day_key: dayKey,
+        title: `${getRandomEmoji()} ${text}`,
+        completed: false,
+        // ✅ 옵션: sort_order까지 주면 정렬도 깔끔 (지금 프로젝트가 sort_order를 쓰고 있어서 추천)
+        // 1,2,3으로 딱 고정
+        // sort_order는 DB 컬럼이 있을 때만 의미 있음(너는 이미 select에 sort_order 넣고 있음)
+        // 아래 줄은 그대로 써도 OK
+        // (혹시 테이블에 sort_order가 없으면 에러 날 수 있으니, 컬럼이 확실하면 켜줘)
+      }));
+
+      // sort_order 확실히 넣고 싶으면 이렇게(추천)
+      const rowsWithOrder = rows.map((r, idx) => ({ ...r, sort_order: idx + 1 }));
+
+      const { error } = await supabase.from("todos").insert(rowsWithOrder);
+      if (error) throw error;
+    } catch (err) {
+      console.error("seedSampleTodosIfEmpty error:", err);
+
+      // ✅ insert 실패했으면 seeded 표시를 되돌려 다음에 다시 시도 가능하게
+      try {
+        localStorage.removeItem(seededKey);
+      } catch {}
+    }
+  };
+
+
+  // =======================
   const fetchMySingleListInfo = async (userId) => {
     const { data, error } = await supabase
       .from("todo_sets")
@@ -395,7 +509,18 @@ function Planner() {
         if (upsertErr) console.error("profiles upsert error:", upsertErr);
       }
 
+      // await fetchTodos(user.id, selectedDayKey);
+      const loaded = await fetchTodos(user.id, selectedDayKey);
+
+      await seedSampleTodosIfEmpty({
+        userId: user.id,
+        dayKey: selectedDayKey,
+        existingCount: loaded.length,
+      });
+
+      // 샘플을 넣었을 수도 있으니 한 번 더 불러와서 화면을 최신화
       await fetchTodos(user.id, selectedDayKey);
+
       await fetchMySingleListInfo(user.id);
       await fetchHallOfFame(selectedDayKey);
 
@@ -417,11 +542,16 @@ function Planner() {
   }, [selectedDayKey, me?.id]);
 
   // =======================
-  // 샘플 숙제 불러오기 실행(테이블 3개에서 조회)
+  // 샘플 숙제 불러오기 실행
   // =======================
   const importSampleTodos = async () => {
     if (!me?.id) return;
     if (importingSample) return;
+
+    if (!isTodaySelected()) {
+      alert("지난 날짜에는 샘플 숙제 불러오기 기능을 사용할 수 없습니다.");
+      return;
+    }
 
     const tableName = SAMPLE_TABLE_BY_KEY[selectedSampleKey];
     if (!tableName) {
@@ -432,7 +562,7 @@ function Planner() {
     try {
       setImportingSample(true);
 
-      // 교체 모드면: 해당 날짜 todos 싹 삭제 + 명예의 전당도 내려가기
+      // 상태 변경시 이름 제거
       if (sampleModeReplace) {
         const { error: delErr } = await supabase
           .from("todos")
@@ -453,16 +583,28 @@ function Planner() {
 
       if (tplErr) throw tplErr;
 
+      const maxSort = (todosRef.current ?? [])
+      .map((t) => Number(t.sort_order ?? 0))
+      .reduce((a, b) => Math.max(a, b), 0);
+
       const rows = (templates ?? [])
-        .map((x) => ({
-          user_id: me.id,
-          day_key: selectedDayKey,
-         
-          template_item_key: `${selectedSampleKey}:${String(x.item_key ?? "").trim()}`,
-          title: String(x.title ?? "").trim(),
-          completed: false,
-        }))
+        .map((x) => {
+          const base = Number(x.sort_order ?? 0) || 0;
+
+          return {
+            user_id: me.id,
+            day_key: selectedDayKey,
+            template_item_key: `${selectedSampleKey}:${String(x.item_key ?? "").trim()}`,
+            title: String(x.title ?? "").trim(),
+            completed: false,
+
+            // 교체면 템플릿 순서 그대로(1,2,3..), 추가면 기존 맨 뒤로 붙이기
+            sort_order: sampleModeReplace ? base : (maxSort + base),
+          };
+        })
         .filter((x) => x.template_item_key && x.title);
+
+
 
       if (rows.length === 0) {
         alert("샘플 템플릿이 비어있습니다. Supabase 샘플 테이블을 확인해주세요.");
@@ -483,7 +625,16 @@ function Planner() {
       setShowSampleModal(false);
     } catch (err) {
       console.error("importSampleTodos error:", err);
-      alert(err?.message ?? "샘플 숙제 불러오기 중 오류가 발생했습니다.");
+
+      const msg = String(err?.message ?? "");
+      if (
+        msg.includes("todos_user_template_item_unique") ||
+        msg.includes("duplicate key value violates unique constraint")
+      ) {
+        alert("이미 불러온 샘플 숙제입니다.");
+      } else {
+        alert(msg || "샘플 숙제 불러오기 중 오류가 발생했습니다.");
+      }
     } finally {
       setImportingSample(false);
     }
@@ -567,68 +718,189 @@ function Planner() {
 
   // 내 목록 불러오기(선택 날짜에 넣기)
   const importMySingleList = async () => {
-    if (!me?.id) return;
+  if (!me?.id) return;
 
-    const { data } = await supabase.auth.getSession();
-    if (!data?.session) {
-      navigate("/login", { replace: true });
+  // 지난 날짜에서는 불러오기 금지
+  if (!isTodaySelected()) {
+    alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.");
+    return;
+  }
+
+  // 세션 없으면 로그인으로
+  const { data } = await supabase.auth.getSession();
+  if (!data?.session) {
+    navigate("/login", { replace: true });
+    return;
+  }
+
+  try {
+    const { id: setId } = await fetchMySingleListInfo(me.id);
+    if (!setId) {
+      alert("저장된 내 목록이 없습니다. 먼저 저장해 주세요.");
       return;
     }
 
-    try {
-      setBusyMyList(true);
+    setBusyMyList(true);
 
-      const { id: setId } = await fetchMySingleListInfo(me.id);
-      if (!setId) {
-        alert("저장된 내 목록이 없습니다. 먼저 저장해 주세요.");
-        return;
-      }
+    if (loadReplace) {
+      const { error: delErr } = await supabase
+        .from("todos")
+        .delete()
+        .eq("user_id", me.id)
+        .eq("day_key", selectedDayKey);
 
-      if (loadReplace) {
-        const { error: delErr } = await supabase
-          .from("todos")
-          .delete()
-          .eq("user_id", me.id)
-          .eq("day_key", selectedDayKey);
+      if (delErr) throw delErr;
 
-        if (delErr) throw delErr;
-        await removeCompletionForDay(selectedDayKey);
-      }
+      await removeCompletionForDay(selectedDayKey);
+    }
 
-      const { data: items, error: itemsErr } = await supabase
-        .from("todo_set_items")
-        .select("item_key, title, sort_order")
-        .eq("set_id", setId)
-        .order("sort_order", { ascending: true });
+    const { data: items, error: itemsErr } = await supabase
+      .from("todo_set_items")
+      .select("item_key, title, sort_order")
+      .eq("set_id", setId)
+      .order("sort_order", { ascending: true });
 
-      if (itemsErr) throw itemsErr;
+    if (itemsErr) throw itemsErr;
 
-      const rows = (items ?? [])
-        .map((x) => ({
+    const maxSort = (todosRef.current ?? [])
+      .map((t) => Number(t.sort_order ?? 0))
+      .reduce((a, b) => Math.max(a, b), 0);
+
+    const rows = (items ?? [])
+      .map((x) => {
+        const base = Number(x.sort_order ?? 0) || 0;
+
+        return {
           user_id: me.id,
           day_key: selectedDayKey,
           source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
           title: String(x.title ?? "").trim(),
           completed: false,
-        }))
-        .filter((x) => x.source_set_item_key && x.title);
 
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, { onConflict: "user_id,day_key,source_set_item_key", ignoreDuplicates: true });
+          // 교체면 내 목록 순서 그대로, 추가면 기존 맨 뒤로 붙이기
+          sort_order: loadReplace ? base : (maxSort + base),
+        };
+      })
+      .filter((x) => x.source_set_item_key && x.title);
 
-      if (upErr) throw upErr;
 
-      await fetchTodos(me.id, selectedDayKey);
-      alert(loadReplace ? "내 목록으로 교체했습니다." : "내 목록을 불러왔습니다.");
-      setShowMyListModal(false);
-    } catch (err) {
-      console.error("importMySingleList error:", err);
-      alert(err?.message ?? "내 목록 불러오기 중 오류가 발생했습니다.");
-    } finally {
-      setBusyMyList(false);
+
+    const { error: upErr } = await supabase
+      .from("todos")
+      .upsert(rows, {
+        onConflict: "user_id,day_key,source_set_item_key",
+        ignoreDuplicates: true,
+      });
+
+    if (upErr) throw upErr;
+
+    await fetchTodos(me.id, selectedDayKey);
+    alert(loadReplace ? "내 목록으로 교체했습니다." : "내 목록을 불러왔습니다.");
+    setShowMyListModal(false);
+  } catch (err) {
+    console.error("importMySingleList error:", err);
+
+    const msg = String(err?.message ?? "");
+
+    // 중복키 에러 처리
+    if (
+      msg.includes("todos_user_source_set_item_unique") ||
+      msg.includes("duplicate key value violates unique constraint")
+    ) {
+      alert("이미 불러온 목록입니다.");
+      // 또는 더 친절하게:
+      // alert("이미 불러온 목록이라 중복으로 추가할 수 없습니다.");
+    } else {
+      alert(msg || "내 목록 불러오기 중 오류가 발생했습니다.");
     }
+  } finally {
+    setBusyMyList(false);
+  }
+};
+
+
+  // =======================
+  // 정렬 
+  // =======================
+  const ensureSortOrderForDay = async () => {
+    if (!me?.id) return;
+
+    const current = todosRef.current ?? [];
+    const needs = current.some((x) => x.sort_order === null || x.sort_order === undefined);
+
+    if (!needs) return;
+
+    // 지금 fetchTodos 정렬 결과(현재 화면 순서)를 그대로 1,2,3...로 부여
+    // 너무 많은 요청을 피하려면 최소한의 업데이트만 수행
+    for (let i = 0; i < current.length; i++) {
+      const t = current[i];
+      const nextOrder = i + 1;
+      if (t.sort_order === nextOrder) continue;
+
+      // eslint-disable-next-line no-await-in-loop
+      const { error } = await supabase.from("todos").update({ sort_order: nextOrder }).eq("id", t.id);
+      if (error) {
+        console.error("ensureSortOrderForDay error:", error);
+        break;
+      }
+    }
+
+    await fetchTodos(me.id, selectedDayKey);
   };
+
+  const swapTodoOrder = async (a, b) => {
+    if (!me?.id) return;
+
+    const aOrder = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : 0;
+    const bOrder = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0;
+
+    // 화면 즉시 반영(체감 좋게)
+    const current = todosRef.current ?? [];
+    setTodos(
+      current.map((x) => {
+        if (x.id === a.id) return { ...x, sort_order: bOrder };
+        if (x.id === b.id) return { ...x, sort_order: aOrder };
+        return x;
+      })
+    );
+
+    // DB 업데이트
+    const { error: e1 } = await supabase.from("todos").update({ sort_order: bOrder }).eq("id", a.id);
+    if (e1) {
+      console.error("swapTodoOrder update a error:", e1);
+      await fetchTodos(me.id, selectedDayKey);
+      alert("순서 변경 중 오류가 발생했습니다.");
+      return;
+    }
+
+    const { error: e2 } = await supabase.from("todos").update({ sort_order: aOrder }).eq("id", b.id);
+    if (e2) {
+      console.error("swapTodoOrder update b error:", e2);
+      await fetchTodos(me.id, selectedDayKey);
+      alert("순서 변경 중 오류가 발생했습니다.");
+      return;
+    }
+
+    await fetchTodos(me.id, selectedDayKey);
+  };
+
+  const moveTodoUp = async (item) => {
+    const list = filteredTodos;
+    const idx = list.findIndex((x) => x.id === item.id);
+    if (idx <= 0) return;
+    await swapTodoOrder(list[idx], list[idx - 1]);
+  };
+
+  const moveTodoDown = async (item) => {
+    const list = filteredTodos;
+    const idx = list.findIndex((x) => x.id === item.id);
+    if (idx < 0 || idx >= list.length - 1) return;
+    await swapTodoOrder(list[idx], list[idx + 1]);
+  };
+
+
+
+
 
   // =======================
   // todos CRUD
@@ -636,28 +908,42 @@ function Planner() {
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
-    const raw = todo.trim();
-    if (!raw) return;
-    if (!me?.id) return;
+  const raw = todo.trim();
+  if (!raw) return;
+  if (!me?.id) return;
 
-    const emoji = getRandomEmoji();
-    const titleWithEmoji = `${emoji} ${raw}`;
+  const emoji = getRandomEmoji();
+  const titleWithEmoji = `${emoji} ${raw}`;
 
-    const { data, error } = await supabase
-      .from("todos")
-      .insert([{ user_id: me.id, day_key: selectedDayKey, title: titleWithEmoji, completed: false }])
-      .select("id, user_id, day_key, title, completed, created_at, template_item_key, source_set_item_key")
-      .single();
+  const maxSort = (todosRef.current ?? [])
+    .map((x) => Number(x.sort_order ?? 0))
+    .reduce((a, b) => Math.max(a, b), 0);
 
-    if (error) {
-      console.error("addTodo error:", error);
-      alert(error.message);
-      return;
-    }
+  const nextSort = maxSort + 1;
 
-    setTodos((prev) => [...prev, data]);
-    setTodo("");
-  };
+  const { error } = await supabase
+    .from("todos")
+    .insert([{
+      user_id: me.id,
+      day_key: selectedDayKey,
+      title: titleWithEmoji,
+      completed: false,
+      sort_order: nextSort,
+    }])
+    .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
+    .single();
+
+  if (error) {
+    console.error("addTodo error:", error);
+    alert(error.message);
+    return;
+  }
+
+  setTodo("");
+
+  // 정렬(순서) 기준과 동일하게 다시 불러와서 화면 확정
+  await fetchTodos(me.id, selectedDayKey);
+};
 
   const onDelete = async (id) => {
     const { error } = await supabase.from("todos").delete().eq("id", id);
@@ -763,13 +1049,110 @@ function Planner() {
   };
 
   // =======================
+  // 타이머(카운트다운)
+  // =======================
+  const TIMER_PRESETS = [5, 10, 15, 20]; // 분 단위 프리셋
+
+  const [timerMin, setTimerMin] = useState(10); // 기본 10분
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [remainingSec, setRemainingSec] = useState(10 * 60);
+
+  const timerIntervalRef = useRef(null);
+
+  // 타이머 분을 바꾸면 남은 시간을 같이 리셋(실행 중이면 변경 막기)
+  useEffect(() => {
+    // 실행 중에는 분 변경을 막고 있다면(disabled), 사실상 이 줄은 안전장치
+    if (timerRunning) return;
+
+    setRemainingSec(timerMin * 60);
+    // ❗의존성에서 timerRunning 제거가 핵심
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerMin]);
+
+  // 언마운트 시 interval 정리(안전)
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  const formatMMSS = (sec) => {
+  const s = Math.max(0, Number(sec) || 0);
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+};
+
+  const startTimer = () => {
+  if (timerRunning) return;
+  if (remainingSec <= 0) return;
+
+  setTimerRunning(true);
+
+  timerIntervalRef.current = setInterval(() => {
+    setRemainingSec((prev) => {
+      const next = prev - 1;
+
+      if (next <= 0) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+        setTimerRunning(false);
+        playFinishSound();
+        return 0;
+      }
+      return next;
+    });
+  }, 1000);
+};
+
+const pauseTimer = () => {
+  if (!timerRunning) return;
+  setTimerRunning(false);
+
+  if (timerIntervalRef.current) {
+    clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = null;
+  }
+};
+
+const resetTimer = () => {
+  setTimerRunning(false);
+
+  if (timerIntervalRef.current) {
+    clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = null;
+  }
+
+  setRemainingSec(timerMin * 60);
+};
+
+
+
+ // =======================
+  // 하가다 (횟수 카운터)
+  // =======================
+  const [hagadaCount, setHagadaCount] = useState(0);
+
+  const increaseHagada = () => {
+    setHagadaCount((prev) => prev + 1);
+  };
+
+  const resetHagada = () => {
+    setHagadaCount(0);
+  };
+
+
+  // =======================
   // 아이콘/닉네임
   // =======================
   const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // ✅ 여기서야 비로소 early return
+  // early return
   if (loading) return <div className="planner-loading">로딩중...</div>;
 
   // =======================
@@ -828,7 +1211,7 @@ function Planner() {
     a.getDate() === b.getDate();
 
   return (
-    <div className="planner">
+    <div className="planner notranslate">
       <header className="top-header">
         <div className="top-row">
           <h1
@@ -885,7 +1268,7 @@ function Planner() {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
-          {/* ✅ 샘플 불러오기 버튼(모달 오픈) */}
+          {/* 샘플 불러오기 버튼 */}
           <button
             type="button"
             className="preset-btn preset-btn-primary"
@@ -935,19 +1318,78 @@ function Planner() {
       </div>
 
       <ul className="todo-list">
-        {filteredTodos.map((t) => (
-          <TodoItem key={t.id} t={t} onToggle={onToggle} onDelete={onDelete} />
+        {filteredTodos.map((t, idx) => (
+          <TodoItem
+            key={t.id}
+            t={t}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            reorderMode={reorderMode}
+            onMoveUp={moveTodoUp}
+            onMoveDown={moveTodoDown}
+            isFirst={idx === 0}
+            isLast={idx === filteredTodos.length - 1}
+          />
         ))}
       </ul>
 
-      {/* 필터 */}
-      <div className="filter-bar">
+      {/* 필터 + 정렬 */}
+      <div className="filter-bar" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div className="filter-group-left">
-          <button className={`filter-btn ${filter === "all" ? "active" : ""}`} onClick={() => setFilter("all")}>전체</button>
-          <button className={`filter-btn ${filter === "completed" ? "active" : ""}`} onClick={() => setFilter("completed")}>했음</button>
-          <button className={`filter-btn ${filter === "uncompleted" ? "active" : ""}`} onClick={() => setFilter("uncompleted")}>안했음</button>
+          <button
+            className={`filter-btn ${filter === "all" ? "active" : ""}`}
+            onClick={() => {
+              setFilter("all");
+              setReorderMode(false);
+            }}
+          >
+            전체
+          </button>
+
+          <button
+            className={`filter-btn ${filter === "completed" ? "active" : ""}`}
+            onClick={() => {
+              setFilter("completed");
+              setReorderMode(false);
+            }}
+          >
+            했음
+          </button>
+
+          <button
+            className={`filter-btn ${filter === "uncompleted" ? "active" : ""}`}
+            onClick={() => {
+              setFilter("uncompleted");
+              setReorderMode(false);
+            }}
+          >
+            안했음
+          </button>
         </div>
+
+        {/* 전체일 때만 순서 버튼 노출 */}
+        {filter === "all" && (
+          <button
+            type="button"
+            className={`filter-btn ${reorderMode ? "active" : ""}`}
+            onClick={async () => {
+              const next = !reorderMode;
+              setReorderMode(next);
+
+              // 순서 모드 처음 켤 때 sort_order 정리
+              if (next) {
+                await ensureSortOrderForDay();
+              }
+            }}
+            title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
+            style={{ whiteSpace: "nowrap" }}
+          >
+            {reorderMode ? "순서변경완료" : "순서변경하기"}
+          </button>
+        )}
       </div>
+
+
 
       <div className="finish">
         <span className="title">공부 다하면?</span>
@@ -979,14 +1421,70 @@ function Planner() {
         )}
       </div>
 
-      {/* 스탑워치 */}
-      <div className="stopwatch">
-        <span className="title">스탑워치</span>
-        <div className="time">{formatTime(elapsedMs)}</div>
-        <button onClick={startStopwatch} disabled={isRunning}>시작</button>
-        <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
-        <button onClick={resetStopwatch}>다시</button>
+      {/* =======================
+          학습 도구(스탑워치/타이머/하가다) - 한 박스, 3행, 선으로 구분
+      ======================= */}
+      <div className="study-tools">
+        {/* 1) 스탑워치 */}
+        <div className="tool-row">
+          <div className="tool-title">스탑워치</div>
+
+          <div className="tool-display">
+            {formatTime(elapsedMs)}
+          </div>
+
+          <div className="tool-actions">
+            <button onClick={startStopwatch} disabled={isRunning}>시작</button>
+            <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
+            <button onClick={resetStopwatch}>처음부터</button>
+          </div>
+        </div>
+
+        {/* 2) 타이머 */}
+        <div className="tool-row">
+          <div className="tool-title">타이머</div>
+
+          <div className="tool-display tool-display-timer">
+            <select
+              value={timerMin}
+              onChange={(e) => setTimerMin(Number(e.target.value))}
+              disabled={timerRunning}
+              aria-label="타이머 시간 선택"
+            >
+              {TIMER_PRESETS.map((m) => (
+                <option key={m} value={m}>{m}분</option>
+              ))}
+            </select>
+
+            <span className="timer-value">
+              {/* 밀리초 버전이면 remainingMs / formatMMSSms(remainingMs)
+                  초 버전이면 remainingSec / formatMMSS(remainingSec)로 바꿔주세요 */}
+              {formatMMSS(remainingSec)}
+            </span>
+          </div>
+
+          <div className="tool-actions">
+            <button onClick={startTimer} disabled={timerRunning || remainingSec <= 0}>시작</button>
+            <button onClick={pauseTimer} disabled={!timerRunning}>멈춤</button>
+            <button onClick={resetTimer}>처음부터</button>
+          </div>
+        </div>
+
+        {/* 3) 하가다 */}
+        <div className="tool-row">
+          <div className="tool-title">하가다</div>
+
+          <div className="tool-display">
+            {hagadaCount}
+          </div>
+
+          <div className="tool-actions">
+            <button onClick={increaseHagada}>추가</button>
+            <button onClick={resetHagada}>처음부터</button>
+          </div>
+        </div>
       </div>
+
 
       {/* 내 목록 모달 */}
       {showMyListModal && (
@@ -1027,7 +1525,7 @@ function Planner() {
         </div>
       )}
 
-      {/* ✅ 샘플 숙제 불러오기 모달 */}
+      {/* 샘플 숙제 불러오기 모달 */}
       {showSampleModal && (
         <div className="modal-backdrop" onClick={closeSampleModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>

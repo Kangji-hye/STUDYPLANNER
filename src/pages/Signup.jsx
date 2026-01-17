@@ -103,6 +103,10 @@ const Signup = () => {
           required
         />
 
+        <div className="email-id-hint" role="note" aria-label="이메일 안내">
+          이메일은 아이디이므로 반드시 기억해 주세요. 비밀번호 재설정도 이 이메일로만 진행됩니다.
+        </div>
+
         <input
           type="password"
           placeholder="비밀번호 (8자 이상)"

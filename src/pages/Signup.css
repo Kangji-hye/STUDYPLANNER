@@ -39,3 +39,15 @@
   font-size: var(--fs-small);
   color: #e11d48;
 }
+
+/* ✅ 이메일=아이디 안내 문구 */
+.email-id-hint {
+  margin-top: -6px;              /* input과 간격을 자연스럽게 */
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 122, 162, 0.08);   /* 연한 핑크 배경 */
+  border: 1px solid rgba(255, 122, 162, 0.20);
+  color: #9f1239;                /* 너무 진하지 않은 안내 컬러 */
+  font-size: 0.92rem;
+  line-height: 1.35;
+}

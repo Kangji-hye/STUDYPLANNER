@@ -80,6 +80,8 @@ a:hover {
   padding: 10px 30px;
 }
 
+.notranslate { translate: no; }
+
 input {
   /* width: 100%; */
   font-family: inherit;
