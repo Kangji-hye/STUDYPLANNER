@@ -7,6 +7,7 @@ import supabase from "../supabaseClient";
 import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
+import { useSoundSettings } from "../context/SoundSettingsContext";
 
 // =======================
 // 이모지 풀
@@ -88,6 +89,7 @@ function Planner() {
   const [usedEmojis, setUsedEmojis] = useState([]);
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
+  const { finishEnabled } = useSoundSettings();
 
   // =======================
   // 데일리: 선택 날짜
@@ -325,26 +327,64 @@ function Planner() {
   };
 
 
+  // const playFinishSound = async () => {
+  //   const audio = finishAudioRef.current;
+  //   if (!audio) return;
+  //   try {
+  //     audio.currentTime = 0;
+  //     await audio.play();
+  //   } catch (e) {
+  //     console.log("finish.mp3 재생 실패:", e);
+  //   }
+  // };
 
+  // ✅ 모두 완료 효과음(모바일 안정 버전)
+  // - 재사용(ref) 대신, 재생할 때마다 새 Audio 생성
+  // - done.mp3처럼 "그 순간 재생"이라 모바일에서 훨씬 잘 들립니다.
+  const playFinishSound = (overrideSrc) => {
+  try {
+    // 1) 토글이 꺼져 있으면 재생 자체를 안 함(예전 토글 흔적 방지)
+    // finishEnabled를 쓰고 있지 않다면 이 if는 빼도 됩니다.
+    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
+    // 2) src 후보 만들기
+    let src = overrideSrc ?? profile?.finish_sound ?? "/finish.mp3";
+    src = String(src).trim();
 
-  const playFinishSound = async () => {
-    const audio = finishAudioRef.current;
-    if (!audio) return;
-    try {
-      audio.currentTime = 0;
-      await audio.play();
-    } catch (e) {
-      console.log("finish.mp3 재생 실패:", e);
+    // 3) src 검증: 비었거나, mp3가 아니면 기본값으로 강제
+    // (필요하면 .wav, .m4a도 허용 가능하지만 지금은 mp3만)
+    if (!src || !src.startsWith("/") || !src.toLowerCase().endsWith(".mp3")) {
+      src = "/finish.mp3";
     }
-  };
 
-  useEffect(() => {
-    const src = profile?.finish_sound || "/finish.mp3";
-    finishAudioRef.current = new Audio(src);
-    finishAudioRef.current.volume = 0.9;
-    finishAudioRef.current.preload = "auto";
-  }, [profile?.finish_sound]);
+    // 🔎 문제 추적용(원인 잡히면 지워도 됨)
+    console.log("finish src:", src);
+
+    // 4) 재생
+    const audio = new Audio(src);
+    audio.preload = "auto";
+    audio.volume = 0.9;
+    audio.currentTime = 0;
+
+    // ref 보관(선택)
+    finishAudioRef.current = audio;
+
+    audio.play().catch((e) => {
+      console.warn("finish sound play blocked:", e);
+    });
+  } catch (e) {
+    console.warn("finish sound create/play fail:", e);
+  }
+};
+
+
+
+  // useEffect(() => {
+  //   const src = profile?.finish_sound || "/finish.mp3";
+  //   finishAudioRef.current = new Audio(src);
+  //   finishAudioRef.current.volume = 0.9;
+  //   finishAudioRef.current.preload = "auto";
+  // }, [profile?.finish_sound]);
 
   // =======================
   // 날짜별 todos 조회
@@ -976,20 +1016,6 @@ function Planner() {
   const onToggle = async (item) => {
     const current = todosRef.current;
     const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
-
-    // 음원 에러 수정: 지금 완료로 바꾸는 클릭인지 확인
-    const isCompleting = item.completed === false; // 지금 완료로 바꾸는 클릭인가?
-    const willBeAllCompleted =
-      isCompleting &&
-      current.length > 0 &&
-      current.every((t) => (t.id === item.id ? true : t.completed));
-
-    if (!wasAllCompleted && willBeAllCompleted) {
-      fireConfetti();
-      playFinishSound(); 
-      recordCompletionForDay(selectedDayKey);
-    }
-
 
     const { data, error } = await supabase
       .from("todos")

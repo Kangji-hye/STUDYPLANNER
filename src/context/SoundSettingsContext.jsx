@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 const SoundSettingsContext = createContext(null);
 
 const SFX_KEY = "sfxEnabled";
-const FINISH_KEY = "finishEnabled";
+const FINISH_KEY = "finishEnabled_v2";
 
 export const SoundSettingsProvider = ({ children }) => {
   const [sfxEnabled, setSfxEnabled] = useState(() => {
