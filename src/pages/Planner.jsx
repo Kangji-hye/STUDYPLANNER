@@ -977,6 +977,20 @@ function Planner() {
     const current = todosRef.current;
     const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
 
+    // 음원 에러 수정: 지금 완료로 바꾸는 클릭인지 확인
+    const isCompleting = item.completed === false; // 지금 완료로 바꾸는 클릭인가?
+    const willBeAllCompleted =
+      isCompleting &&
+      current.length > 0 &&
+      current.every((t) => (t.id === item.id ? true : t.completed));
+
+    if (!wasAllCompleted && willBeAllCompleted) {
+      fireConfetti();
+      playFinishSound(); 
+      recordCompletionForDay(selectedDayKey);
+    }
+
+
     const { data, error } = await supabase
       .from("todos")
       .update({ completed: !item.completed })
@@ -1551,7 +1565,7 @@ const resetTimer = () => {
           </div>
 
           <div className="tool-actions">
-            <button onClick={increaseHagada}>추가</button>
+            <button onClick={increaseHagada}>하나 추가</button>
             <button onClick={resetHagada}>처음부터</button>
           </div>
         </div>

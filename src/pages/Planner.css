@@ -200,7 +200,9 @@
   transform: translateY(-1px);
 }
 
-/* finish 영역 */
+/* ===============================
+   공부 다하면: 텍스트/입력 토글 스타일
+================================ */
 .finish {
   background: var(--bg);
   margin:20px 0 10px 0;
@@ -224,6 +226,41 @@
   border: 1px solid var(--line);
   font-size: var(--fs-input);
 }
+.afterstudy-box{
+  margin-top: 6px;
+}
+
+/* 평소엔 텍스트(메모)처럼 */
+.afterstudy-text{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: rgba(255,255,255,0.7);
+  font-size: var(--fs-input);
+  color: var(--text);
+  cursor: text;
+}
+
+.afterstudy-text.is-empty{
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* 편집 모드에서만 input */
+.afterstudy-input{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: var(--fs-input);
+  background: #fff;
+}
+
+
+
+
+
 
 /* ===============================
    스탑워치 스타일 정리
@@ -555,7 +592,7 @@
   }
 }
 
-/* ✅ 그래도 아주 타이트한 기기에서 1줄이 정말 안 되면: 버튼 영역만 가로 스크롤 허용(선택) */
+/* 버튼 영역만 가로 스크롤 허용(선택) */
 @media (max-width: 390px) and (min-width: 361px){
   .tool-actions{
     overflow-x: auto;
@@ -567,52 +604,46 @@
   }
 }
 
-
-
 @media (min-width: 561px) and (max-width: 900px){
   /* 숫자 영역 폭을 살짝 줄여 버튼 영역 확보 */
   :root{
-    --tool-display-w: 180px;  /* 230 → 180 (태블릿에서만) */
+    --tool-display-w: 195px; 
   }
 
-  /* 버튼: 한 줄 고정 + 동일 폭으로 유연하게 줄어들기 */
   .tool-actions{
-    flex-wrap: nowrap;  /* ✅ 줄바꿈 금지 */
-    gap: 6px;           /* gap 살짝 줄여 폭 확보 */
+    flex-wrap: nowrap; 
+    gap: 6px;          
   }
 
   .tool-actions button{
-    flex: 1 1 0;        /* ✅ 3개 버튼이 동일 폭으로 나뉨 */
-    min-width: 0;       /* ✅ 내용이 길어도 버튼이 줄어들 수 있게 */
-    padding: 10px 8px;  /* 폭 절약 */
-    font-size: 0.82rem; /* 태블릿에서만 살짝 줄임 */
+    flex: 1 1 0;      
+    min-width: 0;       
+    padding: 10px 8px; 
+    font-size: 0.82rem; 
     text-align: center;
     white-space: nowrap;
   }
 }
 
 @media (max-width: 430px) and (min-width: 361px){
-  /* 버튼 영역: 줄바꿈 금지(한 줄 유지) */
   .tool-actions{
     flex-wrap: nowrap;
-    gap: 6px;                 /* gap 살짝 줄여서 폭 확보 */
+    gap: 6px;                 
   }
 
   /* 버튼을 조금 더 슬림하게 */
   .tool-actions button{
-    padding: 9px 8px;         /* 기존 10px 10px보다 살짝 줄임 */
-    font-size: 0.78rem;       /* 글자 조금 줄임(아이폰에서 체감 큼) */
-    letter-spacing: -0.3px;   /* 글자 폭 미세 감소 */
+    padding: 9px 8px;        
+    font-size: 0.78rem;       
+    letter-spacing: -0.3px;  
   }
 
-  /* “처음부터”가 길어서 밀리면, 버튼이 스스로 줄어들 수 있게 */
   .tool-actions button{
     flex: 0 1 auto;
     min-width: 0;
   }
 }
 
-/* ✅ 그래도 아주 타이트한 기기에서 1줄이 정말 안 되면: 버튼 영역만 가로 스크롤 허용(선택) */
 @media (max-width: 390px) and (min-width: 361px){
   .tool-actions{
     overflow-x: auto;
@@ -624,44 +655,6 @@
   }
 }
 
-
-
-
-
-
-/* ===============================
-   공부 다하면: 텍스트/입력 토글 스타일
-================================ */
-.afterstudy-box{
-  margin-top: 6px;
-}
-
-/* 평소엔 텍스트(메모)처럼 */
-.afterstudy-text{
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--line);
-  background: rgba(255,255,255,0.7);
-  font-size: var(--fs-input);
-  color: var(--text);
-  cursor: text;
-}
-
-.afterstudy-text.is-empty{
-  color: var(--muted);
-  opacity: 0.8;
-}
-
-/* 편집 모드에서만 input */
-.afterstudy-input{
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  font-size: var(--fs-input);
-  background: #fff;
-}
 
 
 

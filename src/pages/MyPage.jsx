@@ -187,7 +187,18 @@ const MyPage = () => {
   return (
     <div className="mypage">
       <div className="mypage-header">
-        <h2 className="mypage-title">마이페이지</h2>
+        <div className="mypage-brand">
+          <img
+            src="/logo.png"
+            alt="스터디 플래너 로고"
+            className="mypage-logo"
+          />
+
+          <div className="mypage-title-wrap">
+            <h2 className="mypage-title">마이페이지</h2>
+            <span className="mypage-subtitle">초등학생을 위한 스터디 플래너</span>
+          </div>
+        </div>
 
         <div className="mypage-qr-box">
           <img
@@ -195,7 +206,7 @@ const MyPage = () => {
             alt="플래너 QR 코드"
             className="mypage-qr"
           />
-          <span className="mypage-qr-caption">스터디플래너</span>
+          <span className="mypage-qr-caption">Study Planner</span>
         </div>
       </div>
 

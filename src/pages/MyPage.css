@@ -17,6 +17,38 @@
   gap: 12px;
 }
 
+/* ===== 헤더 브랜드 영역 ===== */
+.mypage-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 로고 */
+.mypage-logo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
+  /* border: 1px solid var(--line); */
+  /* box-shadow: 0 6px 14px rgba(0,0,0,0.06); */
+}
+
+/* 타이틀 묶음 */
+.mypage-title-wrap {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.mypage-subtitle {
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: -0.3px;
+}
+
+
 /* QR 코드 */
 .mypage-qr-box {
   display: flex;
