@@ -468,8 +468,8 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
-
-@media (max-width: 560px){
+/* @media (max-width: 560px){ */
+@media (max-width: 750px){
   .tool-row{
     /* 타이틀은 왼쪽 고정, 오른쪽 칼럼(숫자/버튼)이 세로로 쌓임 */
     grid-template-columns: var(--tool-title-w) 1fr;
