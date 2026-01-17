@@ -79,16 +79,14 @@ const buildMonthGrid = (year, monthIndex) => {
 function Planner() {
   // 훅은 무조건 항상 같은 순서로 실행
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
-
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [reorderMode, setReorderMode] = useState(false);
   const [usedEmojis, setUsedEmojis] = useState([]);
-
+  const [afterStudyText, setAfterStudyText] = useState("");
 
   // =======================
   // 데일리: 선택 날짜
@@ -383,13 +381,13 @@ function Planner() {
       const alreadySeeded = localStorage.getItem(seededKey) === "true";
       if (alreadySeeded) return;
 
-      // ✅ 핵심: insert 전에 먼저 "seeded"를 찍어서
+      // 핵심: insert 전에 먼저 "seeded"를 찍어서
       // StrictMode로 loadAll이 2번 돌더라도 두 번째 실행을 즉시 차단
       localStorage.setItem(seededKey, "true");
 
       const samples = [
         "오늘의 할 일을 추가해 보세요",
-        "완료 버튼을 눌러 보세요 ⭐",
+        "완료 버튼을 눌러 보세요",
         "전체 삭제로 정리할 수 있어요",
       ];
 
@@ -398,7 +396,7 @@ function Planner() {
         day_key: dayKey,
         title: `${getRandomEmoji()} ${text}`,
         completed: false,
-        // ✅ 옵션: sort_order까지 주면 정렬도 깔끔 (지금 프로젝트가 sort_order를 쓰고 있어서 추천)
+        // 옵션: sort_order까지 주면 정렬도 깔끔 (지금 프로젝트가 sort_order를 쓰고 있어서 추천)
         // 1,2,3으로 딱 고정
         // sort_order는 DB 컬럼이 있을 때만 의미 있음(너는 이미 select에 sort_order 넣고 있음)
         // 아래 줄은 그대로 써도 OK
@@ -413,7 +411,7 @@ function Planner() {
     } catch (err) {
       console.error("seedSampleTodosIfEmpty error:", err);
 
-      // ✅ insert 실패했으면 seeded 표시를 되돌려 다음에 다시 시도 가능하게
+      // insert 실패했으면 seeded 표시를 되돌려 다음에 다시 시도 가능하게
       try {
         localStorage.removeItem(seededKey);
       } catch {}
@@ -540,6 +538,20 @@ function Planner() {
     fetchHallOfFame(selectedDayKey);
      
   }, [selectedDayKey, me?.id]);
+
+  // "공부 다하면" 메모 불러오기
+  useEffect(() => {
+    if (!me?.id) return;
+
+    const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+    try {
+      const saved = localStorage.getItem(key);
+      setAfterStudyText(saved ?? "");
+    } catch (e) {
+      console.warn("afterStudyText localStorage read fail:", e);
+      setAfterStudyText("");
+    }
+  }, [me?.id, selectedDayKey]);
 
   // =======================
   // 샘플 숙제 불러오기 실행
@@ -1393,8 +1405,29 @@ const resetTimer = () => {
 
       <div className="finish">
         <span className="title">공부 다하면?</span>
-        <div><input type="text" placeholder="뭐하고 놀까~" /></div>
+
+        <div>
+          <input
+            type="text"
+            placeholder="뭐하고 놀까~"
+            value={afterStudyText}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAfterStudyText(v);
+
+              // ✅ 즉시 저장(유저+날짜별)
+              if (!me?.id) return;
+              const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+              try {
+                localStorage.setItem(key, v);
+              } catch (err) {
+                console.warn("afterStudyText localStorage write fail:", err);
+              }
+            }}
+          />
+        </div>
       </div>
+
 
       {/* 명예의 전당 */}
       <div className="hof-card">
