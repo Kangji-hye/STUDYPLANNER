@@ -452,8 +452,40 @@
 }
 
 /* 모바일에서 타이틀 폭 약간 줄이기 */
+/* ✅ iPhone(모바일)에서는 버튼을 크게: 손가락 터치 친화 */
 @media (max-width: 480px){
-  :root{ --tool-title-w: 80px; }
+  .tool-actions{
+    gap: 10px;                 /* 버튼 간격 넉넉 */
+    flex-wrap: wrap;           /* ✅ 작아지면 과감히 줄바꿈 허용 */
+  }
+
+  .tool-actions button{
+    min-height: 44px;          /* ✅ iOS 권장 터치 높이 */
+    padding: 12px 14px;        /* ✅ 손가락용 패딩 */
+    font-size: 0.9rem;         /* 글자도 다시 키움 */
+    border-radius: 16px;
+    letter-spacing: -0.2px;
+  }
+
+  /* 3개 버튼(스탑워치/타이머)은 2개 + 1개로 예쁘게 */
+  .tool-row:nth-child(1) .tool-actions button,
+  .tool-row:nth-child(2) .tool-actions button{
+    flex: 1 1 calc(50% - 10px); /* 2개씩 한 줄 */
+    text-align: center;
+  }
+
+  /* 하가다(2개 버튼)는 2개를 한 줄로 */
+  .tool-row:nth-child(3) .tool-actions button{
+    flex: 1 1 calc(50% - 10px);
+    text-align: center;
+  }
+
+  /* "처음부터" 버튼이 2번째 줄로 내려가더라도 한 줄 꽉 차게(선택)
+     → 원하면 켜고, 싫으면 이 블록 삭제 */
+  .tool-row:nth-child(1) .tool-actions button:last-child,
+  .tool-row:nth-child(2) .tool-actions button:last-child{
+    flex-basis: 100%;
+  }
 }
 
 @media (max-width: 360px){
