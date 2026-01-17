@@ -87,6 +87,7 @@ function Planner() {
   const [reorderMode, setReorderMode] = useState(false);
   const [usedEmojis, setUsedEmojis] = useState([]);
   const [afterStudyText, setAfterStudyText] = useState("");
+  const [afterStudyEditing, setAfterStudyEditing] = useState(false);
 
   // =======================
   // 데일리: 선택 날짜
@@ -1406,27 +1407,65 @@ const resetTimer = () => {
       <div className="finish">
         <span className="title">공부 다하면?</span>
 
-        <div>
-          <input
-            type="text"
-            placeholder="뭐하고 놀까~"
-            value={afterStudyText}
-            onChange={(e) => {
-              const v = e.target.value;
-              setAfterStudyText(v);
+        <div className="afterstudy-box">
+          {!afterStudyEditing ? (
+            <div
+              className={`afterstudy-text ${afterStudyText.trim() ? "" : "is-empty"}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => setAfterStudyEditing(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setAfterStudyEditing(true);
+              }}
+              title="눌러서 수정하기"
+            >
+              {afterStudyText.trim() ? afterStudyText : "뭐하고 놀까~ (눌러서 적기)"}
+            </div>
+          ) : (
+            <input
+              className="afterstudy-input"
+              type="text"
+              autoFocus
+              value={afterStudyText}
+              placeholder="뭐하고 놀까~"
+              onChange={(e) => {
+                const v = e.target.value;
+                setAfterStudyText(v);
 
-              // ✅ 즉시 저장(유저+날짜별)
-              if (!me?.id) return;
-              const key = `afterStudyText:${me.id}:${selectedDayKey}`;
-              try {
-                localStorage.setItem(key, v);
-              } catch (err) {
-                console.warn("afterStudyText localStorage write fail:", err);
-              }
-            }}
-          />
+                // 입력 중에도 저장(원하면 blur에서만 저장하도록 바꿀 수 있음)
+                if (!me?.id) return;
+                const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+                try {
+                  localStorage.setItem(key, v);
+                } catch (err) {
+                  console.warn("afterStudyText localStorage write fail:", err);
+                }
+              }}
+              onBlur={() => {
+                // 다른 데 누르면 저장하고 텍스트 모드로
+                if (me?.id) {
+                  const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+                  try {
+                    localStorage.setItem(key, afterStudyText);
+                  } catch (err) {
+                    console.warn("afterStudyText localStorage write fail:", err);
+                  }
+                }
+                setAfterStudyEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.currentTarget.blur(); // blur로 보내면 저장 + 종료가 한 번에 처리됨
+                }
+                if (e.key === "Escape") {
+                  setAfterStudyEditing(false); // ESC로 닫기(선택)
+                }
+              }}
+            />
+          )}
         </div>
       </div>
+
 
 
       {/* 명예의 전당 */}

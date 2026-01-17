@@ -597,6 +597,39 @@
 
 
 
+/* ===============================
+   공부 다하면: 텍스트/입력 토글 스타일
+================================ */
+.afterstudy-box{
+  margin-top: 6px;
+}
+
+/* 평소엔 텍스트(메모)처럼 */
+.afterstudy-text{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: rgba(255,255,255,0.7);
+  font-size: var(--fs-input);
+  color: var(--text);
+  cursor: text;
+}
+
+.afterstudy-text.is-empty{
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* 편집 모드에서만 input */
+.afterstudy-input{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: var(--fs-input);
+  background: #fff;
+}
 
 
 
