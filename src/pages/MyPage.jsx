@@ -1,37 +1,57 @@
 // src/pages/MyPage.jsx
-import { useEffect, useRef, useState } from "react"; 
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
-// import { useSoundSettings } from "../context/SoundSettingsContext";
+
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
-// 음악 리스트
+/**
+ * ✅ 모두 완료 기본 효과음
+ * - "요란한 축하"를 기본값으로 고정
+ * - Planner(완료 시 재생) 쪽 기본값도 같은 값으로 맞추는 걸 추천
+ */
+const DEFAULT_FINISH_SOUND = "/finish1.mp3";
+
+// 음악 리스트(옵션)
 const FINISH_SOUNDS = [
-  { label: "효과음을 선택해보세요", value:""},
   { label: "요란한 축하", value: "/finish1.mp3" },
   { label: "환호성과 박수", value: "/finish2.mp3" },
   { label: "웅장한 빵빠레", value: "/finish3.mp3" },
   { label: "띵띵 스웨덴 리믹스", value: "/finish4.mp3" },
 ];
 
+// value로 label 찾기(현재 선택 표시용)
+function getSoundLabelByValue(value) {
+  const v = String(value || "").trim();
+  const found = FINISH_SOUNDS.find((s) => s.value === v);
+  return found?.label ?? "요란한 축하";
+}
+
 const MyPage = () => {
   const navigate = useNavigate();
 
-  // const { sfxEnabled, setSfxEnabled, finishEnabled, setFinishEnabled } = useSoundSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
-  const previewAudioRef = useRef(null); 
+  const previewAudioRef = useRef(null);
 
+  // ✅ 실제로 저장/적용되는 값은 form.finish_sound가 들고 있음
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
     is_male: true,
-    finish_sound: "/finish.mp3", 
+    finish_sound: DEFAULT_FINISH_SOUND,
   });
+
+  /**
+   * ✅ 셀렉트 박스 UI 전용 상태
+   * - 처음 화면에서는 항상 "효과음을 선택해보세요"가 보이도록 value를 ""로 유지
+   * - 사용자가 실제로 선택하면 그때 value가 바뀜
+   */
+  const [soundPickerValue, setSoundPickerValue] = useState("");
 
   const loadMyProfile = async () => {
     setLoading(true);
@@ -53,15 +73,20 @@ const MyPage = () => {
       .eq("id", user.id)
       .single();
 
+    // ✅ 프로필이 없거나 오류면 기본값으로 세팅(기본 효과음도 finish1로)
     const nextProfile = profileError
       ? {
           id: user.id,
           nickname: user.user_metadata?.nickname ?? "닉네임",
           birthdate: user.user_metadata?.birthdate ?? "",
           is_male: user.user_metadata?.is_male ?? true,
-          finish_sound: "/finish.mp3",
+          finish_sound: DEFAULT_FINISH_SOUND,
         }
-      : profileData;
+      : {
+          ...profileData,
+          // DB에 값이 없거나 비어있으면 기본값으로 보정
+          finish_sound: profileData?.finish_sound || DEFAULT_FINISH_SOUND,
+        };
 
     setProfile(nextProfile);
 
@@ -69,8 +94,11 @@ const MyPage = () => {
       nickname: nextProfile.nickname ?? "",
       birthdate: nextProfile.birthdate ?? "",
       is_male: Boolean(nextProfile.is_male),
-      finish_sound: nextProfile.finish_sound ?? "/finish.mp3",
+      finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
     });
+
+    // ✅ 셀렉트는 항상 플레이스홀더가 보이게 초기화
+    setSoundPickerValue("");
 
     setLoading(false);
   };
@@ -94,32 +122,31 @@ const MyPage = () => {
       localStorage.removeItem(PROFILE_CACHE_KEY);
     } catch (err) {
       console.warn("프로필 캐시 삭제 실패", err);
-  }
+    }
 
     navigate("/login");
   };
 
- const previewSound = async () => {
-  try {
-    const src = form.finish_sound || "/finish.mp3";
+  const previewSound = async () => {
+    try {
+      // ✅ 실제 적용 값 기준으로 미리듣기
+      const src = form.finish_sound || DEFAULT_FINISH_SOUND;
 
-    if (!previewAudioRef.current) {
-      previewAudioRef.current = new Audio(src);
-    } else {
-      previewAudioRef.current.pause();
-      previewAudioRef.current.currentTime = 0;
-      previewAudioRef.current.src = src;
+      if (!previewAudioRef.current) {
+        previewAudioRef.current = new Audio(src);
+      } else {
+        previewAudioRef.current.pause();
+        previewAudioRef.current.currentTime = 0;
+        previewAudioRef.current.src = src;
+      }
+
+      previewAudioRef.current.volume = 0.9;
+      await previewAudioRef.current.play();
+    } catch (err) {
+      console.warn("미리듣기 재생 실패", err);
+      alert("효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요.");
     }
-
-    previewAudioRef.current.volume = 0.9;
-    await previewAudioRef.current.play();
-  } catch (err) {
-    console.warn("미리듣기 재생 실패", err);
-    alert(
-      "효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요."
-    );
-  }
-};
+  };
 
   const onSave = async () => {
     if (!profile?.id) return;
@@ -137,7 +164,8 @@ const MyPage = () => {
       nickname,
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
-      finish_sound: form.finish_sound || "/finish.mp3",
+      // ✅ 비어있으면 기본값으로 저장
+      finish_sound: form.finish_sound || DEFAULT_FINISH_SOUND,
     };
 
     const { data, error } = await supabase
@@ -154,12 +182,19 @@ const MyPage = () => {
       return;
     }
 
-    setProfile(data);
+    // ✅ 저장 결과도 기본값 보정
+    const normalized = {
+      ...data,
+      finish_sound: data?.finish_sound || DEFAULT_FINISH_SOUND,
+    };
+
+    setProfile(normalized);
+    setForm((p) => ({ ...p, finish_sound: normalized.finish_sound }));
 
     try {
-      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(normalized));
     } catch (err) {
-     console.warn("프로필 캐시 저장 실패", err);
+      console.warn("프로필 캐시 저장 실패", err);
     }
 
     alert("저장되었습니다.");
@@ -184,15 +219,14 @@ const MyPage = () => {
     );
   }
 
+  // ✅ 현재 적용 중인 효과음 라벨(아래 표시용)
+  const currentSoundLabel = getSoundLabelByValue(form.finish_sound);
+
   return (
     <div className="mypage">
       <div className="mypage-header">
         <div className="mypage-brand">
-          <img
-            src="/logo.png"
-            alt="스터디 플래너 로고"
-            className="mypage-logo"
-          />
+          <img src="/logo.png" alt="스터디 플래너 로고" className="mypage-logo" />
 
           <div className="mypage-title-wrap">
             <h2 className="mypage-title">마이페이지</h2>
@@ -201,11 +235,7 @@ const MyPage = () => {
         </div>
 
         <div className="mypage-qr-box">
-          <img
-            src="/qr.png"
-            alt="플래너 QR 코드"
-            className="mypage-qr"
-          />
+          <img src="/qr.png" alt="플래너 QR 코드" className="mypage-qr" />
           <span className="mypage-qr-caption">Study Planner</span>
         </div>
       </div>
@@ -242,11 +272,25 @@ const MyPage = () => {
         {/* 완료 음악 선택 */}
         <div className="row">
           <span className="label">모두 완료 효과음</span>
+
           <span className="value mypage-sound">
+            {/* ✅ 셀렉트 박스에는 항상 "효과음을 선택해보세요"가 보이도록 placeholder 옵션을 둠 */}
             <select
-              value={form.finish_sound || "/finish.mp3"}
-              onChange={(e) => setForm((p) => ({ ...p, finish_sound: e.target.value }))}
+              value={soundPickerValue}
+              onChange={(e) => {
+                const v = e.target.value;
+
+                // 사용자가 선택하면 실제 값(form.finish_sound)에 반영
+                setForm((p) => ({ ...p, finish_sound: v || DEFAULT_FINISH_SOUND }));
+
+                // 셀렉트 UI도 선택값으로 변경(이후에는 선택값이 보임)
+                setSoundPickerValue(v);
+              }}
             >
+              <option value="" disabled>
+                효과음을 선택해보세요
+              </option>
+
               {FINISH_SOUNDS.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
@@ -258,10 +302,22 @@ const MyPage = () => {
               type="button"
               className="ghost-btn"
               onClick={previewSound}
-              title="선택한 음악을 미리 들어볼 수 있어요"
+              title="현재 적용된 효과음을 미리 들어볼 수 있어요"
             >
               ▶ 미리듣기
             </button>
+
+            {/* ✅ 현재 적용 중인 효과음은 아래에 따로 표시 */}
+            <div
+              style={{
+                marginTop: "6px",
+                fontSize: "0.92rem",
+                opacity: 0.75,
+                lineHeight: 1.3,
+              }}
+            >
+              <b>{currentSoundLabel}</b>(현재 효과음)
+            </div>
           </span>
         </div>
 
@@ -295,14 +351,15 @@ const MyPage = () => {
       </div>
 
       <div className="mypage-actions">
-        <button className="primary-btn" onClick={() => navigate("/planner")}>
-          플래너로
-        </button>
-        <button onClick={onSave} disabled={saving}>
+        <button className="primary-btn" onClick={onSave} disabled={saving}>
           {saving ? "저장 중..." : "저장"}
+        </button>
+        <button className="outline-btn" onClick={() => navigate("/planner")}>
+          플래너로
         </button>
         <button onClick={logout}>로그아웃</button>
       </div>
+                    
     </div>
   );
 };
