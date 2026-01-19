@@ -485,6 +485,17 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 /* @media (max-width: 560px){ */
 @media (max-width: 750px){
   .tool-row{
@@ -1305,6 +1316,68 @@ label.load-item input{width:10px;}
   color: var(--muted);
   line-height: 1.4;
 }
+
+
+
+
+
+
+
+/* =========================
+   하가다 바텀 모달
+   ========================= */
+
+
+.hagada-modal {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+
+  width: min(720px, 100%);
+  max-height: 70vh;
+
+  border-radius: 22px 22px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+
+  animation: hagada-slide-up 0.25s ease-out;
+}
+
+/* 바텀 시트 느낌 */
+@keyframes hagada-slide-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* 내용 스크롤 대비 */
+.hagada-modal .modal-body {
+  max-height: calc(70vh - 60px);
+  overflow-y: auto;
+}
+
+.modal-backdrop.modal-backdrop-bottom{
+  align-items: flex-end;     /* ✅ 바닥으로 붙이기 */
+  padding: 0;                /* 바텀 시트는 좌우 꽉 차는 게 예쁨 */
+}
+
+
+/* 모바일에서 더 안정적으로 */
+@media (max-width: 480px) {
+  .hagada-modal {
+    max-height: 80vh;
+    border-radius: 18px 18px 0 0;
+  }
+}
+
+
+.dodal-backdrop{
+  align-items: end;
+}
+
 
 
 

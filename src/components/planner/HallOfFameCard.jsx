@@ -12,7 +12,7 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
       {hofLoading ? (
         <div className="hof-empty">불러오는 중...</div>
       ) : hof.length === 0 ? (
-        <div className="hof-empty">오늘의 처음으로 공부를 끝내서 내 닉네임을 여기에 올려볼까?</div>
+        <div className="hof-empty">오늘의 처음으로 공부를 끝내서 내 닉네임을 여기에 올려볼까? (랜덤으로 이름이 표시됩니다)</div>
       ) : (
         <div className="hof-chips" aria-label="오늘 함께 공부한 친구들">
           {hof.map((x) => {

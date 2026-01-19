@@ -100,10 +100,11 @@ function Planner() {
   const [filter, setFilter] = useState("all");
   const [reorderMode, setReorderMode] = useState(false);
   const [usedEmojis, setUsedEmojis] = useState([]);
-  const [afterStudyText, setAfterStudyText] = useState("");
-  const [afterStudyEditing, setAfterStudyEditing] = useState(false);
+  // const [afterStudyText, setAfterStudyText] = useState("");
+  // const [afterStudyEditing, setAfterStudyEditing] = useState(false);
   const { finishEnabled } = useSoundSettings();
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
+  
 
   // =======================
   // 데일리: 선택 날짜
@@ -388,7 +389,6 @@ const closeLoadModal = () => {
       const samples = [
         "오늘의 할 일을 추가해 보세요",
         "완료 버튼을 눌러 보세요",
-        "전체 삭제로 정리할 수 있어요",
         "마이 페이지에서 효과음을 설정해보세요",
       ];
 
@@ -429,6 +429,117 @@ const closeLoadModal = () => {
     setHasMyList(!!data?.id);
     return { id: data?.id ?? null };
   };
+
+  // ✅ 자동 초기화(새 날짜가 비었을 때만)
+  // - 내 목록 있으면: 내 목록을 자동 불러오기(교체)
+  // - 내 목록 없으면: 기본 4개 자동 생성
+  const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
+
+  const seedDefault4Todos = async (userId, dayKey) => {
+    // 기본 4개 문구는 여기서 원하는 대로 바꾸면 됩니다.
+    const defaults = [
+      "📌 오늘 할 일 1개 정하기",
+      "📖 책 10분 읽기",
+      "✍️ 숙제 1개 끝내기",
+      "🧹 정리정돈 1번 하기",
+    ];
+
+    const rows = defaults.map((title, idx) => ({
+      user_id: userId,
+      day_key: dayKey,
+      title,
+      completed: false,
+      // ✅ 중복 방지용 키(같은 날짜에 또 넣으려 하면 충돌로 막힘)
+      template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
+    }));
+
+    const { error } = await supabase
+      .from("todos")
+      .upsert(rows, {
+        onConflict: "user_id,day_key,template_item_key",
+        ignoreDuplicates: true,
+      });
+
+    if (error) throw error;
+  };
+
+  const importMySingleListSilently = async (userId, dayKey) => {
+    // 1) 내 목록 set_id 찾기
+    const { data: setRow, error: setErr } = await supabase
+      .from("todo_sets")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("kind", "single")
+      .maybeSingle();
+
+    if (setErr) throw setErr;
+    if (!setRow?.id) return false;
+
+    // 2) 내 목록 아이템 읽기
+    const { data: items, error: itemsErr } = await supabase
+      .from("todo_set_items")
+      .select("item_key, title, sort_order")
+      .eq("set_id", setRow.id)
+      .order("sort_order", { ascending: true });
+
+    if (itemsErr) throw itemsErr;
+
+    const rows = (items ?? [])
+      .map((x) => ({
+        user_id: userId,
+        day_key: dayKey,
+        title: String(x.title ?? "").trim(),
+        completed: false,
+        // ✅ 내 목록 기반 중복 방지 키
+        source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
+      }))
+      .filter((x) => x.title.length > 0 && x.source_set_item_key);
+
+    if (rows.length === 0) return false;
+
+    const { error: upErr } = await supabase
+      .from("todos")
+      .upsert(rows, {
+        onConflict: "user_id,day_key,source_set_item_key",
+        ignoreDuplicates: true,
+      });
+
+    if (upErr) throw upErr;
+    return true;
+  };
+
+  const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
+    // 이미 할 일이 있으면 아무 것도 안 함
+    if ((currentRows ?? []).length > 0) return;
+
+    // 이미 이 날짜에 자동 초기화를 한 적 있으면 반복 방지
+    const seedKey = getAutoSeedKey(userId, dayKey);
+    try {
+      if (localStorage.getItem(seedKey) === "1") return;
+    } catch {}
+
+    // 내 목록 있으면 내 목록 우선, 없으면 기본 4개
+    try {
+      if (hasMyList) {
+        const ok = await importMySingleListSilently(userId, dayKey);
+        if (!ok) {
+          // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
+          await seedDefault4Todos(userId, dayKey);
+        }
+      } else {
+        await seedDefault4Todos(userId, dayKey);
+      }
+
+      // 자동 초기화 완료 표시
+      try { localStorage.setItem(seedKey, "1"); } catch {}
+
+      // 화면 갱신
+      await fetchTodos(userId, dayKey);
+    } catch (err) {
+      console.error("autoPopulateIfEmpty error:", err);
+    }
+  };
+
 
   // =======================
   // 초기 로딩
@@ -526,9 +637,19 @@ const closeLoadModal = () => {
   // 날짜 바뀌면 재조회
   useEffect(() => {
     if (!me?.id) return;
-    fetchTodos(me.id, selectedDayKey);
-    fetchHallOfFame(selectedDayKey);
-  }, [selectedDayKey, me?.id]);
+
+    const run = async () => {
+      const rows = await fetchTodos(me.id, selectedDayKey);
+      await fetchHallOfFame(selectedDayKey);
+
+      // 비어 있으면 자동으로 채우기
+      await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
+    };
+
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDayKey, me?.id, hasMyList]);
+
 
   // =======================
   // 명예의 전당 30분 주기 자동 새로고침
@@ -1160,10 +1281,7 @@ const closeLoadModal = () => {
     }
   }, [remainingSec, timerSoundOn]);
 
-
-
-
-
+  //하가다
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);

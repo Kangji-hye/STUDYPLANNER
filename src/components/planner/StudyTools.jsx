@@ -12,24 +12,24 @@ export default function StudyTools({
   resetStopwatch,
 
   // 타이머
-  TIMER_PRESETS,
-  timerMin,
-  setTimerMin,
-  timerRunning,
-  formatMMSS,
-  remainingSec,
-  startTimer,
-  pauseTimer,
-  resetTimer,
+  // TIMER_PRESETS,
+  // timerMin,
+  // setTimerMin,
+  // timerRunning,
+  // formatMMSS,
+  // remainingSec,
+  // startTimer,
+  // pauseTimer,
+  // resetTimer,
 
   // ✅ 타이머 사운드 토글
   timerSoundOn,
   setTimerSoundOn,
 
   // 하가다
-  hagadaCount,
-  increaseHagada,
-  resetHagada,
+  // hagadaCount,
+  // increaseHagada,
+  // resetHagada,
 }) {
   return (
     <div className="study-tools">
@@ -45,7 +45,7 @@ export default function StudyTools({
       </div>
 
       {/* 2) 타이머 */}
-      <div className="tool-row">
+      {/* <div className="tool-row">
         <div className="tool-title tool-title-with-toggle">
           <span>타이머</span>
 
@@ -80,17 +80,18 @@ export default function StudyTools({
           <button onClick={pauseTimer} disabled={!timerRunning}>멈춤</button>
           <button onClick={resetTimer}>처음부터</button>
         </div>
-      </div>
+      </div> */}
 
       {/* 3) 하가다 */}
-      <div className="tool-row">
+      {/* <div className="tool-row">
         <div className="tool-title">하가다</div>
         <div className="tool-display">{hagadaCount}</div>
         <div className="tool-actions">
           <button onClick={increaseHagada}>한번 더하기</button>
           <button onClick={resetHagada}>처음부터</button>
         </div>
-      </div>
+      </div> */}
+      
     </div>
   );
 }
