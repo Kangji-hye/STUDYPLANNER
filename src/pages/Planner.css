@@ -1263,6 +1263,118 @@
   border-color: rgba(255,122,162,0.35);
 }
 
+/* 모달 불러오기 통합 관련 추가 */
+/* ===============================
+   ✅ 필터바: 좌/우 정렬 버전 (inline style 제거용)
+================================ */
+.filter-bar.filter-bar-split{
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-btn-nowrap{
+  white-space: nowrap;
+}
+
+/* ===============================
+   ✅ 통합 "일정 불러오기" 모달 스타일
+================================ */
+.load-tabs{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.load-radio-grid{
+  display: grid;
+  gap: 8px;
+}
+
+.load-radio-card{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.load-radio-card input{
+  flex: 0 0 auto;
+}
+
+.load-radio-label{
+  font-weight: 700;
+}
+
+/* 내 일정 탭에서 "저장된 내 목록 없음" 안내 */
+.load-no-list{
+  opacity: 0.9;
+}
+
+/* 모바일에서 탭 버튼이 너무 꽉 차면 보기 좋게 */
+@media (max-width: 480px){
+  .load-tabs .filter-btn{
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
+  }
+}
+
+/* ===============================
+   일정 불러오기 모달(리스트 한눈에)
+================================ */
+.load-divider{
+  height: 1px;
+  background: rgba(241, 215, 230, 0.9); /* var(--line) 톤 */
+  margin: 10px 0;
+}
+
+.load-divider.thin{
+  opacity: 0.75;
+  margin: 8px 0;
+}
+
+.load-list{
+  display: grid;
+  gap: 8px;
+}
+
+.load-item{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.load-item input{
+  flex: 0 0 auto;
+}
+
+.load-item-text{
+  font-weight: 700;
+}
+
+.load-item-badge{
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.load-help{
+  margin-top: 10px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+
 /* ===============================
    반응형 스타일
 ================================ */

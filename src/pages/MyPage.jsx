@@ -18,7 +18,7 @@ const FINISH_SOUNDS = [
   { label: "🐵요란한 축하", value: "/finish1.mp3" },
   { label: "👏환호성과 박수", value: "/finish2.mp3" },
   { label: "🎺웅장한 빵빠레", value: "/finish3.mp3" },
-  { label: "🐸띵띵 스웨덴 리믹스", value: "/finish4.mp3" },
+  { label: "🐸개구리 달려", value: "/finish4.mp3" },
 ];
 
 // value로 label 찾기(현재 선택 표시용)
@@ -274,46 +274,58 @@ const MyPage = () => {
           <span className="label">모두 완료 효과음</span>
 
           <span className="value mypage-sound">
-            {/* ✅ 셀렉트 박스에는 항상 "효과음을 선택해보세요"가 보이도록 placeholder 옵션을 둠 */}
-            <select
-              value={soundPickerValue}
-              onChange={(e) => {
-                const v = e.target.value;
+            <div className="sound-card">
+              <div className="sound-card-head">
+                <span className="sound-card-title">🎵 효과음 선택</span>
+                <span className="sound-card-current">
+                  현재: <b>{currentSoundLabel}</b>
+                </span>
+              </div>
 
-                // 사용자가 선택하면 실제 값(form.finish_sound)에 반영
-                setForm((p) => ({ ...p, finish_sound: v || DEFAULT_FINISH_SOUND }));
+              <div className="sound-card-body">
+                <div className="sound-control-row">
+                  <select
+                    className="sound-select"
+                    value={soundPickerValue}
+                    onChange={(e) => {
+                      const v = e.target.value;
 
-                // 셀렉트 UI도 선택값으로 변경(이후에는 선택값이 보임)
-                setSoundPickerValue(v);
-              }}
-            >
-              <option value="" disabled>
-                효과음을 선택해보세요
-              </option>
+                      // 사용자가 선택하면 실제 값(form.finish_sound)에 반영
+                      setForm((p) => ({ ...p, finish_sound: v || DEFAULT_FINISH_SOUND }));
 
-              {FINISH_SOUNDS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+                      // 셀렉트 UI도 선택값으로 변경(이후에는 선택값이 보임)
+                      setSoundPickerValue(v);
+                    }}
+                  >
+                    <option value="" disabled>
+                      효과음 선택
+                    </option>
 
-            <button
-              type="button"
-              className="ghost-btn"
-              onClick={previewSound}
-              title="현재 적용된 효과음을 미리 들어볼 수 있어요"
-            >
-              ▶ 미리듣기
-            </button>
+                    {FINISH_SOUNDS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
 
-            {/* ✅ 현재 적용 중인 효과음은 아래에 따로 표시 */}
-            <div className="current-sound">
-              🎉현재 효과음: {currentSoundLabel}
+                  <button
+                    type="button"
+                    className="sound-preview-btn"
+                    onClick={previewSound}
+                    title="현재 적용된 효과음을 미리 들어볼 수 있어요"
+                  >
+                    ▶ 미리듣기
+                  </button>
+                </div>
+
+                <div className="sound-hint">
+                  마지막 “완료”를 눌렀을 때 이 소리가 나와요 🙂
+                </div>
+              </div>
             </div>
-
           </span>
         </div>
+
 
         {/* 성별 */}
         <div className="row gender">

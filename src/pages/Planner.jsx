@@ -23,10 +23,10 @@ const EMOJI_POOL = [
 
 // 명예의 전당
 const cutName6 = (name) => {
-    const s = String(name ?? "").trim();
-    if (!s) return "익명";
-    return s.length > 6 ? s.slice(0, 6) : s;
-  };
+  const s = String(name ?? "").trim();
+  if (!s) return "익명";
+  return s.length > 6 ? s.slice(0, 6) : s;
+};
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
@@ -85,8 +85,8 @@ const buildMonthGrid = (year, monthIndex) => {
 };
 
 function Planner() {
-  // 훅은 무조건 항상 같은 순서로 실행
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
   const [todo, setTodo] = useState("");
@@ -104,12 +104,9 @@ function Planner() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
-  
-  // 선택된 날짜가 "오늘(KST)"인지 확인
   const isTodaySelected = () => {
     return selectedDayKey === toKstDayKey(new Date());
   };
-
 
   // =======================
   // 달력 모달
@@ -119,6 +116,7 @@ function Planner() {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
   });
+
   const monthCells = useMemo(
     () => buildMonthGrid(calMonth.y, calMonth.m),
     [calMonth.y, calMonth.m]
@@ -150,13 +148,37 @@ function Planner() {
   }, [todos]);
 
   // =======================
-  // 샘플 숙제 불러오기 모달 (테이블 3개 버전)
+  // 통합: 일정 불러오기 모달
   // =======================
-  const [showSampleModal, setShowSampleModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+
+// 모달에서 선택하는 항목을 하나로 통합
+// "my" | "vacation" | "weekday" | "weekend"
+const [loadChoice, setLoadChoice] = useState("vacation");
+
+const openLoadModal = () => {
+  // 내 목록이 있으면 기본을 "내가 만든 목록"으로, 없으면 방학 샘플로
+  setLoadChoice(hasMyList ? "my" : "vacation");
+
+  // 체크박스(교체) 기본은 OFF
+  setSampleModeReplace(false);
+  setLoadReplace(false);
+
+  setShowLoadModal(true);
+};
+
+const closeLoadModal = () => {
+  // 불러오는 중엔 닫기 막기(중복 클릭 방지)
+  if (importingSample || busyMyList) return;
+  setShowLoadModal(false);
+};
+
+  // =======================
+  // 샘플(테이블 3개)
+  // =======================
   const [sampleModeReplace, setSampleModeReplace] = useState(false); // true면 교체
   const [importingSample, setImportingSample] = useState(false);
 
-  // ✅ 여기서 key는 "테이블 종류"로 고정
   const SAMPLE_SETS = [
     { key: "vacation", label: "방학 샘플" },
     { key: "weekday", label: "평일 샘플" },
@@ -171,22 +193,11 @@ function Planner() {
 
   const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
 
-  const openSampleModal = () => {
-    setSampleModeReplace(false);
-    setSelectedSampleKey(SAMPLE_SETS[0].key);
-    setShowSampleModal(true);
-  };
-
-  const closeSampleModal = () => {
-    if (importingSample) return;
-    setShowSampleModal(false);
-  };
-
   // =======================
-  // 내 목록 모달
+  // 내 목록 모달(저장만 유지)
   // =======================
   const [showMyListModal, setShowMyListModal] = useState(false);
-  const [myListMode, setMyListMode] = useState("load");
+  const [myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
   const [loadReplace, setLoadReplace] = useState(false);
   const [busyMyList, setBusyMyList] = useState(false);
   const [hasMyList, setHasMyList] = useState(false);
@@ -300,56 +311,38 @@ function Planner() {
   };
 
   // ✅ 모두 완료 효과음(안정 + URL도 허용)
-const playFinishSound = (overrideSrc) => {
-  try {
-    // 1) 토글이 꺼져 있으면 재생 안 함
-    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+  const playFinishSound = (overrideSrc) => {
+    try {
+      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-    // 2) src 후보
-    let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
-    src = String(src).trim();
+      let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
+      src = String(src).trim();
+      if (!src) src = "/finish.mp3";
 
-    // 3) src가 비었으면 기본값
-    if (!src) src = "/finish.mp3";
+      if (!src.toLowerCase().includes(".mp3")) {
+        src = "/finish.mp3";
+      }
 
-    // 4) mp3 확장자만 강제하고 싶으면(권장) 이 정도만 체크
-    //    (URL/상대경로 모두 허용)
-    if (!src.toLowerCase().includes(".mp3")) {
-      src = "/finish.mp3";
+      if (finishAudioRef.current) {
+        try {
+          finishAudioRef.current.pause();
+          finishAudioRef.current.currentTime = 0;
+        } catch {}
+      }
+
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.volume = 0.9;
+
+      finishAudioRef.current = audio;
+
+      audio.play().catch((e) => {
+        console.warn("finish sound blocked:", e);
+      });
+    } catch (e) {
+      console.warn("finish sound error:", e);
     }
-
-    // 🔎 디버깅: 실제로 어떤 src로 재생 시도하는지 확인
-    console.log("finish sound src:", src);
-
-    // 5) 이전에 재생 중인게 있으면 멈추기(겹침 방지)
-    if (finishAudioRef.current) {
-      try {
-        finishAudioRef.current.pause();
-        finishAudioRef.current.currentTime = 0;
-      } catch {}
-    }
-
-    const audio = new Audio(src);
-    audio.preload = "auto";
-    audio.volume = 0.9;
-
-    finishAudioRef.current = audio;
-
-    audio.play().catch((e) => {
-      console.warn("finish sound blocked:", e);
-    });
-  } catch (e) {
-    console.warn("finish sound error:", e);
-  }
-};
-
-
-  // useEffect(() => {
-  //   const src = profile?.finish_sound || "/finish.mp3";
-  //   finishAudioRef.current = new Audio(src);
-  //   finishAudioRef.current.volume = 0.9;
-  //   finishAudioRef.current.preload = "auto";
-  // }, [profile?.finish_sound]);
+  };
 
   // =======================
   // 날짜별 todos 조회
@@ -360,7 +353,6 @@ const playFinishSound = (overrideSrc) => {
       .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
       .eq("user_id", userId)
       .eq("day_key", dayKey)
-      // .order("template_item_key", { ascending: true, nullsFirst: true })
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false });
 
@@ -374,28 +366,23 @@ const playFinishSound = (overrideSrc) => {
     return rows;
   };
 
-  //처음 들어온 사용자에게 샘플 3개 자동 주입
-  // 처음 들어온 사용자에게 샘플 3개 자동 주입 (StrictMode 2회 실행에도 안전)
+  // 처음 들어온 사용자에게 샘플 자동 주입
   const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
     const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
 
     try {
-      // 이미 할 일이 있으면 아무 것도 안 함
       if (existingCount > 0) return;
 
-      // 이미 샘플 넣은 적이 있으면 또 넣지 않음
       const alreadySeeded = localStorage.getItem(seededKey) === "true";
       if (alreadySeeded) return;
 
-      // 핵심: insert 전에 먼저 "seeded"를 찍어서
-      // StrictMode로 loadAll이 2번 돌더라도 두 번째 실행을 즉시 차단
       localStorage.setItem(seededKey, "true");
 
       const samples = [
         "오늘의 할 일을 추가해 보세요",
         "완료 버튼을 눌러 보세요",
         "전체 삭제로 정리할 수 있어요",
-        "마이 페이지에서 효과음을 설정해보세요"
+        "마이 페이지에서 효과음을 설정해보세요",
       ];
 
       const rows = samples.map((text) => ({
@@ -403,30 +390,21 @@ const playFinishSound = (overrideSrc) => {
         day_key: dayKey,
         title: `${getRandomEmoji()} ${text}`,
         completed: false,
-        // 옵션: sort_order까지 주면 정렬도 깔끔 (지금 프로젝트가 sort_order를 쓰고 있어서 추천)
-        // 1,2,3으로 딱 고정
-        // sort_order는 DB 컬럼이 있을 때만 의미 있음(너는 이미 select에 sort_order 넣고 있음)
-        // 아래 줄은 그대로 써도 OK
-        // (혹시 테이블에 sort_order가 없으면 에러 날 수 있으니, 컬럼이 확실하면 켜줘)
       }));
 
-      // sort_order 확실히 넣고 싶으면 이렇게(추천)
       const rowsWithOrder = rows.map((r, idx) => ({ ...r, sort_order: idx + 1 }));
 
       const { error } = await supabase.from("todos").insert(rowsWithOrder);
       if (error) throw error;
     } catch (err) {
       console.error("seedSampleTodosIfEmpty error:", err);
-
-      // insert 실패했으면 seeded 표시를 되돌려 다음에 다시 시도 가능하게
       try {
         localStorage.removeItem(seededKey);
       } catch {}
     }
   };
 
-
-  // =======================
+  // 내 목록 존재 여부
   const fetchMySingleListInfo = async (userId) => {
     const { data, error } = await supabase
       .from("todo_sets")
@@ -514,7 +492,6 @@ const playFinishSound = (overrideSrc) => {
         if (upsertErr) console.error("profiles upsert error:", upsertErr);
       }
 
-      // await fetchTodos(user.id, selectedDayKey);
       const loaded = await fetchTodos(user.id, selectedDayKey);
 
       await seedSampleTodosIfEmpty({
@@ -523,7 +500,6 @@ const playFinishSound = (overrideSrc) => {
         existingCount: loaded.length,
       });
 
-      // 샘플을 넣었을 수도 있으니 한 번 더 불러와서 화면을 최신화
       await fetchTodos(user.id, selectedDayKey);
 
       await fetchMySingleListInfo(user.id);
@@ -534,7 +510,9 @@ const playFinishSound = (overrideSrc) => {
     };
 
     loadAll();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
@@ -543,7 +521,6 @@ const playFinishSound = (overrideSrc) => {
     if (!me?.id) return;
     fetchTodos(me.id, selectedDayKey);
     fetchHallOfFame(selectedDayKey);
-     
   }, [selectedDayKey, me?.id]);
 
   // "공부 다하면" 메모 불러오기
@@ -561,9 +538,10 @@ const playFinishSound = (overrideSrc) => {
   }, [me?.id, selectedDayKey]);
 
   // =======================
-  // 샘플 숙제 불러오기 실행
+  // 샘플 일정 불러오기 실행
   // =======================
-  const importSampleTodos = async () => {
+  const importSampleTodos = async (sampleKeyOverride) => {
+
     if (!me?.id) return;
     if (importingSample) return;
 
@@ -572,16 +550,19 @@ const playFinishSound = (overrideSrc) => {
       return;
     }
 
-    const tableName = SAMPLE_TABLE_BY_KEY[selectedSampleKey];
+    const useKey = sampleKeyOverride || selectedSampleKey;
+    const tableName = SAMPLE_TABLE_BY_KEY[useKey];
     if (!tableName) {
       alert("샘플 테이블 설정이 올바르지 않습니다.");
       return;
     }
 
+    // ✅ 화면/상태도 함께 맞춰두기(선택 유지용)
+    setSelectedSampleKey(useKey);
+
     try {
       setImportingSample(true);
 
-      // 상태 변경시 이름 제거
       if (sampleModeReplace) {
         const { error: delErr } = await supabase
           .from("todos")
@@ -594,7 +575,6 @@ const playFinishSound = (overrideSrc) => {
         await removeCompletionForDay(selectedDayKey);
       }
 
-     //템플릿 조회: todo_templates_xxx 테이블에서 직접 읽음
       const { data: templates, error: tplErr } = await supabase
         .from(tableName)
         .select("item_key, title, sort_order")
@@ -603,8 +583,8 @@ const playFinishSound = (overrideSrc) => {
       if (tplErr) throw tplErr;
 
       const maxSort = (todosRef.current ?? [])
-      .map((t) => Number(t.sort_order ?? 0))
-      .reduce((a, b) => Math.max(a, b), 0);
+        .map((t) => Number(t.sort_order ?? 0))
+        .reduce((a, b) => Math.max(a, b), 0);
 
       const rows = (templates ?? [])
         .map((x) => {
@@ -613,24 +593,20 @@ const playFinishSound = (overrideSrc) => {
           return {
             user_id: me.id,
             day_key: selectedDayKey,
-            template_item_key: `${selectedSampleKey}:${String(x.item_key ?? "").trim()}`,
+            template_item_key: `${useKey}:${String(x.item_key ?? "").trim()}`,
             title: String(x.title ?? "").trim(),
             completed: false,
-
-            // 교체면 템플릿 순서 그대로(1,2,3..), 추가면 기존 맨 뒤로 붙이기
             sort_order: sampleModeReplace ? base : (maxSort + base),
           };
         })
         .filter((x) => x.template_item_key && x.title);
-
-
 
       if (rows.length === 0) {
         alert("샘플 템플릿이 비어있습니다. Supabase 샘플 테이블을 확인해주세요.");
         return;
       }
 
-       const { error: upErr } = await supabase
+      const { error: upErr } = await supabase
         .from("todos")
         .upsert(rows, {
           onConflict: "user_id,day_key,template_item_key",
@@ -640,8 +616,8 @@ const playFinishSound = (overrideSrc) => {
       if (upErr) throw upErr;
 
       await fetchTodos(me.id, selectedDayKey);
-      alert(sampleModeReplace ? "샘플 숙제로 교체했습니다." : "샘플 숙제를 추가했습니다.");
-      setShowSampleModal(false);
+      alert(sampleModeReplace ? "샘플 일정으로 교체했습니다." : "샘플 일정을 추가했습니다.");
+      setShowLoadModal(false);
     } catch (err) {
       console.error("importSampleTodos error:", err);
 
@@ -650,26 +626,20 @@ const playFinishSound = (overrideSrc) => {
         msg.includes("todos_user_template_item_unique") ||
         msg.includes("duplicate key value violates unique constraint")
       ) {
-        alert("이미 불러온 샘플 숙제입니다.");
+        alert("이미 불러온 샘플 일정입니다.");
       } else {
-        alert(msg || "샘플 숙제 불러오기 중 오류가 발생했습니다.");
+        alert(msg || "샘플 일정 불러오기 중 오류가 발생했습니다.");
       }
     } finally {
       setImportingSample(false);
     }
   };
-  
 
   // =======================
-  // 내 목록 모달
+  // 내 목록 저장 모달
   // =======================
   const openMyListSaveModal = () => {
     setMyListMode("save");
-    setShowMyListModal(true);
-  };
-
-  const openMyListLoadModal = () => {
-    setMyListMode("load");
     setShowMyListModal(true);
   };
 
@@ -735,8 +705,8 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
-  // 내 목록 불러오기(선택 날짜에 넣기)
-  const importMySingleList = async () => {
+  // ✅ 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
+const importMySingleList = async () => {
   if (!me?.id) return;
 
   // 지난 날짜에서는 불러오기 금지
@@ -753,14 +723,16 @@ const playFinishSound = (overrideSrc) => {
   }
 
   try {
+    // ✅ 내 목록(set) id 찾기
     const { id: setId } = await fetchMySingleListInfo(me.id);
     if (!setId) {
-      alert("저장된 내 목록이 없습니다. 먼저 저장해 주세요.");
+      alert("저장된 내가 만든 목록이 없습니다. 먼저 '내 목록 저장'을 해주세요.");
       return;
     }
 
     setBusyMyList(true);
 
+    // ✅ 교체 모드면 현재 날짜 todos 삭제
     if (loadReplace) {
       const { error: delErr } = await supabase
         .from("todos")
@@ -773,6 +745,7 @@ const playFinishSound = (overrideSrc) => {
       await removeCompletionForDay(selectedDayKey);
     }
 
+    // ✅ 내가 만든 목록 아이템 읽기 (여기가 items!)
     const { data: items, error: itemsErr } = await supabase
       .from("todo_set_items")
       .select("item_key, title, sort_order")
@@ -781,10 +754,12 @@ const playFinishSound = (overrideSrc) => {
 
     if (itemsErr) throw itemsErr;
 
+    // ✅ 현재 todos의 max sort
     const maxSort = (todosRef.current ?? [])
       .map((t) => Number(t.sort_order ?? 0))
       .reduce((a, b) => Math.max(a, b), 0);
 
+    // ✅ rows 생성 (templates 절대 사용 X)
     const rows = (items ?? [])
       .map((x) => {
         const base = Number(x.sort_order ?? 0) || 0;
@@ -795,14 +770,11 @@ const playFinishSound = (overrideSrc) => {
           source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
           title: String(x.title ?? "").trim(),
           completed: false,
-
-          // 교체면 내 목록 순서 그대로, 추가면 기존 맨 뒤로 붙이기
+          // 교체면 1..n, 추가면 maxSort 뒤로
           sort_order: loadReplace ? base : (maxSort + base),
         };
       })
       .filter((x) => x.source_set_item_key && x.title);
-
-
 
     const { error: upErr } = await supabase
       .from("todos")
@@ -814,23 +786,19 @@ const playFinishSound = (overrideSrc) => {
     if (upErr) throw upErr;
 
     await fetchTodos(me.id, selectedDayKey);
-    alert(loadReplace ? "내 목록으로 교체했습니다." : "내 목록을 불러왔습니다.");
-    setShowMyListModal(false);
+    alert(loadReplace ? "내 일정으로 교체했습니다." : "내 일정을 불러왔습니다.");
+    setShowLoadModal(false);
   } catch (err) {
     console.error("importMySingleList error:", err);
 
     const msg = String(err?.message ?? "");
-
-    // 중복키 에러 처리
     if (
       msg.includes("todos_user_source_set_item_unique") ||
       msg.includes("duplicate key value violates unique constraint")
     ) {
       alert("이미 불러온 목록입니다.");
-      // 또는 더 친절하게:
-      // alert("이미 불러온 목록이라 중복으로 추가할 수 없습니다.");
     } else {
-      alert(msg || "내 목록 불러오기 중 오류가 발생했습니다.");
+      alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
     }
   } finally {
     setBusyMyList(false);
@@ -839,7 +807,7 @@ const playFinishSound = (overrideSrc) => {
 
 
   // =======================
-  // 정렬 
+  // 정렬
   // =======================
   const ensureSortOrderForDay = async () => {
     if (!me?.id) return;
@@ -849,8 +817,6 @@ const playFinishSound = (overrideSrc) => {
 
     if (!needs) return;
 
-    // 지금 fetchTodos 정렬 결과(현재 화면 순서)를 그대로 1,2,3...로 부여
-    // 너무 많은 요청을 피하려면 최소한의 업데이트만 수행
     for (let i = 0; i < current.length; i++) {
       const t = current[i];
       const nextOrder = i + 1;
@@ -873,7 +839,6 @@ const playFinishSound = (overrideSrc) => {
     const aOrder = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : 0;
     const bOrder = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0;
 
-    // 화면 즉시 반영(체감 좋게)
     const current = todosRef.current ?? [];
     setTodos(
       current.map((x) => {
@@ -883,7 +848,6 @@ const playFinishSound = (overrideSrc) => {
       })
     );
 
-    // DB 업데이트
     const { error: e1 } = await supabase.from("todos").update({ sort_order: bOrder }).eq("id", a.id);
     if (e1) {
       console.error("swapTodoOrder update a error:", e1);
@@ -903,6 +867,12 @@ const playFinishSound = (overrideSrc) => {
     await fetchTodos(me.id, selectedDayKey);
   };
 
+  const filteredTodos = useMemo(() => {
+    if (filter === "completed") return todos.filter((t) => t.completed);
+    if (filter === "uncompleted") return todos.filter((t) => !t.completed);
+    return todos;
+  }, [filter, todos]);
+
   const moveTodoUp = async (item) => {
     const list = filteredTodos;
     const idx = list.findIndex((x) => x.id === item.id);
@@ -917,52 +887,46 @@ const playFinishSound = (overrideSrc) => {
     await swapTodoOrder(list[idx], list[idx + 1]);
   };
 
-
-
-
-
   // =======================
   // todos CRUD
   // =======================
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
-  const raw = todo.trim();
-  if (!raw) return;
-  if (!me?.id) return;
+    const raw = todo.trim();
+    if (!raw) return;
+    if (!me?.id) return;
 
-  const emoji = getRandomEmoji();
-  const titleWithEmoji = `${emoji} ${raw}`;
+    const emoji = getRandomEmoji();
+    const titleWithEmoji = `${emoji} ${raw}`;
 
-  const maxSort = (todosRef.current ?? [])
-    .map((x) => Number(x.sort_order ?? 0))
-    .reduce((a, b) => Math.max(a, b), 0);
+    const maxSort = (todosRef.current ?? [])
+      .map((x) => Number(x.sort_order ?? 0))
+      .reduce((a, b) => Math.max(a, b), 0);
 
-  const nextSort = maxSort + 1;
+    const nextSort = maxSort + 1;
 
-  const { error } = await supabase
-    .from("todos")
-    .insert([{
-      user_id: me.id,
-      day_key: selectedDayKey,
-      title: titleWithEmoji,
-      completed: false,
-      sort_order: nextSort,
-    }])
-    .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
-    .single();
+    const { error } = await supabase
+      .from("todos")
+      .insert([{
+        user_id: me.id,
+        day_key: selectedDayKey,
+        title: titleWithEmoji,
+        completed: false,
+        sort_order: nextSort,
+      }])
+      .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
+      .single();
 
-  if (error) {
-    console.error("addTodo error:", error);
-    alert(error.message);
-    return;
-  }
+    if (error) {
+      console.error("addTodo error:", error);
+      alert(error.message);
+      return;
+    }
 
-  setTodo("");
-
-  // 정렬(순서) 기준과 동일하게 다시 불러와서 화면 확정
-  await fetchTodos(me.id, selectedDayKey);
-};
+    setTodo("");
+    await fetchTodos(me.id, selectedDayKey);
+  };
 
   const onDelete = async (id) => {
     const { error } = await supabase.from("todos").delete().eq("id", id);
@@ -1002,7 +966,6 @@ const playFinishSound = (overrideSrc) => {
     const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
     if (!wasAllCompleted && isAllCompleted) {
-      console.log("호출은 되고 모두 완료 효과음은 안들림");
       fireConfetti();
       playFinishSound();
       recordCompletionForDay(selectedDayKey);
@@ -1013,14 +976,8 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
-  const filteredTodos = useMemo(() => {
-    if (filter === "completed") return todos.filter((t) => t.completed);
-    if (filter === "uncompleted") return todos.filter((t) => !t.completed);
-    return todos;
-  }, [filter, todos]);
-
   // =======================
-  // 스탑워치
+  // 스탑워치/타이머/하가다 (원본 유지)
   // =======================
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -1068,28 +1025,18 @@ const playFinishSound = (overrideSrc) => {
     setElapsedMs(0);
   };
 
-  // =======================
-  // 타이머(카운트다운)
-  // =======================
-  const TIMER_PRESETS = [5, 10, 15, 20]; // 분 단위 프리셋
-
-  const [timerMin, setTimerMin] = useState(10); // 기본 10분
+  const TIMER_PRESETS = [5, 10, 15, 20];
+  const [timerMin, setTimerMin] = useState(10);
   const [timerRunning, setTimerRunning] = useState(false);
   const [remainingSec, setRemainingSec] = useState(10 * 60);
-
   const timerIntervalRef = useRef(null);
 
-  // 타이머 분을 바꾸면 남은 시간을 같이 리셋(실행 중이면 변경 막기)
   useEffect(() => {
-    // 실행 중에는 분 변경을 막고 있다면(disabled), 사실상 이 줄은 안전장치
     if (timerRunning) return;
-
     setRemainingSec(timerMin * 60);
-    // ❗의존성에서 timerRunning 제거가 핵심
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerMin]);
 
-  // 언마운트 시 interval 정리(안전)
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) {
@@ -1100,70 +1047,58 @@ const playFinishSound = (overrideSrc) => {
   }, []);
 
   const formatMMSS = (sec) => {
-  const s = Math.max(0, Number(sec) || 0);
-  const mm = String(Math.floor(s / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
-};
+    const s = Math.max(0, Number(sec) || 0);
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
 
   const startTimer = () => {
-  if (timerRunning) return;
-  if (remainingSec <= 0) return;
+    if (timerRunning) return;
+    if (remainingSec <= 0) return;
 
-  setTimerRunning(true);
+    setTimerRunning(true);
 
-  timerIntervalRef.current = setInterval(() => {
-    setRemainingSec((prev) => {
-      const next = prev - 1;
+    timerIntervalRef.current = setInterval(() => {
+      setRemainingSec((prev) => {
+        const next = prev - 1;
 
-      if (next <= 0) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-        setTimerRunning(false);
-        playFinishSound();
-        return 0;
-      }
-      return next;
-    });
-  }, 1000);
-};
+        if (next <= 0) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+          setTimerRunning(false);
+          playFinishSound();
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+  };
 
-const pauseTimer = () => {
-  if (!timerRunning) return;
-  setTimerRunning(false);
+  const pauseTimer = () => {
+    if (!timerRunning) return;
+    setTimerRunning(false);
 
-  if (timerIntervalRef.current) {
-    clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = null;
-  }
-};
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  };
 
-const resetTimer = () => {
-  setTimerRunning(false);
+  const resetTimer = () => {
+    setTimerRunning(false);
 
-  if (timerIntervalRef.current) {
-    clearInterval(timerIntervalRef.current);
-    timerIntervalRef.current = null;
-  }
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
 
-  setRemainingSec(timerMin * 60);
-};
+    setRemainingSec(timerMin * 60);
+  };
 
-
-
- // =======================
-  // 하가다 (횟수 카운터)
-  // =======================
   const [hagadaCount, setHagadaCount] = useState(0);
-
-  const increaseHagada = () => {
-    setHagadaCount((prev) => prev + 1);
-  };
-
-  const resetHagada = () => {
-    setHagadaCount(0);
-  };
-
+  const increaseHagada = () => setHagadaCount((prev) => prev + 1);
+  const resetHagada = () => setHagadaCount(0);
 
   // =======================
   // 아이콘/닉네임
@@ -1172,7 +1107,6 @@ const resetTimer = () => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // early return
   if (loading) return <div className="planner-loading">로딩중...</div>;
 
   // =======================
@@ -1202,10 +1136,12 @@ const resetTimer = () => {
 
   // 로그아웃
   const handleLogout = async () => {
-   await supabase.auth.signOut({ scope: "local" });
-    try { localStorage.removeItem(PROFILE_CACHE_KEY); } catch (e) {
-    console.warn("프로필 캐시 삭제 실패", e);
-    } 
+    await supabase.auth.signOut({ scope: "local" });
+    try {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+    } catch (e) {
+      console.warn("프로필 캐시 삭제 실패", e);
+    }
     navigate("/login");
   };
 
@@ -1288,22 +1224,17 @@ const resetTimer = () => {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
-          {/* 샘플 불러오기 버튼 */}
+          {/* ✅ 통합: 일정 불러오기(핑크 버튼 유지) */}
           <button
             type="button"
             className="preset-btn preset-btn-primary"
-            onClick={openSampleModal}
-            disabled={importingSample}
+            onClick={openLoadModal}
+            disabled={importingSample || busyMyList}
           >
-            {importingSample ? "불러오는 중..." : "📂 샘플 숙제 불러오기"}
+            {importingSample || busyMyList ? "불러오는 중..." : "📂 일정 불러오기"}
           </button>
 
-          <div className="mylist-actions">
-            <button className="preset-btn preset-btn-ghost" onClick={openMyListLoadModal}>
-              📂 내 목록 불러오기 {hasMyList ? "" : "(없음)"}
-            </button>
-          </div>
-
+          {/* 내 목록 저장은 그대로 */}
           <button className="preset-btn preset-btn-ghost" onClick={openMyListSaveModal}>
             💾 내 목록 저장
           </button>
@@ -1313,7 +1244,7 @@ const resetTimer = () => {
             title="선택한 날짜 목록 전체 삭제"
             onClick={deleteAllTodos}
           >
-            🗑️ 현재 날짜 목록 전체 삭제
+            ❌ 오늘 목록 모두 삭제
           </button>
         </div>
 
@@ -1354,15 +1285,13 @@ const resetTimer = () => {
       </ul>
 
       {/* 필터 + 정렬 */}
-      <div className="filter-bar" style={{ justifyContent: "space-between", alignItems: "center" }}>
+      <div className="filter-bar filter-bar-split">
         <div className="filter-group-left">
           {reorderMode ? (
-            // 순서 변경 모드일 때: 버튼 대신 안내 텍스트
             <span className="reorder-hint" aria-live="polite">
               현재 목록 순서 변경중...
             </span>
           ) : (
-            // 평소에는 필터 버튼 3개
             <>
               <button
                 className={`filter-btn ${filter === "all" ? "active" : ""}`}
@@ -1397,20 +1326,14 @@ const resetTimer = () => {
           )}
         </div>
 
-        {/* 전체일 때만 순서 버튼 노출 → ✅ reorderMode일 때도 계속 보여야 완료를 누를 수 있음 */}
         {filter === "all" && (
           <button
             type="button"
-            className={`filter-btn ${reorderMode ? "active" : ""}`}
+            className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
             onClick={async () => {
               const next = !reorderMode;
-
-              // ✅ 순서 변경을 시작할 때는 필터를 강제로 전체로 맞춤
               if (next) setFilter("all");
-
               setReorderMode(next);
-
-              // ✅ 순서 모드 처음 켤 때 sort_order 정리
               if (next) {
                 await ensureSortOrderForDay();
               }
@@ -1421,8 +1344,6 @@ const resetTimer = () => {
           </button>
         )}
       </div>
-
-
 
       <div className="finish">
         <span className="title">공부 다하면?</span>
@@ -1452,7 +1373,6 @@ const resetTimer = () => {
                 const v = e.target.value;
                 setAfterStudyText(v);
 
-                // 입력 중에도 저장(원하면 blur에서만 저장하도록 바꿀 수 있음)
                 if (!me?.id) return;
                 const key = `afterStudyText:${me.id}:${selectedDayKey}`;
                 try {
@@ -1462,7 +1382,6 @@ const resetTimer = () => {
                 }
               }}
               onBlur={() => {
-                // 다른 데 누르면 저장하고 텍스트 모드로
                 if (me?.id) {
                   const key = `afterStudyText:${me.id}:${selectedDayKey}`;
                   try {
@@ -1474,19 +1393,13 @@ const resetTimer = () => {
                 setAfterStudyEditing(false);
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.currentTarget.blur(); // blur로 보내면 저장 + 종료가 한 번에 처리됨
-                }
-                if (e.key === "Escape") {
-                  setAfterStudyEditing(false); // ESC로 닫기(선택)
-                }
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") setAfterStudyEditing(false);
               }}
             />
           )}
         </div>
       </div>
-
-
 
       {/* 명예의 전당 */}
       <div className="hof-card">
@@ -1500,7 +1413,6 @@ const resetTimer = () => {
           <div className="hof-empty">오늘의 첫 친구가 되어볼까?</div>
         ) : (
           <div className="hof-chips" aria-label="오늘 함께 공부한 친구들">
-            {/* 내 이름은 색상 변하는 작업 */}
             {hof.map((x) => {
               const isMe = me?.id && x.user_id === me.id;
 
@@ -1514,23 +1426,15 @@ const resetTimer = () => {
                 </div>
               );
             })}
-
           </div>
         )}
       </div>
 
-      {/* =======================
-          학습 도구(스탑워치/타이머/하가다) - 한 박스, 3행, 선으로 구분
-      ======================= */}
+      {/* 학습 도구 */}
       <div className="study-tools">
-        {/* 1) 스탑워치 */}
         <div className="tool-row">
           <div className="tool-title">스탑워치</div>
-
-          <div className="tool-display">
-            {formatTime(elapsedMs)}
-          </div>
-
+          <div className="tool-display">{formatTime(elapsedMs)}</div>
           <div className="tool-actions">
             <button onClick={startStopwatch} disabled={isRunning}>시작</button>
             <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
@@ -1538,10 +1442,8 @@ const resetTimer = () => {
           </div>
         </div>
 
-        {/* 2) 타이머 */}
         <div className="tool-row">
           <div className="tool-title">타이머</div>
-
           <div className="tool-display tool-display-timer">
             <select
               value={timerMin}
@@ -1554,11 +1456,7 @@ const resetTimer = () => {
               ))}
             </select>
 
-            <span className="timer-value">
-              {/* 밀리초 버전이면 remainingMs / formatMMSSms(remainingMs)
-                  초 버전이면 remainingSec / formatMMSS(remainingSec)로 바꿔주세요 */}
-              {formatMMSS(remainingSec)}
-            </span>
+            <span className="timer-value">{formatMMSS(remainingSec)}</span>
           </div>
 
           <div className="tool-actions">
@@ -1568,14 +1466,9 @@ const resetTimer = () => {
           </div>
         </div>
 
-        {/* 3) 하가다 */}
         <div className="tool-row">
           <div className="tool-title">하가다</div>
-
-          <div className="tool-display">
-            {hagadaCount}
-          </div>
-
+          <div className="tool-display">{hagadaCount}</div>
           <div className="tool-actions">
             <button onClick={increaseHagada}>하나 추가</button>
             <button onClick={resetHagada}>처음부터</button>
@@ -1583,105 +1476,152 @@ const resetTimer = () => {
         </div>
       </div>
 
-
-      {/* 내 목록 모달 */}
-      {showMyListModal && (
-        <div className="modal-backdrop" onClick={closeMyListModal}>
+      {/* 통합 일정 불러오기 모달 */}
+      {showLoadModal && (
+        <div className="modal-backdrop" onClick={closeLoadModal}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <div className="modal-title">{myListMode === "save" ? "내 목록 저장" : "내 목록 불러오기"}</div>
-              <button className="modal-close" onClick={closeMyListModal} disabled={busyMyList}>✕</button>
-            </div>
-
-            {myListMode === "save" ? (
-              <div className="modal-body">
-                <div className="modal-help">지금 화면의 할 일 목록을 “내 목록”으로 저장합니다. 저장하면 이전 내 목록은 덮어씁니다.</div>
-                <button className="modal-primary" onClick={saveMySingleList} disabled={busyMyList}>
-                  {busyMyList ? "저장 중..." : "내 목록으로 저장하기"}
-                </button>
-              </div>
-            ) : (
-              <div className="modal-body">
-                <div className="modal-help">저장된 내 목록을 현재 날짜 플래너로 가져옵니다.</div>
-
-                <label className="modal-check">
-                  <input
-                    type="checkbox"
-                    checked={loadReplace}
-                    onChange={(e) => setLoadReplace(e.target.checked)}
-                    disabled={busyMyList}
-                  />
-                  기존 목록을 비우고 불러오기(교체)
-                </label>
-
-                <button className="modal-primary" onClick={importMySingleList} disabled={busyMyList}>
-                  {busyMyList ? "불러오는 중..." : "불러오기"}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 샘플 숙제 불러오기 모달 */}
-      {showSampleModal && (
-        <div className="modal-backdrop" onClick={closeSampleModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">샘플 숙제 불러오기</div>
-              <button className="modal-close" onClick={closeSampleModal} disabled={importingSample}>✕</button>
+              <div className="modal-title">일정 불러오기</div>
+              <button
+                className="modal-close"
+                onClick={closeLoadModal}
+                disabled={importingSample || busyMyList}
+              >
+                ✕
+              </button>
             </div>
 
             <div className="modal-body">
-              <div className="modal-help">
-                선택한 날짜({selectedDayKey})에 샘플 숙제를 불러옵니다.
+              <div className="load-divider" />
+
+              <div className="load-list" role="radiogroup" aria-label="불러올 일정 선택">
+                <label className="load-item">
+                  <input
+                    type="radio"
+                    name="load_choice"
+                    value="my"
+                    checked={loadChoice === "my"}
+                    onChange={() => setLoadChoice("my")}
+                    disabled={importingSample || busyMyList}
+                  />
+                  <span className="load-item-text">내가 만든 목록</span>
+                  {!hasMyList && <span className="load-item-badge">없음</span>}
+                </label>
+
+                <div className="load-divider thin" />
+
+                <label className="load-item">
+                  <input
+                    type="radio"
+                    name="load_choice"
+                    value="vacation"
+                    checked={loadChoice === "vacation"}
+                    onChange={() => setLoadChoice("vacation")}
+                    disabled={importingSample || busyMyList}
+                  />
+                  <span className="load-item-text">방학 숙제 샘플</span>
+                </label>
+
+                <label className="load-item">
+                  <input
+                    type="radio"
+                    name="load_choice"
+                    value="weekday"
+                    checked={loadChoice === "weekday"}
+                    onChange={() => setLoadChoice("weekday")}
+                    disabled={importingSample || busyMyList}
+                  />
+                  <span className="load-item-text">평일 숙제 샘플</span>
+                </label>
+
+                <label className="load-item">
+                  <input
+                    type="radio"
+                    name="load_choice"
+                    value="weekend"
+                    checked={loadChoice === "weekend"}
+                    onChange={() => setLoadChoice("weekend")}
+                    disabled={importingSample || busyMyList}
+                  />
+                  <span className="load-item-text">주말 숙제 샘플</span>
+                </label>
               </div>
 
-              <div style={{ display: "grid", gap: "8px" }}>
-                {SAMPLE_SETS.map((s) => (
-                  <label
-                    key={s.key}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "10px 12px",
-                      border: "1px solid var(--line)",
-                      borderRadius: "14px",
-                      background: "#fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="sample_set"
-                      checked={selectedSampleKey === s.key}
-                      onChange={() => setSelectedSampleKey(s.key)}
-                    />
-                    <span style={{ fontWeight: 700 }}>{s.label}</span>
-                  </label>
-                ))}
-              </div>
+              <div className="load-divider" />
 
               <label className="modal-check">
                 <input
                   type="checkbox"
-                  checked={sampleModeReplace}
-                  onChange={(e) => setSampleModeReplace(e.target.checked)}
-                  disabled={importingSample}
+                  checked={loadChoice === "my" ? loadReplace : sampleModeReplace}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    // ✅ UI는 하나지만 내부 로직은 그대로 쓰기 위해 둘 다 동기화
+                    setSampleModeReplace(v);
+                    setLoadReplace(v);
+                  }}
+                  disabled={importingSample || busyMyList}
                 />
-                기존 목록을 비우고 불러오기(교체)
+                기존목록을 비우고 불러오기 (교체)
               </label>
 
-              <button className="modal-primary" onClick={importSampleTodos} disabled={importingSample}>
-                {importingSample ? "불러오는 중..." : sampleModeReplace ? "교체해서 불러오기" : "추가로 불러오기"}
+              <div className="load-divider" />
+
+              <button
+                className="modal-primary"
+                onClick={async () => {
+                  if (loadChoice === "my") {
+                    await importMySingleList();
+                    return;
+                  }
+                  await importSampleTodos(loadChoice);
+                }}
+                disabled={
+                  importingSample ||
+                  busyMyList ||
+                  (loadChoice === "my" && !hasMyList)
+                }
+              >
+                {importingSample || busyMyList
+                  ? "불러오는 중..."
+                  : loadChoice === "my"
+                    ? "내 일정 불러오기"
+                    : "샘플 추가하기"}
+              </button>
+
+
+              {loadChoice === "my" && !hasMyList && (
+                <div className="load-help">
+                  저장된 “내가 만든 목록”이 없어요. 먼저 상단의 “내 목록 저장”을 해주세요.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 내 목록 저장 모달(기존 유지) */}
+      {showMyListModal && (
+        <div className="modal-backdrop" onClick={closeMyListModal}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="modal-title">내 목록 저장</div>
+              <button className="modal-close" onClick={closeMyListModal} disabled={busyMyList}>✕</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-help">
+                지금 화면의 할 일 목록을 “내 목록”으로 저장합니다. 저장하면 이전 내 목록은 덮어씁니다.
+              </div>
+
+              <button className="modal-primary" onClick={saveMySingleList} disabled={busyMyList}>
+                {busyMyList ? "저장 중..." : "내 목록으로 저장하기"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 달력 모달 */}
+      {/* 달력 모달(기존 유지) */}
       {showCalendarModal && (
         <div className="modal-backdrop" onClick={closeCalendar}>
           <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()}>
