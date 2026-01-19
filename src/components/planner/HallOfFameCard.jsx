@@ -1,4 +1,5 @@
 // src/components/planner/HallOfFameCard.jsx
+//오늘 함께 해낸 친구들 명예의 전당
 import React from "react";
 
 export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {

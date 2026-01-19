@@ -468,6 +468,26 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+
+.tool-title-with-toggle{
+  display: flex;
+  align-items: center;
+  /* gap: 8px; */
+}
+
+.timer-sound-toggle{
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.1rem;
+}
+
+
+
+
 /* @media (max-width: 560px){ */
 @media (max-width: 750px){
   .tool-row{
@@ -523,6 +543,11 @@
   .tool-row:nth-child(2) .tool-actions button:last-child{
     flex-basis: 100%;
   }
+
+  .tool-title-with-toggle{
+  gap: 8px;
+}
+
 }
 
 @media (max-width: 360px){

@@ -1,5 +1,5 @@
 // src/components/planner/StudyTools.jsx
-//스탑워치/타이머/하가다
+// 스탑워치/타이머/하가다
 import React from "react";
 
 export default function StudyTools({
@@ -22,6 +22,10 @@ export default function StudyTools({
   pauseTimer,
   resetTimer,
 
+  // ✅ 타이머 사운드 토글
+  timerSoundOn,
+  setTimerSoundOn,
+
   // 하가다
   hagadaCount,
   increaseHagada,
@@ -29,6 +33,7 @@ export default function StudyTools({
 }) {
   return (
     <div className="study-tools">
+      {/* 1) 스탑워치 */}
       <div className="tool-row">
         <div className="tool-title">스탑워치</div>
         <div className="tool-display">{formatTime(elapsedMs)}</div>
@@ -39,8 +44,22 @@ export default function StudyTools({
         </div>
       </div>
 
+      {/* 2) 타이머 */}
       <div className="tool-row">
-        <div className="tool-title">타이머</div>
+        <div className="tool-title tool-title-with-toggle">
+          <span>타이머</span>
+
+          <button
+            type="button"
+            className="timer-sound-toggle"
+            onClick={() => setTimerSoundOn((v) => !v)}
+            aria-label={timerSoundOn ? "타이머 소리 끄기" : "타이머 소리 켜기"}
+            title={timerSoundOn ? "타이머 소리 끄기" : "타이머 소리 켜기"}
+          >
+            {timerSoundOn ? "🔊" : "🔇"}
+          </button>
+        </div>
+
         <div className="tool-display tool-display-timer">
           <select
             value={timerMin}
@@ -63,11 +82,12 @@ export default function StudyTools({
         </div>
       </div>
 
+      {/* 3) 하가다 */}
       <div className="tool-row">
         <div className="tool-title">하가다</div>
         <div className="tool-display">{hagadaCount}</div>
         <div className="tool-actions">
-          <button onClick={increaseHagada}>하나 추가</button>
+          <button onClick={increaseHagada}>한번 더하기</button>
           <button onClick={resetHagada}>처음부터</button>
         </div>
       </div>

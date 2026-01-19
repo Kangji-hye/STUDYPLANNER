@@ -7,7 +7,7 @@ import "./Login.css";
 const REMEMBER_EMAIL_KEY = "remember_email_v1";
 
 /**
- * ✅ Supabase/Auth 에러 메시지를 사용자 친화적인 한글로 변환
+ * Supabase/Auth 에러 메시지를 사용자 친화적인 한글로 변환
  * - Supabase는 상황에 따라 message가 조금씩 달라질 수 있어서
  *   "포함 여부"로 매칭하는 방식이 안전합니다.
  * - 너무 기술적인 메시지는 사용자에게 그대로 보여주지 않는 게 좋아서

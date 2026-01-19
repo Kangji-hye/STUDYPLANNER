@@ -18,7 +18,12 @@ const FINISH_SOUNDS = [
   { label: "🐵요란한 축하", value: "/finish1.mp3" },
   { label: "👏환호성과 박수", value: "/finish2.mp3" },
   { label: "🎺웅장한 빵빠레", value: "/finish3.mp3" },
-  { label: "🐸개구리 달려", value: "/finish4.mp3" },
+  { label: "🎈셀러브레이션", value: "/finish4.mp3" },
+  { label: "🦕쥬라기 공원 버전", value: "/finish5.mp3" },
+  { label: "✨빰빰빰빰빠라", value: "/finish6.mp3" },
+  { label: "🥳1초 축하", value: "/finish7.mp3" },
+  { label: "🌟미션 완료", value: "/finish8.mp3" },
+  { label: "🏆웅장한 축하", value: "/finish9.mp3" },
 ];
 
 // value로 label 찾기(현재 선택 표시용)
@@ -38,7 +43,7 @@ const MyPage = () => {
 
   const previewAudioRef = useRef(null);
 
-  // ✅ 실제로 저장/적용되는 값은 form.finish_sound가 들고 있음
+  //  실제로 저장/적용되는 값은 form.finish_sound가 들고 있음
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
@@ -46,11 +51,7 @@ const MyPage = () => {
     finish_sound: DEFAULT_FINISH_SOUND,
   });
 
-  /**
-   * ✅ 셀렉트 박스 UI 전용 상태
-   * - 처음 화면에서는 항상 "효과음을 선택해보세요"가 보이도록 value를 ""로 유지
-   * - 사용자가 실제로 선택하면 그때 value가 바뀜
-   */
+  // 셀렉트 박스 UI 전용 상태
   const [soundPickerValue, setSoundPickerValue] = useState("");
 
   const loadMyProfile = async () => {
@@ -271,7 +272,7 @@ const MyPage = () => {
 
         {/* 완료 음악 선택 */}
         <div className="row">
-          <span className="label">모두 완료 효과음</span>
+          <span className="label">모두 완료시</span>
 
           <span className="value mypage-sound">
             <div className="sound-card">

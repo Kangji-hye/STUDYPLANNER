@@ -103,6 +103,7 @@ function Planner() {
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
   const { finishEnabled } = useSoundSettings();
+  const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
   // =======================
   // 데일리: 선택 날짜
@@ -154,7 +155,7 @@ function Planner() {
   }, [todos]);
 
   // =======================
-  // 통합: 일정 불러오기 모달
+  // 통합: 목록 불러오기 모달
   // =======================
   const [showLoadModal, setShowLoadModal] = useState(false);
 
@@ -546,8 +547,10 @@ const closeLoadModal = () => {
   // =======================
   // 샘플 일정 불러오기 실행
   // =======================
+  // =======================
+// 샘플 일정 불러오기 실행
+// =======================
   const importSampleTodos = async (sampleKeyOverride) => {
-
     if (!me?.id) return;
     if (importingSample) return;
 
@@ -596,13 +599,18 @@ const closeLoadModal = () => {
         .map((x) => {
           const base = Number(x.sort_order ?? 0) || 0;
 
+          // ✅ 핵심 1) template_item_key에 날짜까지 포함(날짜가 다르면 절대 충돌 X)
+          //    같은 날에 같은 샘플을 또 눌러도, 아래 upsert+ignoreDuplicates로 조용히 무시됨
+          const itemKey = String(x.item_key ?? "").trim();
+          const tplKey = `${selectedDayKey}:${useKey}:${itemKey}`;
+
           return {
             user_id: me.id,
             day_key: selectedDayKey,
-            template_item_key: `${useKey}:${String(x.item_key ?? "").trim()}`,
+            template_item_key: tplKey,
             title: String(x.title ?? "").trim(),
             completed: false,
-            sort_order: sampleModeReplace ? base : (maxSort + base),
+            sort_order: sampleModeReplace ? base : maxSort + base,
           };
         })
         .filter((x) => x.template_item_key && x.title);
@@ -612,34 +620,32 @@ const closeLoadModal = () => {
         return;
       }
 
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, {
-          onConflict: "user_id,day_key,template_item_key",
-          ignoreDuplicates: true,
-        });
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        // ✅ 핵심 2) 실제 유니크 제약(todos_user_template_item_unique)과 맞출 확률이 높은 조합
+        //    에러 메시지상 template_item_key 중심 제약이라 보통 (user_id, template_item_key)입니다.
+        onConflict: "user_id,template_item_key",
+        ignoreDuplicates: true,
+      });
 
       if (upErr) throw upErr;
 
       await fetchTodos(me.id, selectedDayKey);
+
+      // ✅ 요청한 UX: "이미 불러온 샘플입니다" 같은 문구는 불필요하니 성공 문구만 유지
       alert(sampleModeReplace ? "샘플 일정으로 교체했습니다." : "샘플 일정을 추가했습니다.");
       setShowLoadModal(false);
     } catch (err) {
       console.error("importSampleTodos error:", err);
 
+      // ✅ 중복이면 원래 조용히 무시되어 여기로 안 들어오는 게 정상.
+      //    혹시 다른 오류면 그대로 에러 안내만.
       const msg = String(err?.message ?? "");
-      if (
-        msg.includes("todos_user_template_item_unique") ||
-        msg.includes("duplicate key value violates unique constraint")
-      ) {
-        alert("이미 불러온 샘플 일정입니다.");
-      } else {
-        alert(msg || "샘플 일정 불러오기 중 오류가 발생했습니다.");
-      }
+      alert(msg || "샘플 일정 불러오기 중 오류가 발생했습니다.");
     } finally {
       setImportingSample(false);
     }
   };
+
 
   // =======================
   // 내 목록 저장 모달
@@ -729,7 +735,7 @@ const importMySingleList = async () => {
   }
 
   try {
-    // ✅ 내 목록(set) id 찾기
+    // 내 목록(set) id 찾기
     const { id: setId } = await fetchMySingleListInfo(me.id);
     if (!setId) {
       alert("저장된 내가 만든 목록이 없습니다. 먼저 '내 목록 저장'을 해주세요.");
@@ -738,7 +744,7 @@ const importMySingleList = async () => {
 
     setBusyMyList(true);
 
-    // ✅ 교체 모드면 현재 날짜 todos 삭제
+    // 교체 모드면 현재 날짜 todos 삭제
     if (loadReplace) {
       const { error: delErr } = await supabase
         .from("todos")
@@ -751,7 +757,7 @@ const importMySingleList = async () => {
       await removeCompletionForDay(selectedDayKey);
     }
 
-    // ✅ 내가 만든 목록 아이템 읽기 (여기가 items!)
+    // 내가 만든 목록 아이템 읽기 (여기가 items!)
     const { data: items, error: itemsErr } = await supabase
       .from("todo_set_items")
       .select("item_key, title, sort_order")
@@ -760,12 +766,12 @@ const importMySingleList = async () => {
 
     if (itemsErr) throw itemsErr;
 
-    // ✅ 현재 todos의 max sort
+    // 현재 todos의 max sort
     const maxSort = (todosRef.current ?? [])
       .map((t) => Number(t.sort_order ?? 0))
       .reduce((a, b) => Math.max(a, b), 0);
 
-    // ✅ rows 생성 (templates 절대 사용 X)
+    // rows 생성 (templates 절대 사용 X)
     const rows = (items ?? [])
       .map((x) => {
         const base = Number(x.sort_order ?? 0) || 0;
@@ -1031,7 +1037,7 @@ const importMySingleList = async () => {
     setElapsedMs(0);
   };
 
-  const TIMER_PRESETS = [5, 10, 15, 20];
+  const TIMER_PRESETS = [2, 5, 10, 20];
   const [timerMin, setTimerMin] = useState(10);
   const [timerRunning, setTimerRunning] = useState(false);
   const [remainingSec, setRemainingSec] = useState(10 * 60);
@@ -1102,6 +1108,42 @@ const importMySingleList = async () => {
     setRemainingSec(timerMin * 60);
   };
 
+
+  // 타이머 사운드 
+  const TIMER_END_SOUND = "/time1.mp3";
+  const timerAudioRef = useRef(null);
+  const timerEndedRef = useRef(false);
+
+  useEffect(() => {
+    if (remainingSec === 0 && !timerEndedRef.current) {
+      timerEndedRef.current = true;
+
+      // ✅ 소리 꺼져 있으면 재생 안 함
+      if (!timerSoundOn) return;
+
+      try {
+        if (!timerAudioRef.current) {
+          timerAudioRef.current = new Audio(TIMER_END_SOUND);
+        }
+
+        timerAudioRef.current.currentTime = 0;
+        timerAudioRef.current.volume = 0.9;
+        timerAudioRef.current.play().catch(() => {});
+      } catch (err) {
+        console.warn("타이머 종료 효과음 재생 실패", err);
+      }
+    }
+
+    // ✅ 타이머가 다시 0보다 커지면(리셋/시간 변경) 다시 재생 가능
+    if (remainingSec > 0) {
+      timerEndedRef.current = false;
+    }
+  }, [remainingSec, timerSoundOn]);
+
+
+
+
+
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
@@ -1124,21 +1166,37 @@ const importMySingleList = async () => {
     const ok = window.confirm("선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다.");
     if (!ok) return;
 
-    const { error } = await supabase
-      .from("todos")
-      .delete()
-      .eq("user_id", me.id)
-      .eq("day_key", selectedDayKey);
+    try {
+      // ✅ 실제로 몇 개가 삭제됐는지 확인(검증용)
+      const { data: deletedRows, error } = await supabase
+        .from("todos")
+        .delete()
+        .eq("user_id", me.id)
+        .eq("day_key", selectedDayKey)
+        .select("id");
 
-    if (error) {
-      console.error("deleteAllTodos error:", error);
-      alert(error.message ?? "전체 삭제 중 오류가 발생했습니다.");
-      return;
+      if (error) throw error;
+
+      // 완료 기록도 정리
+      await removeCompletionForDay(selectedDayKey);
+
+      // ✅ 서버에 진짜 남아있는지 재확인(가장 중요)
+      const left = await fetchTodos(me.id, selectedDayKey);
+
+      if ((left ?? []).length > 0) {
+        alert("삭제가 완전히 적용되지 않았어요. 네트워크/권한/날짜 선택을 확인해주세요.");
+        console.warn("deleteAllTodos: rows still left", { deletedCount: deletedRows?.length ?? 0, left });
+        return;
+      }
+
+      // fetchTodos가 setTodos까지 해주지만, 확실히 비우기
+      setTodos([]);
+    } catch (err) {
+      console.error("deleteAllTodos error:", err);
+      alert(err?.message ?? "전체 삭제 중 오류가 발생했습니다.");
     }
-
-    setTodos([]);
-    await removeCompletionForDay(selectedDayKey);
   };
+
 
   // 로그아웃
   const handleLogout = async () => {
@@ -1160,17 +1218,17 @@ const importMySingleList = async () => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
-  const chooseDate = (d) => {
-    if (!d) return;
-    setSelectedDate(d);
-    setShowCalendarModal(false);
-  };
+  // const chooseDate = (d) => {
+  //   if (!d) return;
+  //   setSelectedDate(d);
+  //   setShowCalendarModal(false);
+  // };
 
-  const isSameDay = (a, b) =>
-    a && b &&
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  // const isSameDay = (a, b) =>
+  //   a && b &&
+  //   a.getFullYear() === b.getFullYear() &&
+  //   a.getMonth() === b.getMonth() &&
+  //   a.getDate() === b.getDate();
 
   return (
     <div className="planner notranslate">
@@ -1230,14 +1288,14 @@ const importMySingleList = async () => {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
-          {/* ✅ 통합: 일정 불러오기(핑크 버튼 유지) */}
+          {/* 통합: 모록 불러오기 */}
           <button
             type="button"
             className="preset-btn preset-btn-primary"
             onClick={openLoadModal}
             disabled={importingSample || busyMyList}
           >
-            {importingSample || busyMyList ? "불러오는 중..." : "📂 일정 불러오기"}
+            {importingSample || busyMyList ? "불러오는 중..." : "📂 목록 불러오기"}
           </button>
 
           {/* 내 목록 저장은 그대로 */}
@@ -1432,10 +1490,15 @@ const importMySingleList = async () => {
         startTimer={startTimer}
         pauseTimer={pauseTimer}
         resetTimer={resetTimer}
+
+        timerSoundOn={timerSoundOn}
+        setTimerSoundOn={setTimerSoundOn}
+
         hagadaCount={hagadaCount}
         increaseHagada={increaseHagada}
         resetHagada={resetHagada}
       />
+
 
       <LoadScheduleModal
         open={showLoadModal}

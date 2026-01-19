@@ -477,7 +477,8 @@ label.gender {
 }
 
 /* 모바일에서 버튼/셀렉트가 너무 꽉 차면 2줄로 */
-@media (max-width: 480px){
+/* @media (max-width: 480px){ */
+@media (max-width: 660px){
   .sound-control-row{
     flex-direction: column;
     align-items: stretch;
@@ -495,10 +496,6 @@ label.gender {
       "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif !important;
     letter-spacing: 0 !important;
   }
-}
-
-/* ===== 모바일 반응형 보강: 좁아지면 자동 줄바꿈/세로정렬 ===== */
-@media (max-width: 480px) {
   .mypage {
     gap: 10px;
   }
@@ -543,7 +540,6 @@ label.gender {
   }
 
   .mypage-sound {
-    /* flex-direction: column; */
     align-items: stretch;
     gap: 10px;
   }
@@ -561,7 +557,7 @@ label.gender {
 
 @media (max-width: 360px) {
   .mypage-title {
-    font-size: 1.2rem; /* 아주 작은 화면에서만 살짝 */
+    font-size: 1.2rem; 
   }
 
   .mypage-sound select,
