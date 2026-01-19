@@ -15,10 +15,10 @@ const DEFAULT_FINISH_SOUND = "/finish1.mp3";
 
 // 음악 리스트(옵션)
 const FINISH_SOUNDS = [
-  { label: "요란한 축하", value: "/finish1.mp3" },
-  { label: "환호성과 박수", value: "/finish2.mp3" },
-  { label: "웅장한 빵빠레", value: "/finish3.mp3" },
-  { label: "띵띵 스웨덴 리믹스", value: "/finish4.mp3" },
+  { label: "🐵요란한 축하", value: "/finish1.mp3" },
+  { label: "👏환호성과 박수", value: "/finish2.mp3" },
+  { label: "🎺웅장한 빵빠레", value: "/finish3.mp3" },
+  { label: "🐸띵띵 스웨덴 리믹스", value: "/finish4.mp3" },
 ];
 
 // value로 label 찾기(현재 선택 표시용)
@@ -308,16 +308,10 @@ const MyPage = () => {
             </button>
 
             {/* ✅ 현재 적용 중인 효과음은 아래에 따로 표시 */}
-            <div
-              style={{
-                marginTop: "6px",
-                fontSize: "0.92rem",
-                opacity: 0.75,
-                lineHeight: 1.3,
-              }}
-            >
-              <b>{currentSoundLabel}</b>(현재 효과음)
+            <div className="current-sound">
+              🎉현재 효과음: {currentSoundLabel}
             </div>
+
           </span>
         </div>
 
