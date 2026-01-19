@@ -104,7 +104,7 @@ const Signup = () => {
         />
 
         <div className="email-id-hint" role="note" aria-label="이메일 안내">
-          이메일은 아이디이므로 반드시 기억해 주세요. 비밀번호 재설정도 이 이메일로만 진행됩니다.
+          이메일은 아이디이므로 반드시 기억해 주세요. 비밀번호 재설정도 지금 설정하는 이메일로 진행됩니다.
         </div>
 
         <input
@@ -135,7 +135,7 @@ const Signup = () => {
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
-          maxLength={8}
+          maxLength={6}
         />
 
         <input

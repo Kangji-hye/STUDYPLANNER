@@ -476,6 +476,43 @@ label.gender {
   line-height: 1.35;
 }
 
+/* =========================
+   MyPage - 효과음 카드 헤더 반응형
+   950px 이하: "효과음 선택" / "안내문구" 두 줄로
+========================= */
+
+/* 기본: 한 줄 배치(데스크탑) */
+.sound-card-head{
+  display: flex;
+  align-items: baseline;       /* 제목/문구 기준선 맞추기 */
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 안내 문구가 너무 길면 기본에서도 자연스럽게 줄바꿈 가능하도록 */
+.sound-hint{
+  display: inline-block;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  text-align: right;           /* 데스크탑에서는 오른쪽 정렬이 보기 좋음 */
+}
+
+/* 950px 이하: 두 줄(세로 스택) */
+@media (max-width: 950px){
+  .sound-card-head{
+    flex-direction: column;    /* ✅ 세로로 쌓기 */
+    align-items: flex-start;   /* ✅ 왼쪽 정렬 */
+    gap: 6px;
+  }
+
+  .sound-hint{
+    text-align: left;          /* ✅ 모바일에서는 왼쪽 정렬 */
+  }
+}
+
+
 /* 모바일에서 버튼/셀렉트가 너무 꽉 차면 2줄로 */
 /* @media (max-width: 480px){ */
 @media (max-width: 660px){

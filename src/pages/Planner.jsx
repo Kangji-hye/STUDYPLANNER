@@ -31,7 +31,7 @@ const EMOJI_POOL = [
 const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
-  return s.length > 6 ? s.slice(0, 6) : s;
+  return s; 
 };
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
@@ -530,6 +530,27 @@ const closeLoadModal = () => {
     fetchHallOfFame(selectedDayKey);
   }, [selectedDayKey, me?.id]);
 
+  // =======================
+  // 명예의 전당 30분 주기 자동 새로고침
+  // =======================
+  useEffect(() => {
+    if (!me?.id) return;
+
+    // 30분 = 30 * 60 * 1000 ms
+    const INTERVAL_MS = 30 * 60 * 1000;
+
+    const intervalId = setInterval(() => {
+      // 오늘 선택된 날짜 기준으로만 갱신
+      fetchHallOfFame(selectedDayKey);
+    }, INTERVAL_MS);
+
+    // 컴포넌트 언마운트 / 날짜 변경 시 정리
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [me?.id, selectedDayKey]);
+
+
   // "공부 다하면" 메모 불러오기
   useEffect(() => {
     if (!me?.id) return;
@@ -717,106 +738,105 @@ const closeLoadModal = () => {
     }
   };
 
-  // ✅ 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
-const importMySingleList = async () => {
-  if (!me?.id) return;
+  // 에러 잡기: 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
+  const importMySingleList = async () => {
+    if (!me?.id) return;
 
-  // 지난 날짜에서는 불러오기 금지
-  if (!isTodaySelected()) {
-    alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.");
-    return;
-  }
-
-  // 세션 없으면 로그인으로
-  const { data } = await supabase.auth.getSession();
-  if (!data?.session) {
-    navigate("/login", { replace: true });
-    return;
-  }
-
-  try {
-    // 내 목록(set) id 찾기
-    const { id: setId } = await fetchMySingleListInfo(me.id);
-    if (!setId) {
-      alert("저장된 내가 만든 목록이 없습니다. 먼저 '내 목록 저장'을 해주세요.");
+    // 지난 날짜에서는 불러오기 금지
+    if (!isTodaySelected()) {
+      alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.");
       return;
     }
 
-    setBusyMyList(true);
+    // 세션 없으면 로그인으로
+    const { data } = await supabase.auth.getSession();
+    if (!data?.session) {
+      navigate("/login", { replace: true });
+      return;
+    }
 
-    // 교체 모드면 현재 날짜 todos 삭제
-    if (loadReplace) {
-      const { error: delErr } = await supabase
+    try {
+      // 내 목록(set) id 찾기
+      const { id: setId } = await fetchMySingleListInfo(me.id);
+      if (!setId) {
+        alert("저장된 내가 만든 목록이 없습니다. 먼저 '내 목록 저장'을 해주세요.");
+        return;
+      }
+
+      setBusyMyList(true);
+
+      // 교체 모드면 현재 날짜 todos 삭제
+      if (loadReplace) {
+        const { error: delErr } = await supabase
+          .from("todos")
+          .delete()
+          .eq("user_id", me.id)
+          .eq("day_key", selectedDayKey);
+
+        if (delErr) throw delErr;
+
+        await removeCompletionForDay(selectedDayKey);
+      }
+
+      // 내가 만든 목록 아이템 읽기 (여기가 items!)
+      const { data: items, error: itemsErr } = await supabase
+        .from("todo_set_items")
+        .select("item_key, title, sort_order")
+        .eq("set_id", setId)
+        .order("sort_order", { ascending: true });
+
+      if (itemsErr) throw itemsErr;
+
+      // 현재 todos의 max sort
+      const maxSort = (todosRef.current ?? [])
+        .map((t) => Number(t.sort_order ?? 0))
+        .reduce((a, b) => Math.max(a, b), 0);
+
+      // rows 생성 (templates 절대 사용 X)
+      const rows = (items ?? [])
+        .map((x) => {
+          const base = Number(x.sort_order ?? 0) || 0;
+
+          return {
+            user_id: me.id,
+            day_key: selectedDayKey,
+            source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
+            title: String(x.title ?? "").trim(),
+            completed: false,
+            // 교체면 1..n, 추가면 maxSort 뒤로
+            sort_order: loadReplace ? base : (maxSort + base),
+          };
+        })
+        .filter((x) => x.source_set_item_key && x.title);
+
+      const { error: upErr } = await supabase
         .from("todos")
-        .delete()
-        .eq("user_id", me.id)
-        .eq("day_key", selectedDayKey);
+        .upsert(rows, {
+          onConflict: "user_id,day_key,source_set_item_key",
+          ignoreDuplicates: true,
+        });
 
-      if (delErr) throw delErr;
+      if (upErr) throw upErr;
 
-      await removeCompletionForDay(selectedDayKey);
+      await fetchTodos(me.id, selectedDayKey);
+      alert(loadReplace ? "내 일정으로 교체했습니다." : "내 일정을 불러왔습니다.");
+      setShowLoadModal(false);
+    } catch (err) {
+      console.error("importMySingleList error:", err);
+
+      const msg = String(err?.message ?? "");
+      if (
+        msg.includes("todos_user_source_set_item_unique") ||
+        msg.includes("duplicate key value violates unique constraint")
+      ) {
+        alert("이미 불러온 목록입니다.");
+      } else {
+        alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setBusyMyList(false);
     }
-
-    // 내가 만든 목록 아이템 읽기 (여기가 items!)
-    const { data: items, error: itemsErr } = await supabase
-      .from("todo_set_items")
-      .select("item_key, title, sort_order")
-      .eq("set_id", setId)
-      .order("sort_order", { ascending: true });
-
-    if (itemsErr) throw itemsErr;
-
-    // 현재 todos의 max sort
-    const maxSort = (todosRef.current ?? [])
-      .map((t) => Number(t.sort_order ?? 0))
-      .reduce((a, b) => Math.max(a, b), 0);
-
-    // rows 생성 (templates 절대 사용 X)
-    const rows = (items ?? [])
-      .map((x) => {
-        const base = Number(x.sort_order ?? 0) || 0;
-
-        return {
-          user_id: me.id,
-          day_key: selectedDayKey,
-          source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
-          title: String(x.title ?? "").trim(),
-          completed: false,
-          // 교체면 1..n, 추가면 maxSort 뒤로
-          sort_order: loadReplace ? base : (maxSort + base),
-        };
-      })
-      .filter((x) => x.source_set_item_key && x.title);
-
-    const { error: upErr } = await supabase
-      .from("todos")
-      .upsert(rows, {
-        onConflict: "user_id,day_key,source_set_item_key",
-        ignoreDuplicates: true,
-      });
-
-    if (upErr) throw upErr;
-
-    await fetchTodos(me.id, selectedDayKey);
-    alert(loadReplace ? "내 일정으로 교체했습니다." : "내 일정을 불러왔습니다.");
-    setShowLoadModal(false);
-  } catch (err) {
-    console.error("importMySingleList error:", err);
-
-    const msg = String(err?.message ?? "");
-    if (
-      msg.includes("todos_user_source_set_item_unique") ||
-      msg.includes("duplicate key value violates unique constraint")
-    ) {
-      alert("이미 불러온 목록입니다.");
-    } else {
-      alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
-    }
-  } finally {
-    setBusyMyList(false);
-  }
-};
-
+  };
 
   // =======================
   // 정렬
@@ -1037,7 +1057,7 @@ const importMySingleList = async () => {
     setElapsedMs(0);
   };
 
-  const TIMER_PRESETS = [2, 5, 10, 20];
+  const TIMER_PRESETS = [1, 2, 3, 4, 5, 10, 20];
   const [timerMin, setTimerMin] = useState(10);
   const [timerRunning, setTimerRunning] = useState(false);
   const [remainingSec, setRemainingSec] = useState(10 * 60);

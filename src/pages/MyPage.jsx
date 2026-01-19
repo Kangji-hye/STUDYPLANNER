@@ -15,10 +15,10 @@ const DEFAULT_FINISH_SOUND = "/finish1.mp3";
 
 // 음악 리스트(옵션)
 const FINISH_SOUNDS = [
-  { label: "🐵요란한 축하", value: "/finish1.mp3" },
+  { label: "🎺웅장한 빵빠레", value: "/finish1.mp3" },
   { label: "👏환호성과 박수", value: "/finish2.mp3" },
-  { label: "🎺웅장한 빵빠레", value: "/finish3.mp3" },
-  { label: "🎈셀러브레이션", value: "/finish4.mp3" },
+  { label: "🎈셀러브레이션", value: "/finish3.mp3" },
+  { label: "🐵요란한 축하", value: "/finish4.mp3" },
   { label: "🦕쥬라기 공원 버전", value: "/finish5.mp3" },
   { label: "✨빰빰빰빰빠라", value: "/finish6.mp3" },
   { label: "🥳1초 축하", value: "/finish7.mp3" },
@@ -251,10 +251,10 @@ const MyPage = () => {
           <span className="label">닉네임</span>
           <span className="value">
             <input
+              type="text"
               value={form.nickname}
-              onChange={(e) => setForm((p) => ({ ...p, nickname: e.target.value }))}
-              placeholder="닉네임(플래너 상단에 표시)"
-              maxLength={8}
+              maxLength={6}  
+              onChange={(e) => setForm({ ...form, nickname: e.target.value })}
             />
           </span>
         </div>
@@ -270,6 +270,34 @@ const MyPage = () => {
           </span>
         </div>
 
+        {/* 성별 */}
+        <div className="row gender">
+          <span className="label">성별</span>
+          <span className="value gender">
+            <label className="gender">
+              <input
+                type="radio"
+                name="is_male"
+                checked={form.is_male === true}
+                onChange={() => setForm((p) => ({ ...p, is_male: true }))}
+              />
+              <img src="/icon_boy.png" alt="남자" className="gender-icon" />
+              <span className="gendertext">남자</span>
+            </label>
+
+            <label className="gender">
+              <input
+                type="radio"
+                name="is_male"
+                checked={form.is_male === false}
+                onChange={() => setForm((p) => ({ ...p, is_male: false }))}
+              />
+              <img src="/icon_girl.png" alt="여자" className="gender-icon" />
+              <span className="gendertext">여자</span>
+            </label>
+          </span>
+        </div>
+
         {/* 완료 음악 선택 */}
         <div className="row">
           <span className="label">모두 완료시</span>
@@ -278,9 +306,9 @@ const MyPage = () => {
             <div className="sound-card">
               <div className="sound-card-head">
                 <span className="sound-card-title">🎵 효과음 선택</span>
-                <span className="sound-card-current">
-                  현재: <b>{currentSoundLabel}</b>
-                </span>
+                  <span className="sound-hint">
+                    마지막 “완료”를 눌렀을 때 이 소리가 나와요 🙂
+                  </span>
               </div>
 
               <div className="sound-card-body">
@@ -318,43 +346,17 @@ const MyPage = () => {
                     ▶ 미리듣기
                   </button>
                 </div>
-
-                <div className="sound-hint">
-                  마지막 “완료”를 눌렀을 때 이 소리가 나와요 🙂
-                </div>
+                    
+                <span className="sound-card-current">
+                  현재: <b>{currentSoundLabel}</b>
+                </span>
               </div>
             </div>
           </span>
         </div>
 
 
-        {/* 성별 */}
-        <div className="row gender">
-          <span className="label">프로필</span>
-          <span className="value gender">
-            <label className="gender">
-              <input
-                type="radio"
-                name="is_male"
-                checked={form.is_male === true}
-                onChange={() => setForm((p) => ({ ...p, is_male: true }))}
-              />
-              <img src="/icon_boy.png" alt="남자" className="gender-icon" />
-              <span className="gendertext">남자</span>
-            </label>
-
-            <label className="gender">
-              <input
-                type="radio"
-                name="is_male"
-                checked={form.is_male === false}
-                onChange={() => setForm((p) => ({ ...p, is_male: false }))}
-              />
-              <img src="/icon_girl.png" alt="여자" className="gender-icon" />
-              <span className="gendertext">여자</span>
-            </label>
-          </span>
-        </div>
+        
       </div>
 
       <div className="mypage-actions">
