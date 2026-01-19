@@ -552,18 +552,18 @@ const closeLoadModal = () => {
 
 
   // "공부 다하면" 메모 불러오기
-  useEffect(() => {
-    if (!me?.id) return;
+  // useEffect(() => {
+  //   if (!me?.id) return;
 
-    const key = `afterStudyText:${me.id}:${selectedDayKey}`;
-    try {
-      const saved = localStorage.getItem(key);
-      setAfterStudyText(saved ?? "");
-    } catch (e) {
-      console.warn("afterStudyText localStorage read fail:", e);
-      setAfterStudyText("");
-    }
-  }, [me?.id, selectedDayKey]);
+  //   const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+  //   try {
+  //     const saved = localStorage.getItem(key);
+  //     setAfterStudyText(saved ?? "");
+  //   } catch (e) {
+  //     console.warn("afterStudyText localStorage read fail:", e);
+  //     setAfterStudyText("");
+  //   }
+  // }, [me?.id, selectedDayKey]);
 
   // =======================
   // 샘플 일정 불러오기 실행
@@ -1352,22 +1352,6 @@ const closeLoadModal = () => {
         </div>
       </div>
 
-      <ul className="todo-list">
-        {filteredTodos.map((t, idx) => (
-          <TodoItem
-            key={t.id}
-            t={t}
-            onToggle={onToggle}
-            onDelete={onDelete}
-            reorderMode={reorderMode}
-            onMoveUp={moveTodoUp}
-            onMoveDown={moveTodoDown}
-            isFirst={idx === 0}
-            isLast={idx === filteredTodos.length - 1}
-          />
-        ))}
-      </ul>
-
       {/* 필터 + 정렬 */}
       <div className="filter-bar filter-bar-split">
         <div className="filter-group-left">
@@ -1429,7 +1413,25 @@ const closeLoadModal = () => {
         )}
       </div>
 
-      <div className="finish">
+      <ul className="todo-list">
+        {filteredTodos.map((t, idx) => (
+          <TodoItem
+            key={t.id}
+            t={t}
+            onToggle={onToggle}
+            onDelete={onDelete}
+            reorderMode={reorderMode}
+            onMoveUp={moveTodoUp}
+            onMoveDown={moveTodoDown}
+            isFirst={idx === 0}
+            isLast={idx === filteredTodos.length - 1}
+          />
+        ))}
+      </ul>
+
+      
+
+      {/* <div className="finish">
         <span className="title">공부 다하면?</span>
 
         <div className="afterstudy-box">
@@ -1483,7 +1485,7 @@ const closeLoadModal = () => {
             />
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* 명예의 전당 */}
       <HallOfFameCard
@@ -1555,7 +1557,7 @@ const closeLoadModal = () => {
 
       <footer className="planner-footer-simple">
         <div className="footer-links">
-          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>마이페이지</a>
+          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>😊마이페이지</a>
           <span>|</span>
           <a onClick={handleLogout}>로그아웃</a>
         </div>
