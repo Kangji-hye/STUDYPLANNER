@@ -8,6 +8,7 @@ const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
 // 음악 리스트
 const FINISH_SOUNDS = [
+  { label: "효과음을 선택해보세요", value:""},
   { label: "요란한 축하", value: "/finish1.mp3" },
   { label: "환호성과 박수", value: "/finish2.mp3" },
   { label: "웅장한 빵빠레", value: "/finish3.mp3" },
@@ -115,7 +116,6 @@ const MyPage = () => {
   } catch (err) {
     console.warn("미리듣기 재생 실패", err);
     alert(
-      "브라우저 정책으로 인해 소리가 바로 재생되지 않을 수 있어요.\n" +
       "효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요."
     );
   }

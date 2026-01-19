@@ -6,12 +6,48 @@ import "./Login.css";
 
 const REMEMBER_EMAIL_KEY = "remember_email_v1";
 
+/**
+ * ✅ Supabase/Auth 에러 메시지를 사용자 친화적인 한글로 변환
+ * - Supabase는 상황에 따라 message가 조금씩 달라질 수 있어서
+ *   "포함 여부"로 매칭하는 방식이 안전합니다.
+ * - 너무 기술적인 메시지는 사용자에게 그대로 보여주지 않는 게 좋아서
+ *   매칭이 안 되면 일반 문구로 안내합니다.
+ */
+function toKoreanAuthError(err) {
+  const raw = String(err?.message ?? "").trim();
+  const msg = raw.toLowerCase();
+
+  if (msg.includes("invalid login credentials")) {
+    return "이메일 또는 비밀번호가 올바르지 않습니다.";
+  }
+  if (msg.includes("invalid email")) {
+    return "이메일 형식이 올바르지 않습니다.";
+  }
+  if (msg.includes("password") && msg.includes("should be")) {
+    return "비밀번호 형식이 올바르지 않습니다.";
+  }
+  if (msg.includes("email not confirmed") || msg.includes("email_not_confirmed")) {
+    return "이메일 인증이 필요합니다. 메일함에서 인증을 완료해 주세요.";
+  }
+  if (msg.includes("too many requests")) {
+    return "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+  }
+  if (msg.includes("failed to fetch") || msg.includes("network")) {
+    return "네트워크 연결이 불안정합니다. 인터넷 상태를 확인한 뒤 다시 시도해 주세요.";
+  }
+
+  return "로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.";
+}
+
 const Login = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // ✅ 아이디 저장 기본값: ON
   const [rememberEmail, setRememberEmail] = useState(true);
+
   const [loading, setLoading] = useState(false);
 
   // 구글 로그인
@@ -31,7 +67,7 @@ const Login = () => {
 
     if (error) {
       console.error("google oauth error:", error);
-      alert(error.message);
+      alert(toKoreanAuthError(error));
     }
   };
 
@@ -56,19 +92,49 @@ const Login = () => {
 
     if (error) {
       console.error("kakao oauth error:", error);
-      alert(error.message);
+      alert(toKoreanAuthError(error));
     }
   };
 
-  // 처음 들어올 때 저장된 이메일이 있으면 자동 채우기
+  /**
+   * ✅ 첫 진입 시:
+   * 1) 저장된 이메일이 있으면 이메일 자동 채움 + 체크박스 ON
+   * 2) 저장된 이메일이 없으면 체크박스는 기본값(ON)을 유지
+   */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
-      if (saved) setEmail(saved);
+
+      if (saved) {
+        setEmail(saved);
+        setRememberEmail(true); // ✅ 저장된 값이 있으면 ON으로 확정
+      } else {
+        // ✅ 저장값이 없으면 기본값(ON) 유지
+        setRememberEmail(true);
+      }
     } catch (err) {
-    console.warn("이메일 로컬스토리지 읽기 실패", err);
+      console.warn("이메일 로컬스토리지 읽기 실패", err);
+      // 읽기 실패해도 기본값 ON 유지
+      setRememberEmail(true);
     }
   }, []);
+
+  /**
+   * ✅ 체크박스를 끄는 순간:
+   * - 저장된 이메일도 즉시 삭제해서
+   *   다음 접속 때도 "꺼짐 + 빈칸" 상태가 확실히 유지되게 함
+   */
+  const onToggleRemember = (checked) => {
+    setRememberEmail(checked);
+
+    if (!checked) {
+      try {
+        localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      } catch (err) {
+        console.warn("이메일 로컬스토리지 삭제 실패", err);
+      }
+    }
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -76,13 +142,13 @@ const Login = () => {
 
     const safeEmail = email.trim();
 
-    // 아이디 저장 체크돼 있으면 저장, 아니면 삭제
+    // ✅ 아이디 저장 체크돼 있으면 저장, 아니면 삭제
     try {
       if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, safeEmail);
       else localStorage.removeItem(REMEMBER_EMAIL_KEY);
-    } catch(err) {
+    } catch (err) {
       console.warn("이메일 로컬스토리지 저장 실패", err);
-    }     
+    }
 
     try {
       setLoading(true);
@@ -92,12 +158,15 @@ const Login = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        alert(toKoreanAuthError(error));
+        return;
+      }
 
       navigate("/planner");
     } catch (err) {
-      alert(err?.message ?? "로그인 중 오류가 발생했습니다.");
-      console.error(err);
+      console.error("login error:", err);
+      alert(toKoreanAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -106,11 +175,8 @@ const Login = () => {
   return (
     <div className="auth-page">
       <h1 className="service-title">초등 스터디 플래너</h1>
-      <p className="service-desc">
-        매일의 학습을 스스로 계획하고 기록해요
-      </p>
+      <p className="service-desc">매일의 학습을 스스로 계획하고 기록해요</p>
 
-      {/* <h2 className="auth-title">로그인</h2> */}
       <img src="/logo.png" alt="로고" className="auth-logo" />
 
       <form onSubmit={onSubmit} className="auth-form">
@@ -136,7 +202,7 @@ const Login = () => {
           <input
             type="checkbox"
             checked={rememberEmail}
-            onChange={(e) => setRememberEmail(e.target.checked)}
+            onChange={(e) => onToggleRemember(e.target.checked)} // ✅ 즉시 삭제 로직 포함
           />
           <span>아이디 저장</span>
         </label>
@@ -167,7 +233,6 @@ const Login = () => {
           비밀번호찾기
         </Link>
       </div>
-
     </div>
   );
 };

@@ -908,7 +908,7 @@
 }
 
 /* ===== 오늘 함께 해낸 친구들(명예의 전당) ===== */
-.hof-card{
+/* .hof-card{
   margin: 16px 0 0;
   padding: 14px;
   border-radius: 16px;
@@ -968,9 +968,116 @@
 .hof-name{
   font-weight: 400;
   font-size: 1.05rem;
+} */
+
+/* ===== 명예의 전당: 칩(블럭) 레이아웃 ===== */
+.hof-chips{
+  display: grid;
+  /* ✅ 화면 폭에 따라 자동으로 1~N개 배치 */
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
 }
 
+.hof-chip{
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+  padding: 10px 10px;
+  border-radius: 14px;
+
+  background: #fff;
+  border: 1px solid rgba(241,215,230,0.7);
+  box-shadow: none;
+
+  min-height: 40px;
+  min-width: 0; /* ✅ grid 안에서 말줄임/폭 계산 안정 */
+}
+
+.hof-chip-name{
+  font-weight: 400;
+  font-size: 1.02rem;
+  color: var(--text);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* ✅ 내 이름(내 칩)만 강조 */
+.hof-chip.is-me{
+  /* 배경은 그대로: 강조감 과하지 않게 */
+  background: #fff;
+
+  /* 테두리만 살짝 핑크 톤 */
+  border-color: rgba(255, 122, 162, 0.55);
+}
+
+.hof-chip.is-me .hof-chip-name{
+  /* 글자색도 '완전 핑크'가 아니라 살짝 톤다운 */
+  color: rgba(255, 122, 162, 0.95);
+  font-weight: 400; /* 너무 두꺼우면 튀니까 700~800 사이 */
+}
+
+/* .hof-chip.is-me{
+  border-color: var(--primary);
+  background: rgba(255, 122, 162, 0.14); 
+}
+
+.hof-chip.is-me .hof-chip-name{
+  color: var(--primary);
+  font-weight: 800;
+} */
+
+/* ===== 오늘 함께 해낸 친구들(명예의 전당) : 카드/헤더 기본 스타일 복구 ===== */
+.hof-card{
+  margin: 16px 0 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.85);
+  border: 1px dashed var(--line);
+  box-shadow: var(--shadow);
+}
+
+/* 헤더 줄(타이틀) */
+.hof-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0; /* 좁은 화면에서 글자/칩 폭 계산 안정 */
+}
+
+.hof-title{
+  font-family: "Poor Story";
+  font-weight: 900;
+  font-size: 1.05rem;
+  min-width: 0;
+}
+
+/* 로딩/빈 상태 문구 */
+.hof-empty{
+  color: var(--muted);
+  font-size: var(--fs-small);
+  padding: 8px 2px 2px;
+}
+
+/* ===== 칩 그리드가 너무 촘촘해서 깨져 보일 때 안전장치 ===== */
+.hof-chips{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); /* 기존 72px이 너무 작으면 84px로 */
+  gap: 8px;
+  align-items: stretch;
+}
+
+.hof-chip{
+  min-width: 0;
+}
+
+.hof-chip-name{
+  min-width: 0;
+}
 
 /* ===============================
    달력 모달 레이아웃 (정렬 깨짐 방지)

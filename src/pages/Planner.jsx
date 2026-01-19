@@ -21,6 +21,13 @@ const EMOJI_POOL = [
   "🦄", "🐰", "🐶", "🐱", "🌈",
 ];
 
+// 명예의 전당
+const cutName6 = (name) => {
+    const s = String(name ?? "").trim();
+    if (!s) return "익명";
+    return s.length > 6 ? s.slice(0, 6) : s;
+  };
+
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
 
@@ -190,17 +197,27 @@ function Planner() {
   const [hof, setHof] = useState([]);
   const [hofLoading, setHofLoading] = useState(false);
 
+  const shuffleArray = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
   const fetchHallOfFame = async (dayKey) => {
     setHofLoading(true);
     try {
       const { data, error } = await supabase
         .from("hall_of_fame")
         .select("user_id, nickname, finished_at")
-        .eq("day_key", dayKey)
-        .order("finished_at", { ascending: true });
+        .eq("day_key", dayKey);
 
       if (error) throw error;
-      setHof(data ?? []);
+
+      const shuffled = shuffleArray(data ?? []);
+      setHof(shuffled);
     } catch (err) {
       console.error("fetchHallOfFame error:", err);
       setHof([]);
@@ -273,110 +290,58 @@ function Planner() {
   // =======================
   // 폭죽 & 사운드
   // =======================
-  // const fireConfetti = () => {
-  //   confetti({
-  //     particleCount: 140,
-  //     spread: 90,
-  //     origin: { y: 0.62 },
-  //     colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
-  //   });
-  // };
-
-  // 폭죽 애니메이션 화려하게
   const fireConfetti = () => {
-  // 모션 줄이기 설정 존중
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
-      confetti({ particleCount: 60, spread: 70, origin: { y: 0.65 } });
-      return;
-    }
-
-    const base = {
-      startVelocity: 40,   // 과하지 않게
-      spread: 90,
-      ticks: 220,          // 꼬리 너무 길지 않게
-      scalar: 1.2,        // 살짝만 크게
-      gravity: 0.95,
-      zIndex: 9999,
-      colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
-    };
-
-    // 가운데 한 번
     confetti({
-       ...base,
-      particleCount: 250,   
-      spread: 105,
-      origin: { x: 0.5, y: 0.64 },
+      particleCount: 140,
+      spread: 90,
+      origin: { y: 0.62 },
+      colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
     });
-
-    // 살짝 시간차 두고 좌/우 보조
-    setTimeout(() => {
-      confetti({
-        ...base,
-        particleCount: 50,
-        origin: { x: 0.25, y: 0.7 },
-        angle: 60,
-      });
-
-      confetti({
-        ...base,
-        particleCount: 50,
-        origin: { x: 0.75, y: 0.7 },
-        angle: 120,
-      });
-    }, 120);
   };
 
-
-  // const playFinishSound = async () => {
-  //   const audio = finishAudioRef.current;
-  //   if (!audio) return;
-  //   try {
-  //     audio.currentTime = 0;
-  //     await audio.play();
-  //   } catch (e) {
-  //     console.log("finish.mp3 재생 실패:", e);
-  //   }
-  // };
-
-  // ✅ 모두 완료 효과음(모바일 안정 버전)
-  // - 재사용(ref) 대신, 재생할 때마다 새 Audio 생성
-  // - done.mp3처럼 "그 순간 재생"이라 모바일에서 훨씬 잘 들립니다.
-  const playFinishSound = (overrideSrc) => {
+  // ✅ 모두 완료 효과음(안정 + URL도 허용)
+const playFinishSound = (overrideSrc) => {
   try {
-    // 1) 토글이 꺼져 있으면 재생 자체를 안 함(예전 토글 흔적 방지)
-    // finishEnabled를 쓰고 있지 않다면 이 if는 빼도 됩니다.
+    // 1) 토글이 꺼져 있으면 재생 안 함
     if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-    // 2) src 후보 만들기
-    let src = overrideSrc ?? profile?.finish_sound ?? "/finish.mp3";
+    // 2) src 후보
+    let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
     src = String(src).trim();
 
-    // 3) src 검증: 비었거나, mp3가 아니면 기본값으로 강제
-    // (필요하면 .wav, .m4a도 허용 가능하지만 지금은 mp3만)
-    if (!src || !src.startsWith("/") || !src.toLowerCase().endsWith(".mp3")) {
+    // 3) src가 비었으면 기본값
+    if (!src) src = "/finish.mp3";
+
+    // 4) mp3 확장자만 강제하고 싶으면(권장) 이 정도만 체크
+    //    (URL/상대경로 모두 허용)
+    if (!src.toLowerCase().includes(".mp3")) {
       src = "/finish.mp3";
     }
 
-    // 🔎 문제 추적용(원인 잡히면 지워도 됨)
-    console.log("finish src:", src);
+    // 🔎 디버깅: 실제로 어떤 src로 재생 시도하는지 확인
+    console.log("finish sound src:", src);
 
-    // 4) 재생
+    // 5) 이전에 재생 중인게 있으면 멈추기(겹침 방지)
+    if (finishAudioRef.current) {
+      try {
+        finishAudioRef.current.pause();
+        finishAudioRef.current.currentTime = 0;
+      } catch {}
+    }
+
     const audio = new Audio(src);
     audio.preload = "auto";
     audio.volume = 0.9;
-    audio.currentTime = 0;
 
-    // ref 보관(선택)
     finishAudioRef.current = audio;
 
     audio.play().catch((e) => {
-      console.warn("finish sound play blocked:", e);
+      console.warn("finish sound blocked:", e);
     });
   } catch (e) {
-    console.warn("finish sound create/play fail:", e);
+    console.warn("finish sound error:", e);
   }
 };
-
 
 
   // useEffect(() => {
@@ -430,6 +395,7 @@ function Planner() {
         "오늘의 할 일을 추가해 보세요",
         "완료 버튼을 눌러 보세요",
         "전체 삭제로 정리할 수 있어요",
+        "마이 페이지에서 효과음을 설정해보세요"
       ];
 
       const rows = samples.map((text) => ({
@@ -1036,6 +1002,7 @@ function Planner() {
     const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
     if (!wasAllCompleted && isAllCompleted) {
+      console.log("호출은 되고 모두 완료 효과음은 안들림");
       fireConfetti();
       playFinishSound();
       recordCompletionForDay(selectedDayKey);
@@ -1459,7 +1426,7 @@ const resetTimer = () => {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "뭐하고 놀까~ (눌러서 적기)"}
+              {afterStudyText.trim() ? afterStudyText : "뭐하고 놀까~ 레고?"}
             </div>
           ) : (
             <input
@@ -1512,23 +1479,29 @@ const resetTimer = () => {
       <div className="hof-card">
         <div className="hof-head">
           <span className="hof-title">오늘 함께 해낸 친구들</span>
-          <span className="hof-sub">{selectedDayKey}</span>
         </div>
 
         {hofLoading ? (
           <div className="hof-empty">불러오는 중...</div>
         ) : hof.length === 0 ? (
-          <div className="hof-empty">첫 번째로 이름을 올려볼까?</div>
+          <div className="hof-empty">오늘의 첫 친구가 되어볼까?</div>
         ) : (
-          <div className="hof-list">
-            {hof.map((x, idx) => (
-              <div key={`${x.user_id}-${x.finished_at}`} className="hof-row">
-                <span className="hof-rank">
-                  {idx === 0 ? "👑" : idx === 1 ? "🥇" : idx === 2 ? "🥈" : "⭐"}
-                </span>
-                <span className="hof-name">{x.nickname}</span>
-              </div>
-            ))}
+          <div className="hof-chips" aria-label="오늘 함께 공부한 친구들">
+            {/* 내 이름은 색상 변하는 작업 */}
+            {hof.map((x) => {
+              const isMe = me?.id && x.user_id === me.id;
+
+              return (
+                <div
+                  key={`${x.user_id}-${x.finished_at}`}
+                  className={`hof-chip ${isMe ? "is-me" : ""}`}
+                  title={x.nickname ?? ""}
+                >
+                  <span className="hof-chip-name">{cutName6(x.nickname)}</span>
+                </div>
+              );
+            })}
+
           </div>
         )}
       </div>
