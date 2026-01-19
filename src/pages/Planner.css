@@ -259,9 +259,6 @@
 
 
 
-
-
-
 /* ===============================
    스탑워치 스타일 정리
 ================================ */
@@ -942,20 +939,39 @@
   opacity: 0.6;
 }
 
-/* =========================
-   오늘 함께 해낸 친구들 (명예의 전당)
-========================= */
+/* ===============================
+   오늘 함께 해낸 친구들(명예의 전당)
+================================ */
 
-/* =========================
-   오늘 함께 해낸 친구들 (명예의 전당)
-   6글자: 박스 밖으로 안 튀고, ... 없이 전부 보이게
-========================= */
+.hof-card{
+  margin: 16px 0 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.85);
+  border: 1px dashed var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hof-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0; /* 좁은 화면에서 글자/칩 폭 계산 안정 */
+}
+
+.hof-title{
+  font-family: "Poor Story";
+  font-weight: 900;
+  font-size: 1.05rem;
+  min-width: 0;
+}
 
 .hof-chips{
   display: grid;
-  /* ✅ 6글자(한글) + 패딩 고려: 최소 폭을 넉넉히 */
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); 
   align-items: stretch;
 }
 
@@ -964,7 +980,7 @@
   align-items: center;
   justify-content: center;
 
-  padding: 10px 12px;
+  padding: 10px 10px;
   border-radius: 14px;
 
   background: #fff;
@@ -972,23 +988,18 @@
   box-shadow: none;
 
   min-height: 40px;
-  min-width: 0;        /* grid 폭 계산 안정 */
-  overflow: hidden;    /* ✅ 글자가 박스 밖으로 튀는 것 방지 */
-  box-sizing: border-box;
+  min-width: 0;
 }
 
 .hof-chip-name{
-  display: block;
   font-weight: 400;
   font-size: 1.02rem;
   color: var(--text);
-  line-height: 1.2;
 
-  white-space: nowrap;     /* ✅ 6글자는 한 줄 */
-  overflow: hidden;        /* ✅ 혹시라도 넘치면 박스 안에서만 */
-  text-overflow: clip;     /* ✅ ... 금지 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   max-width: 100%;
-  text-align: center;
 }
 
 .hof-chip.is-me{
@@ -998,7 +1009,15 @@
 
 .hof-chip.is-me .hof-chip-name{
   color: rgba(255, 122, 162, 0.95);
-  font-weight: 400;
+  font-weight: 400; /* 너무 두꺼우면 튀니까 700~800 사이 */
+}
+
+
+/* 로딩/빈 상태 문구 */
+.hof-empty{
+  color: var(--muted);
+  font-size: var(--fs-small);
+  padding: 8px 2px 2px;
 }
 
 
@@ -1339,16 +1358,6 @@
   .stopwatch .title {
     flex: 0 0 100%;
   }
-
-  /* .stopwatch .time {
-    flex: 0 0 100%;
-    text-align: center;
-    font-size: 1.05rem;
-    padding: 8px 10px;
-    border: 1px dashed var(--line);
-    border-radius: 14px;
-    background: rgba(255,255,255,0.7);
-  } */
 
   .stopwatch button {
     flex: 1 1 calc(50% - 6px);
