@@ -9,6 +9,12 @@ import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 import { useSoundSettings } from "../context/SoundSettingsContext";
 
+import LoadScheduleModal from "../components/planner/LoadScheduleModal";
+import MyListSaveModal from "../components/planner/MyListSaveModal";
+import CalendarModal from "../components/planner/CalendarModal";
+import HallOfFameCard from "../components/planner/HallOfFameCard";
+import StudyTools from "../components/planner/StudyTools";
+
 // =======================
 // 이모지 풀
 // =======================
@@ -1402,302 +1408,67 @@ const importMySingleList = async () => {
       </div>
 
       {/* 명예의 전당 */}
-      <div className="hof-card">
-        <div className="hof-head">
-          <span className="hof-title">오늘 함께 해낸 친구들</span>
-        </div>
+      <HallOfFameCard
+        hofLoading={hofLoading}
+        hof={hof}
+        meId={me?.id}
+        cutName6={cutName6}
+      />
 
-        {hofLoading ? (
-          <div className="hof-empty">불러오는 중...</div>
-        ) : hof.length === 0 ? (
-          <div className="hof-empty">오늘의 첫 친구가 되어볼까?</div>
-        ) : (
-          <div className="hof-chips" aria-label="오늘 함께 공부한 친구들">
-            {hof.map((x) => {
-              const isMe = me?.id && x.user_id === me.id;
+      {/* 학습 도구들 */}
+      <StudyTools
+        formatTime={formatTime}
+        elapsedMs={elapsedMs}
+        isRunning={isRunning}
+        startStopwatch={startStopwatch}
+        stopStopwatch={stopStopwatch}
+        resetStopwatch={resetStopwatch}
+        TIMER_PRESETS={TIMER_PRESETS}
+        timerMin={timerMin}
+        setTimerMin={setTimerMin}
+        timerRunning={timerRunning}
+        formatMMSS={formatMMSS}
+        remainingSec={remainingSec}
+        startTimer={startTimer}
+        pauseTimer={pauseTimer}
+        resetTimer={resetTimer}
+        hagadaCount={hagadaCount}
+        increaseHagada={increaseHagada}
+        resetHagada={resetHagada}
+      />
 
-              return (
-                <div
-                  key={`${x.user_id}-${x.finished_at}`}
-                  className={`hof-chip ${isMe ? "is-me" : ""}`}
-                  title={x.nickname ?? ""}
-                >
-                  <span className="hof-chip-name">{cutName6(x.nickname)}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <LoadScheduleModal
+        open={showLoadModal}
+        onClose={closeLoadModal}
+        selectedDayKey={selectedDayKey}
+        loadChoice={loadChoice}
+        setLoadChoice={setLoadChoice}
+        hasMyList={hasMyList}
+        sampleModeReplace={sampleModeReplace}
+        setSampleModeReplace={setSampleModeReplace}
+        loadReplace={loadReplace}
+        setLoadReplace={setLoadReplace}
+        importingSample={importingSample}
+        busyMyList={busyMyList}
+        importMySingleList={importMySingleList}
+        importSampleTodos={importSampleTodos}
+      />
 
-      {/* 학습 도구 */}
-      <div className="study-tools">
-        <div className="tool-row">
-          <div className="tool-title">스탑워치</div>
-          <div className="tool-display">{formatTime(elapsedMs)}</div>
-          <div className="tool-actions">
-            <button onClick={startStopwatch} disabled={isRunning}>시작</button>
-            <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
-            <button onClick={resetStopwatch}>처음부터</button>
-          </div>
-        </div>
+      <MyListSaveModal
+        open={showMyListModal}
+        onClose={closeMyListModal}
+        busyMyList={busyMyList}
+        onSaveMyList={saveMySingleList}
+      />
 
-        <div className="tool-row">
-          <div className="tool-title">타이머</div>
-          <div className="tool-display tool-display-timer">
-            <select
-              value={timerMin}
-              onChange={(e) => setTimerMin(Number(e.target.value))}
-              disabled={timerRunning}
-              aria-label="타이머 시간 선택"
-            >
-              {TIMER_PRESETS.map((m) => (
-                <option key={m} value={m}>{m}분</option>
-              ))}
-            </select>
-
-            <span className="timer-value">{formatMMSS(remainingSec)}</span>
-          </div>
-
-          <div className="tool-actions">
-            <button onClick={startTimer} disabled={timerRunning || remainingSec <= 0}>시작</button>
-            <button onClick={pauseTimer} disabled={!timerRunning}>멈춤</button>
-            <button onClick={resetTimer}>처음부터</button>
-          </div>
-        </div>
-
-        <div className="tool-row">
-          <div className="tool-title">하가다</div>
-          <div className="tool-display">{hagadaCount}</div>
-          <div className="tool-actions">
-            <button onClick={increaseHagada}>하나 추가</button>
-            <button onClick={resetHagada}>처음부터</button>
-          </div>
-        </div>
-      </div>
-
-      {/* 통합 일정 불러오기 모달 */}
-      {showLoadModal && (
-        <div className="modal-backdrop" onClick={closeLoadModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">일정 불러오기</div>
-              <button
-                className="modal-close"
-                onClick={closeLoadModal}
-                disabled={importingSample || busyMyList}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <div className="load-divider" />
-
-              <div className="load-list" role="radiogroup" aria-label="불러올 일정 선택">
-                <label className="load-item">
-                  <input
-                    type="radio"
-                    name="load_choice"
-                    value="my"
-                    checked={loadChoice === "my"}
-                    onChange={() => setLoadChoice("my")}
-                    disabled={importingSample || busyMyList}
-                  />
-                  <span className="load-item-text">내가 만든 목록</span>
-                  {!hasMyList && <span className="load-item-badge">없음</span>}
-                </label>
-
-                <div className="load-divider thin" />
-
-                <label className="load-item">
-                  <input
-                    type="radio"
-                    name="load_choice"
-                    value="vacation"
-                    checked={loadChoice === "vacation"}
-                    onChange={() => setLoadChoice("vacation")}
-                    disabled={importingSample || busyMyList}
-                  />
-                  <span className="load-item-text">방학 숙제 샘플</span>
-                </label>
-
-                <label className="load-item">
-                  <input
-                    type="radio"
-                    name="load_choice"
-                    value="weekday"
-                    checked={loadChoice === "weekday"}
-                    onChange={() => setLoadChoice("weekday")}
-                    disabled={importingSample || busyMyList}
-                  />
-                  <span className="load-item-text">평일 숙제 샘플</span>
-                </label>
-
-                <label className="load-item">
-                  <input
-                    type="radio"
-                    name="load_choice"
-                    value="weekend"
-                    checked={loadChoice === "weekend"}
-                    onChange={() => setLoadChoice("weekend")}
-                    disabled={importingSample || busyMyList}
-                  />
-                  <span className="load-item-text">주말 숙제 샘플</span>
-                </label>
-              </div>
-
-              <div className="load-divider" />
-
-              <label className="modal-check">
-                <input
-                  type="checkbox"
-                  checked={loadChoice === "my" ? loadReplace : sampleModeReplace}
-                  onChange={(e) => {
-                    const v = e.target.checked;
-                    // ✅ UI는 하나지만 내부 로직은 그대로 쓰기 위해 둘 다 동기화
-                    setSampleModeReplace(v);
-                    setLoadReplace(v);
-                  }}
-                  disabled={importingSample || busyMyList}
-                />
-                기존목록을 비우고 불러오기 (교체)
-              </label>
-
-              <div className="load-divider" />
-
-              <button
-                className="modal-primary"
-                onClick={async () => {
-                  if (loadChoice === "my") {
-                    await importMySingleList();
-                    return;
-                  }
-                  await importSampleTodos(loadChoice);
-                }}
-                disabled={
-                  importingSample ||
-                  busyMyList ||
-                  (loadChoice === "my" && !hasMyList)
-                }
-              >
-                {importingSample || busyMyList
-                  ? "불러오는 중..."
-                  : loadChoice === "my"
-                    ? "내 일정 불러오기"
-                    : "샘플 추가하기"}
-              </button>
-
-
-              {loadChoice === "my" && !hasMyList && (
-                <div className="load-help">
-                  저장된 “내가 만든 목록”이 없어요. 먼저 상단의 “내 목록 저장”을 해주세요.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 내 목록 저장 모달(기존 유지) */}
-      {showMyListModal && (
-        <div className="modal-backdrop" onClick={closeMyListModal}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">내 목록 저장</div>
-              <button className="modal-close" onClick={closeMyListModal} disabled={busyMyList}>✕</button>
-            </div>
-
-            <div className="modal-body">
-              <div className="modal-help">
-                지금 화면의 할 일 목록을 “내 목록”으로 저장합니다. 저장하면 이전 내 목록은 덮어씁니다.
-              </div>
-
-              <button className="modal-primary" onClick={saveMySingleList} disabled={busyMyList}>
-                {busyMyList ? "저장 중..." : "내 목록으로 저장하기"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 달력 모달(기존 유지) */}
-      {showCalendarModal && (
-        <div className="modal-backdrop" onClick={closeCalendar}>
-          <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">날짜 선택</div>
-              <button className="modal-close" onClick={closeCalendar}>✕</button>
-            </div>
-
-            <div className="cal-head">
-              <button
-                type="button"
-                className="cal-nav"
-                onClick={() => {
-                  const nm = calMonth.m - 1;
-                  if (nm < 0) setCalMonth({ y: calMonth.y - 1, m: 11 });
-                  else setCalMonth({ y: calMonth.y, m: nm });
-                }}
-              >
-                ◀
-              </button>
-
-              <div className="cal-month-label">{calMonth.y}년 {calMonth.m + 1}월</div>
-
-              <button
-                type="button"
-                className="cal-nav"
-                onClick={() => {
-                  const nm = calMonth.m + 1;
-                  if (nm > 11) setCalMonth({ y: calMonth.y + 1, m: 0 });
-                  else setCalMonth({ y: calMonth.y, m: nm });
-                }}
-              >
-                ▶
-              </button>
-            </div>
-
-            <div className="cal-week">
-              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-            </div>
-
-            <div className="cal-grid">
-              {monthCells.map((d, idx) => {
-                const isSelected = d && isSameDay(d, selectedDate);
-                const isToday = d && isSameDay(d, new Date());
-
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    className={`cal-cell ${!d ? "empty" : ""} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
-                    disabled={!d}
-                    onClick={() => chooseDate(d)}
-                  >
-                    {d ? d.getDate() : ""}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="cal-actions">
-              <button
-                type="button"
-                className="cal-today-btn"
-                onClick={() => {
-                  const d = new Date();
-                  setSelectedDate(d);
-                  setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
-                  setShowCalendarModal(false);
-                }}
-              >
-                오늘로 가기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CalendarModal
+        open={showCalendarModal}
+        onClose={closeCalendar}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        calMonth={calMonth}
+        setCalMonth={setCalMonth}
+      />
 
       <footer className="planner-footer-simple">
         <div className="footer-links">
