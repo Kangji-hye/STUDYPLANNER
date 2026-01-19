@@ -793,6 +793,16 @@
   box-shadow: 0 6px 16px rgba(255, 122, 162, 0.25);
 }
 
+.reorder-hint{
+  color: var(--primary);        /* 핑크 */
+  font-weight: 400;
+  font-family: "Poor Story";
+  font-size: 1.05rem;
+  padding: 10px 2px;
+  letter-spacing: -0.2px;
+  user-select: none;
+}
+
 /* ===============================
    기본 템플릿 버튼 (톤 다운)
 ================================ */

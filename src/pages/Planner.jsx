@@ -1356,53 +1356,66 @@ const resetTimer = () => {
       {/* 필터 + 정렬 */}
       <div className="filter-bar" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div className="filter-group-left">
-          <button
-            className={`filter-btn ${filter === "all" ? "active" : ""}`}
-            onClick={() => {
-              setFilter("all");
-              setReorderMode(false);
-            }}
-          >
-            전체
-          </button>
+          {reorderMode ? (
+            // 순서 변경 모드일 때: 버튼 대신 안내 텍스트
+            <span className="reorder-hint" aria-live="polite">
+              현재 목록 순서 변경중...
+            </span>
+          ) : (
+            // 평소에는 필터 버튼 3개
+            <>
+              <button
+                className={`filter-btn ${filter === "all" ? "active" : ""}`}
+                onClick={() => {
+                  setFilter("all");
+                  setReorderMode(false);
+                }}
+              >
+                전체
+              </button>
 
-          <button
-            className={`filter-btn ${filter === "completed" ? "active" : ""}`}
-            onClick={() => {
-              setFilter("completed");
-              setReorderMode(false);
-            }}
-          >
-            했음
-          </button>
+              <button
+                className={`filter-btn ${filter === "completed" ? "active" : ""}`}
+                onClick={() => {
+                  setFilter("completed");
+                  setReorderMode(false);
+                }}
+              >
+                했음
+              </button>
 
-          <button
-            className={`filter-btn ${filter === "uncompleted" ? "active" : ""}`}
-            onClick={() => {
-              setFilter("uncompleted");
-              setReorderMode(false);
-            }}
-          >
-            안했음
-          </button>
+              <button
+                className={`filter-btn ${filter === "uncompleted" ? "active" : ""}`}
+                onClick={() => {
+                  setFilter("uncompleted");
+                  setReorderMode(false);
+                }}
+              >
+                안했음
+              </button>
+            </>
+          )}
         </div>
 
-        {/* 전체일 때만 순서 버튼 노출 */}
+        {/* 전체일 때만 순서 버튼 노출 → ✅ reorderMode일 때도 계속 보여야 완료를 누를 수 있음 */}
         {filter === "all" && (
           <button
             type="button"
             className={`filter-btn ${reorderMode ? "active" : ""}`}
             onClick={async () => {
               const next = !reorderMode;
+
+              // ✅ 순서 변경을 시작할 때는 필터를 강제로 전체로 맞춤
+              if (next) setFilter("all");
+
               setReorderMode(next);
 
-              // 순서 모드 처음 켤 때 sort_order 정리
+              // ✅ 순서 모드 처음 켤 때 sort_order 정리
               if (next) {
                 await ensureSortOrderForDay();
               }
             }}
             title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
-            style={{ whiteSpace: "nowrap" }}
           >
             {reorderMode ? "순서변경완료" : "순서변경하기"}
           </button>
