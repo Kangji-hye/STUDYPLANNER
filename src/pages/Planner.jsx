@@ -319,38 +319,80 @@ const closeLoadModal = () => {
   };
 
   // ✅ 모두 완료 효과음(안정 + URL도 허용)
-  const playFinishSound = (overrideSrc) => {
-    try {
-      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+  // const playFinishSound = (overrideSrc) => {
+  //   try {
+  //     if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-      let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
-      src = String(src).trim();
-      if (!src) src = "/finish.mp3";
+  //     let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
+  //     src = String(src).trim();
+  //     if (!src) src = "/finish.mp3";
 
-      if (!src.toLowerCase().includes(".mp3")) {
-        src = "/finish.mp3";
-      }
+  //     if (!src.toLowerCase().includes(".mp3")) {
+  //       src = "/finish.mp3";
+  //     }
 
-      if (finishAudioRef.current) {
-        try {
-          finishAudioRef.current.pause();
-          finishAudioRef.current.currentTime = 0;
-        } catch {}
-      }
+  //     if (finishAudioRef.current) {
+  //       try {
+  //         finishAudioRef.current.pause();
+  //         finishAudioRef.current.currentTime = 0;
+  //       } catch {}
+  //     }
 
-      const audio = new Audio(src);
-      audio.preload = "auto";
-      audio.volume = 0.9;
+  //     const audio = new Audio(src);
+  //     audio.preload = "auto";
+  //     audio.volume = 0.9;
 
-      finishAudioRef.current = audio;
+  //     finishAudioRef.current = audio;
 
-      audio.play().catch((e) => {
-        console.warn("finish sound blocked:", e);
-      });
-    } catch (e) {
-      console.warn("finish sound error:", e);
+  //     audio.play().catch((e) => {
+  //       console.warn("finish sound blocked:", e);
+  //     });
+  //   } catch (e) {
+  //     console.warn("finish sound error:", e);
+  //   }
+  // };
+
+  // ✅ 모두 완료 효과음(재사용 + 안정)
+const playFinishSound = (overrideSrc) => {
+  try {
+    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+
+    let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
+    src = String(src).trim();
+    if (!src) src = "/finish.mp3";
+
+    // mp3 아니면 fallback
+    if (!src.toLowerCase().includes(".mp3")) src = "/finish.mp3";
+
+    // ✅ 오디오 객체 재사용 (매번 new Audio 하지 않기)
+    if (!finishAudioRef.current) {
+      finishAudioRef.current = new Audio(src);
+      finishAudioRef.current.preload = "auto";
     }
-  };
+
+    const a = finishAudioRef.current;
+
+    // src가 바뀌면 교체
+    if (a.src !== new URL(src, window.location.origin).href) {
+      a.src = src;
+      a.load();
+    }
+
+    a.volume = 0.9;
+
+    // 되감고 재생
+    try { a.pause(); } catch {}
+    a.currentTime = 0;
+
+    a.play().catch((e) => {
+      // 모바일에서 막힐 수 있음. 아래 “오디오 언락”까지 추가하면 훨씬 줄어듭니다.
+      console.warn("finish sound blocked:", e);
+    });
+  } catch (e) {
+    console.warn("finish sound error:", e);
+  }
+};
+
 
   // =======================
   // 날짜별 todos 조회
@@ -435,12 +477,11 @@ const closeLoadModal = () => {
   // - 내 목록 없으면: 기본 4개 자동 생성
   const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
 
-  const seedDefault4Todos = async (userId, dayKey) => {
-    // 기본 4개 문구는 여기서 원하는 대로 바꾸면 됩니다.
+  // ✅ 기본 3개 자동 생성
+  const seedDefault3Todos = async (userId, dayKey) => {
     const defaults = [
       "📌 오늘 할 일 1개 정하기",
       "📖 책 10분 읽기",
-      "✍️ 숙제 1개 끝내기",
       "🧹 정리정돈 1번 하기",
     ];
 
@@ -449,7 +490,6 @@ const closeLoadModal = () => {
       day_key: dayKey,
       title,
       completed: false,
-      // ✅ 중복 방지용 키(같은 날짜에 또 넣으려 하면 충돌로 막힘)
       template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
     }));
 
@@ -462,6 +502,7 @@ const closeLoadModal = () => {
 
     if (error) throw error;
   };
+
 
   const importMySingleListSilently = async (userId, dayKey) => {
     // 1) 내 목록 set_id 찾기
@@ -490,8 +531,9 @@ const closeLoadModal = () => {
         day_key: dayKey,
         title: String(x.title ?? "").trim(),
         completed: false,
-        // ✅ 내 목록 기반 중복 방지 키
-        source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
+
+        // ✅ 날짜 포함: 같은 유저라도 날짜가 다르면 충돌 X
+        source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
       }))
       .filter((x) => x.title.length > 0 && x.source_set_item_key);
 
@@ -524,10 +566,10 @@ const closeLoadModal = () => {
         const ok = await importMySingleListSilently(userId, dayKey);
         if (!ok) {
           // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
-          await seedDefault4Todos(userId, dayKey);
+          await seedDefault3Todos(userId, dayKey);
         }
       } else {
-        await seedDefault4Todos(userId, dayKey);
+        await seedDefault3Todos(userId, dayKey);
       }
 
       // 자동 초기화 완료 표시
@@ -649,6 +691,45 @@ const closeLoadModal = () => {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayKey, me?.id, hasMyList]);
+
+
+
+  // ✅ 모바일 자동재생 차단을 줄이기 위한 '오디오 언락'
+  // - 첫 사용자 제스처에서 무음 재생 후 바로 멈춰두면 이후 play 성공률이 올라갑니다.
+  useEffect(() => {
+    const unlock = async () => {
+      try {
+        if (!finishAudioRef.current) {
+          finishAudioRef.current = new Audio(profile?.finish_sound ?? "/finish.mp3");
+          finishAudioRef.current.preload = "auto";
+        }
+        const a = finishAudioRef.current;
+
+        // 이미 언락 되었으면 스킵
+        if (a.__unlocked) return;
+
+        a.muted = true;
+        await a.play();     // 사용자 제스처 타이밍에서만 성공 가능
+        a.pause();
+        a.currentTime = 0;
+        a.muted = false;
+
+        a.__unlocked = true; // 커스텀 플래그
+      } catch {
+        // 실패해도 괜찮습니다. 다음 제스처에서 다시 시도됩니다.
+      }
+    };
+
+    // 클릭/터치/키보드 입력 등 “사용자 제스처”에 반응
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [profile?.finish_sound]);
+
 
 
   // =======================
@@ -914,21 +995,25 @@ const closeLoadModal = () => {
         .reduce((a, b) => Math.max(a, b), 0);
 
       // rows 생성 (templates 절대 사용 X)
-      const rows = (items ?? [])
-        .map((x) => {
-          const base = Number(x.sort_order ?? 0) || 0;
+      // ✅ importMySingleList 내부 rows 생성 부분만 교체
+        const rows = (items ?? [])
+          .map((x) => {
+            const base = Number(x.sort_order ?? 0) || 0;
 
-          return {
-            user_id: me.id,
-            day_key: selectedDayKey,
-            source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
-            title: String(x.title ?? "").trim(),
-            completed: false,
-            // 교체면 1..n, 추가면 maxSort 뒤로
-            sort_order: loadReplace ? base : (maxSort + base),
-          };
-        })
-        .filter((x) => x.source_set_item_key && x.title);
+            return {
+              user_id: me.id,
+              day_key: selectedDayKey,
+
+              // ✅ 날짜 포함: 이 한 줄이 “계속 불러오기”를 살립니다
+              source_set_item_key: `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`,
+
+              title: String(x.title ?? "").trim(),
+              completed: false,
+              sort_order: loadReplace ? base : (maxSort + base),
+            };
+          })
+          .filter((x) => x.source_set_item_key && x.title);
+
 
       const { error: upErr } = await supabase
         .from("todos")
@@ -1096,38 +1181,86 @@ const closeLoadModal = () => {
     if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
   };
 
+  // const onToggle = async (item) => {
+  //   const current = todosRef.current;
+  //   const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
+
+  //   const { data, error } = await supabase
+  //     .from("todos")
+  //     .update({ completed: !item.completed })
+  //     .eq("id", item.id)
+  //     .select("id, user_id, day_key, title, completed, created_at, template_item_key, source_set_item_key")
+  //     .single();
+
+  //   if (error) {
+  //     console.error("toggleTodo error:", error);
+  //     alert(error.message);
+  //     return;
+  //   }
+
+  //   const nextTodos = current.map((t) => (t.id === item.id ? data : t));
+  //   setTodos(nextTodos);
+
+  //   const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
+
+  //   if (!wasAllCompleted && isAllCompleted) {
+  //     fireConfetti();
+  //     playFinishSound();
+  //     recordCompletionForDay(selectedDayKey);
+  //   }
+
+  //   if (wasAllCompleted && !isAllCompleted) {
+  //     removeCompletionForDay(selectedDayKey);
+  //   }
+  // };
+
   const onToggle = async (item) => {
-    const current = todosRef.current;
+    const current = todosRef.current ?? [];
     const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
 
-    const { data, error } = await supabase
-      .from("todos")
-      .update({ completed: !item.completed })
-      .eq("id", item.id)
-      .select("id, user_id, day_key, title, completed, created_at, template_item_key, source_set_item_key")
-      .single();
+    // ✅ 1) 클릭 순간에 “토글된 결과”를 먼저 만든다 (네트워크 기다리지 않음)
+    const nextTodos = current.map((t) =>
+      t.id === item.id ? { ...t, completed: !t.completed } : t
+    );
 
-    if (error) {
-      console.error("toggleTodo error:", error);
-      alert(error.message);
-      return;
-    }
+    const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-    const nextTodos = current.map((t) => (t.id === item.id ? data : t));
-    setTodos(nextTodos);
-
-    const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
-
-    if (!wasAllCompleted && isAllCompleted) {
+    // ✅ 2) UX는 즉시: 소리/폭죽은 사용자 제스처 타이밍에 붙여서 실행
+    if (!wasAllCompleted && willAllCompleted) {
       fireConfetti();
       playFinishSound();
-      recordCompletionForDay(selectedDayKey);
     }
 
-    if (wasAllCompleted && !isAllCompleted) {
-      removeCompletionForDay(selectedDayKey);
+    // ✅ 3) 화면도 즉시 반영 (아이 입장에서는 바로 체크가 바뀌는 게 더 자연스러움)
+    setTodos(nextTodos);
+
+    // ✅ 4) 명예의 전당은 “서버 저장 성공 후”에 반영 (데이터 정합성 보호)
+    try {
+      const { error } = await supabase
+        .from("todos")
+        .update({ completed: !item.completed })
+        .eq("id", item.id);
+
+      if (error) throw error;
+
+      // 서버 저장 성공했으니, 이제 명예의 전당 반영
+      if (!wasAllCompleted && willAllCompleted) {
+        await recordCompletionForDay(selectedDayKey);
+      }
+      if (wasAllCompleted && !willAllCompleted) {
+        await removeCompletionForDay(selectedDayKey);
+      }
+    } catch (err) {
+      console.error("toggleTodo error:", err);
+
+      // ✅ 5) 실패하면 롤백 (서버가 거절했는데 UI만 바뀐 상태 방지)
+      setTodos(current);
+
+      // (선택) 필요하면 안내
+      alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
     }
   };
+
 
   // =======================
   // 스탑워치/타이머/하가다 (원본 유지)
