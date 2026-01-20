@@ -769,9 +769,19 @@ const playFinishSound = (overrideSrc) => {
   //   }
   // }, [me?.id, selectedDayKey]);
 
+
+
+  // 샘플 일정 불러오기 이슈 해결중
   // =======================
-  // 샘플 일정 불러오기 실행
-  // =======================
+
+  const makeImportBatchId = () => {
+  try {
+    return crypto.randomUUID(); // 최신 브라우저
+  } catch {
+    // 구형/일부 환경 대비
+    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+};
   // =======================
 // 샘플 일정 불러오기 실행
 // =======================
@@ -827,7 +837,16 @@ const playFinishSound = (overrideSrc) => {
           // ✅ 핵심 1) template_item_key에 날짜까지 포함(날짜가 다르면 절대 충돌 X)
           //    같은 날에 같은 샘플을 또 눌러도, 아래 upsert+ignoreDuplicates로 조용히 무시됨
           const itemKey = String(x.item_key ?? "").trim();
-          const tplKey = `${selectedDayKey}:${useKey}:${itemKey}`;
+          
+          
+          //이슈해결중
+          // ✅ 추가 모드면 매번 다른 키로 만들어서 "중복 추가" 허용
+          const batchId = makeImportBatchId();
+
+          const tplKey = sampleModeReplace
+            ? `${selectedDayKey}:${useKey}:${itemKey}`                 // 교체: 고정 키
+            : `${selectedDayKey}:${useKey}:${itemKey}:${batchId}`;     // 추가: 매번 새 키
+
 
           return {
             user_id: me.id,
@@ -1005,19 +1024,23 @@ const playFinishSound = (overrideSrc) => {
         const rows = (items ?? [])
           .map((x) => {
             const base = Number(x.sort_order ?? 0) || 0;
+            const batchId = makeImportBatchId();
 
             return {
               user_id: me.id,
               day_key: selectedDayKey,
-
               // ✅ 날짜 포함: 이 한 줄이 “계속 불러오기”를 살립니다
-              source_set_item_key: `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`,
-
+              // source_set_item_key: `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`,
+              // source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
               title: String(x.title ?? "").trim(),
               completed: false,
               sort_order: loadReplace ? base : (maxSort + base),
+              source_set_item_key: loadReplace
+                ? `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`                 // 교체: 날짜 고정
+                : `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}:${batchId}`,    // 추가: 매번 새 키
             };
           })
+          
           .filter((x) => x.source_set_item_key && x.title);
 
 
@@ -1038,14 +1061,30 @@ const playFinishSound = (overrideSrc) => {
       console.error("importMySingleList error:", err);
 
       const msg = String(err?.message ?? "");
-      if (
-        msg.includes("todos_user_source_set_item_unique") ||
-        msg.includes("duplicate key value violates unique constraint")
-      ) {
-        alert("이미 불러온 목록입니다.");
+      // if (
+      //   msg.includes("todos_user_source_set_item_unique") ||
+      //   msg.includes("duplicate key value violates unique constraint")
+      // ) {
+      //   alert("이미 불러온 목록입니다.");
+      // } else {
+      //   alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
+      // }
+
+      // 이슈#2 추가 모드에서는 "이미 불러온" 안내를 하지 않는다
+      if (loadReplace) {
+        // 교체 모드에서만 굳이 중복 안내를 하고 싶다면 유지 가능
+        if (msg.includes("duplicate key value") || msg.includes("unique")) {
+          alert("교체 중 중복 문제가 발생했어요. 다시 시도해주세요.");
+        } else {
+          alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
+        }
       } else {
-        alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
+        // 추가 모드: 중복은 허용이므로, 중복 관련 문구로 안내하지 않기
+        alert(msg || "내 일정 추가 중 오류가 발생했습니다.");
       }
+
+
+
     } finally {
       setBusyMyList(false);
     }
