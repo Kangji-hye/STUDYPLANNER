@@ -1029,14 +1029,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding: 10px 10px;
   border-radius: 14px;
-
   background: #fff;
   border: 1px solid rgba(241,215,230,0.7);
   box-shadow: none;
-
   min-height: 40px;
   min-width: 130px;
 }
@@ -1045,7 +1042,6 @@
   font-weight: 400;
   font-size: 1.02rem;
   color: var(--text);
-
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
