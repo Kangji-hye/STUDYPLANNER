@@ -100,8 +100,8 @@ function Planner() {
   const [filter, setFilter] = useState("all");
   const [reorderMode, setReorderMode] = useState(false);
   const [usedEmojis, setUsedEmojis] = useState([]);
-  // const [afterStudyText, setAfterStudyText] = useState("");
-  // const [afterStudyEditing, setAfterStudyEditing] = useState(false);
+  const [afterStudyText, setAfterStudyText] = useState("");
+  const [afterStudyEditing, setAfterStudyEditing] = useState(false);
   const { finishEnabled } = useSoundSettings();
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
@@ -771,8 +771,7 @@ const playFinishSound = (overrideSrc) => {
   useEffect(() => {
     if (!me?.id) return;
 
-    // 30분 = 30 * 60 * 1000 ms
-    const INTERVAL_MS = 30 * 60 * 1000;
+    const INTERVAL_MS = 5 * 60 * 1000; //5분
 
     const intervalId = setInterval(() => {
       // 오늘 선택된 날짜 기준으로만 갱신
@@ -1774,8 +1773,8 @@ const playFinishSound = (overrideSrc) => {
 
       
 
-      {/* <div className="finish">
-        <span className="title">공부 다하면?</span>
+      <div className="finish">
+        <span className="title">메모</span>
 
         <div className="afterstudy-box">
           {!afterStudyEditing ? (
@@ -1789,7 +1788,7 @@ const playFinishSound = (overrideSrc) => {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "뭐하고 놀까~ 레고?"}
+              {afterStudyText.trim() ? afterStudyText : "수학 1장 풀기 45초 만에 성공!!"}
             </div>
           ) : (
             <input
@@ -1797,7 +1796,7 @@ const playFinishSound = (overrideSrc) => {
               type="text"
               autoFocus
               value={afterStudyText}
-              placeholder="뭐하고 놀까~"
+              placeholder="수학 1장 풀기 45초 만에 성공!!"
               onChange={(e) => {
                 const v = e.target.value;
                 setAfterStudyText(v);
@@ -1828,7 +1827,7 @@ const playFinishSound = (overrideSrc) => {
             />
           )}
         </div>
-      </div> */}
+      </div> 
 
       {/* 명예의 전당 */}
       <HallOfFameCard
