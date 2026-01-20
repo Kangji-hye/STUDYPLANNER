@@ -1,4 +1,5 @@
 // src/components/planner/LoadScheduleModal.jsx
+// 일정불러오기
 import React from "react";
 
 export default function LoadScheduleModal({

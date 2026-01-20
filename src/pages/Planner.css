@@ -1021,7 +1021,7 @@
 .hof-chips{
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); 
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
   align-items: stretch;
 }
 
@@ -1038,7 +1038,7 @@
   box-shadow: none;
 
   min-height: 40px;
-  min-width: 0;
+  min-width: 130px;
 }
 
 .hof-chip-name{
