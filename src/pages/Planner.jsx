@@ -235,7 +235,7 @@ const closeLoadModal = () => {
   // 내 목록 모달(저장만 유지)
   // =======================
   const [showMyListModal, setShowMyListModal] = useState(false);
-  const [myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
+  const [_myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
   const [loadReplace, setLoadReplace] = useState(false);
   const [busyMyList, setBusyMyList] = useState(false);
   const [hasMyList, setHasMyList] = useState(false);

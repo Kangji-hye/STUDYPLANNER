@@ -898,6 +898,7 @@
   box-shadow: none;
   opacity: 0.9;
   font-weight: 400;
+  letter-spacing: -0.9px;
 }
 
 .todo-bar-actions .preset-btn-ghost:hover {

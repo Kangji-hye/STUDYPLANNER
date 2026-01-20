@@ -29,7 +29,7 @@ export default function LoadScheduleModal({
 
   const disabledAll = importingSample || busyMyList;
 
-  // ✅ 버튼 문구 자동 변경
+  // 버튼 문구 자동 변경
   const actionLabel =
     disabledAll
       ? "불러오는 중..."
