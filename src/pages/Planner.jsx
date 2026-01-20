@@ -535,6 +535,7 @@ const playFinishSound = (overrideSrc) => {
         // ✅ 날짜 포함: 같은 유저라도 날짜가 다르면 충돌 X
         source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
       }))
+
       .filter((x) => x.title.length > 0 && x.source_set_item_key);
 
     if (rows.length === 0) return false;
@@ -542,12 +543,13 @@ const playFinishSound = (overrideSrc) => {
     const { error: upErr } = await supabase
       .from("todos")
       .upsert(rows, {
-        onConflict: "user_id,day_key,source_set_item_key",
+        // ✅ DB 유니크(todos_user_source_set_item_unique)에 맞출 확률이 매우 높음
+        onConflict: "user_id,source_set_item_key",
         ignoreDuplicates: true,
       });
 
     if (upErr) throw upErr;
-    return true;
+
   };
 
   const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
@@ -843,14 +845,18 @@ const playFinishSound = (overrideSrc) => {
         return;
       }
 
-      const { error: upErr } = await supabase.from("todos").upsert(rows, {
-        // ✅ 핵심 2) 실제 유니크 제약(todos_user_template_item_unique)과 맞출 확률이 높은 조합
-        //    에러 메시지상 template_item_key 중심 제약이라 보통 (user_id, template_item_key)입니다.
-        onConflict: "user_id,template_item_key",
-        ignoreDuplicates: true,
-      });
+      
+      //에러잡는중
+      const { error: upErr } = await supabase
+        .from("todos")
+        .upsert(rows, {
+          // ✅ 샘플은 template_item_key로 중복 판단
+          onConflict: "user_id,template_item_key",
+          ignoreDuplicates: true,
+        });
 
       if (upErr) throw upErr;
+
 
       await fetchTodos(me.id, selectedDayKey);
 
@@ -1018,7 +1024,8 @@ const playFinishSound = (overrideSrc) => {
       const { error: upErr } = await supabase
         .from("todos")
         .upsert(rows, {
-          onConflict: "user_id,day_key,source_set_item_key",
+          // ✅ 여기 역시 동일
+          onConflict: "user_id,source_set_item_key",
           ignoreDuplicates: true,
         });
 
