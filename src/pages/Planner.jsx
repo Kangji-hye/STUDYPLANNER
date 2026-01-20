@@ -119,7 +119,7 @@ function Planner() {
           finishAudioRef.current.currentTime = 0;
           finishAudioRef.current.volume = 0.9;
         }).catch(() => {});
-      } catch {}
+      } catch (err) {console.error(err);}
 
       // 한 번만 실행
       window.removeEventListener("touchstart", unlock);
@@ -411,7 +411,7 @@ const playFinishSound = (overrideSrc) => {
     a.volume = 0.9;
 
     // 되감고 재생
-    try { a.pause(); } catch {}
+    try { a.pause(); } catch (err) {console.error(err);}
     a.currentTime = 0;
 
     a.play().catch((e) => {
@@ -480,7 +480,7 @@ const playFinishSound = (overrideSrc) => {
       console.error("seedSampleTodosIfEmpty error:", err);
       try {
         localStorage.removeItem(seededKey);
-      } catch {}
+      } catch (err) {console.error(err);}
     }
   };
 
@@ -591,7 +591,7 @@ const playFinishSound = (overrideSrc) => {
     const seedKey = getAutoSeedKey(userId, dayKey);
     try {
       if (localStorage.getItem(seedKey) === "1") return;
-    } catch {}
+    } catch (err) {console.error(err);}
 
     // 내 목록 있으면 내 목록 우선, 없으면 기본 4개
     try {
@@ -606,7 +606,7 @@ const playFinishSound = (overrideSrc) => {
       }
 
       // 자동 초기화 완료 표시
-      try { localStorage.setItem(seedKey, "1"); } catch {}
+      try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
 
       // 화면 갱신
       await fetchTodos(userId, dayKey);
@@ -784,20 +784,19 @@ const playFinishSound = (overrideSrc) => {
     };
   }, [me?.id, selectedDayKey]);
 
-
   // "공부 다하면" 메모 불러오기
-  // useEffect(() => {
-  //   if (!me?.id) return;
+  useEffect(() => {
+    if (!me?.id) return;
 
-  //   const key = `afterStudyText:${me.id}:${selectedDayKey}`;
-  //   try {
-  //     const saved = localStorage.getItem(key);
-  //     setAfterStudyText(saved ?? "");
-  //   } catch (e) {
-  //     console.warn("afterStudyText localStorage read fail:", e);
-  //     setAfterStudyText("");
-  //   }
-  // }, [me?.id, selectedDayKey]);
+    const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+    try {
+      const saved = localStorage.getItem(key);
+      setAfterStudyText(saved ?? "");
+    } catch (e) {
+      console.warn("afterStudyText localStorage read fail:", e);
+      setAfterStudyText("");
+    }
+  }, [me?.id, selectedDayKey]);
 
 
 
@@ -1091,29 +1090,15 @@ const playFinishSound = (overrideSrc) => {
       console.error("importMySingleList error:", err);
 
       const msg = String(err?.message ?? "");
-      // if (
-      //   msg.includes("todos_user_source_set_item_unique") ||
-      //   msg.includes("duplicate key value violates unique constraint")
-      // ) {
-      //   alert("이미 불러온 목록입니다.");
-      // } else {
-      //   alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
-      // }
-
-      // 이슈#2 추가 모드에서는 "이미 불러온" 안내를 하지 않는다
       if (loadReplace) {
-        // 교체 모드에서만 굳이 중복 안내를 하고 싶다면 유지 가능
         if (msg.includes("duplicate key value") || msg.includes("unique")) {
           alert("교체 중 중복 문제가 발생했어요. 다시 시도해주세요.");
         } else {
           alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
         }
       } else {
-        // 추가 모드: 중복은 허용이므로, 중복 관련 문구로 안내하지 않기
         alert(msg || "내 일정 추가 중 오류가 발생했습니다.");
       }
-
-
 
     } finally {
       setBusyMyList(false);
@@ -1136,7 +1121,7 @@ const playFinishSound = (overrideSrc) => {
       const nextOrder = i + 1;
       if (t.sort_order === nextOrder) continue;
 
-      // eslint-disable-next-line no-await-in-loop
+       
       const { error } = await supabase.from("todos").update({ sort_order: nextOrder }).eq("id", t.id);
       if (error) {
         console.error("ensureSortOrderForDay error:", error);
