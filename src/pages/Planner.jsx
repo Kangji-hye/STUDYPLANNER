@@ -104,7 +104,38 @@ function Planner() {
   // const [afterStudyEditing, setAfterStudyEditing] = useState(false);
   const { finishEnabled } = useSoundSettings();
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
-  
+
+  // ✅ iOS Safari 오디오 언락 처리
+  useEffect(() => {
+    const unlock = () => {
+      if (!finishAudioRef.current) {
+        finishAudioRef.current = new Audio("/finish.mp3");
+      }
+
+      try {
+        finishAudioRef.current.volume = 0;
+        finishAudioRef.current.play().then(() => {
+          finishAudioRef.current.pause();
+          finishAudioRef.current.currentTime = 0;
+          finishAudioRef.current.volume = 0.9;
+        }).catch(() => {});
+      } catch {}
+
+      // 한 번만 실행
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("click", unlock);
+    };
+
+    // iOS는 touchstart가 가장 확실
+    window.addEventListener("touchstart", unlock, { once: true });
+    window.addEventListener("click", unlock, { once: true });
+
+    return () => {
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("click", unlock);
+    };
+  }, []);
+
 
   // =======================
   // 데일리: 선택 날짜
@@ -1472,7 +1503,22 @@ const playFinishSound = (overrideSrc) => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  if (loading) return <div className="planner-loading">로딩중...</div>;
+
+  //풀스크린 로딩 스플래시
+  // if (loading) return <div className="planner-loading">로딩중...</div>;
+
+  if (loading) {
+    return (
+      <div className="app-splash" role="status" aria-live="polite">
+        <div className="app-splash-inner">
+          <img className="app-splash-logo" src="/logo-192.png" alt="초등 스터디 플래너" />
+          <div className="app-splash-text">초등 스터디 플래너</div>
+          <div className="app-splash-sub">불러오는 중...</div>
+        </div>
+      </div>
+    );
+  }
+
 
   // =======================
   // 선택 날짜 전체 삭제
