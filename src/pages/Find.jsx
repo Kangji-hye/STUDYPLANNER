@@ -8,6 +8,40 @@ const Find = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // const sendReset = async (e) => {
+  //   e.preventDefault();
+  //   if (loading) return;
+
+  //   try {
+  //     setLoading(true);
+
+  //     const safeEmail = email.trim();
+
+
+  //     const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+  //     const { error } = await supabase.auth.resetPasswordForEmail(safeEmail, {
+  //       redirectTo: `${base}/reset`,
+
+  //     // const { error } = await supabase.auth.resetPasswordForEmail(safeEmail, {
+  //       // ✅ 메일 링크 클릭 후 돌아올 페이지
+  //       // redirectTo: `${window.location.origin}/reset`,
+
+
+
+  //     });
+
+  //     if (error) throw error;
+
+  //     alert("비밀번호 재설정 메일을 보냈습니다. 메일함을 확인해 주세요.");
+  //   } catch (err) {
+  //     alert(err?.message ?? "메일 전송 중 오류가 발생했습니다.");
+  //     console.error("resetPasswordForEmail error:", err);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // src/pages/Find.jsx
   const sendReset = async (e) => {
     e.preventDefault();
     if (loading) return;
@@ -17,9 +51,14 @@ const Find = () => {
 
       const safeEmail = email.trim();
 
+      // ✅ 배포 주소 우선(환경변수) → 없으면 현재 origin
+      const base =
+        import.meta.env.VITE_PUBLIC_SITE_URL?.replace(/\/+$/, "") ||
+        window.location.origin;
+
       const { error } = await supabase.auth.resetPasswordForEmail(safeEmail, {
-        // ✅ 메일 링크 클릭 후 돌아올 페이지
-        redirectTo: `${window.location.origin}/reset`,
+        // ✅ 반드시 /reset 으로 돌아오게
+        redirectTo: `${base}/reset`,
       });
 
       if (error) throw error;
@@ -32,6 +71,8 @@ const Find = () => {
       setLoading(false);
     }
   };
+
+
 
   return (
     <div className="auth-page">
