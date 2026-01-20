@@ -105,7 +105,7 @@ function Planner() {
   const { finishEnabled } = useSoundSettings();
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
-  // ✅ iOS Safari 오디오 언락 처리
+  // 새로고침시 효과음 현상 // iOS Safari 오디오 언락 처리 
   useEffect(() => {
     const unlock = () => {
       if (!finishAudioRef.current) {
@@ -135,7 +135,6 @@ function Planner() {
       window.removeEventListener("click", unlock);
     };
   }, []);
-
 
   // =======================
   // 데일리: 선택 날짜
@@ -462,6 +461,7 @@ const playFinishSound = (overrideSrc) => {
       const samples = [
         "오늘의 할 일을 추가해 보세요",
         "완료 버튼을 눌러 보세요",
+        "모두 완료가 되면 폭죽이 터집니다",
         "마이 페이지에서 효과음을 설정해보세요",
       ];
 
