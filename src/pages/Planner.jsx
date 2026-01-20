@@ -348,41 +348,7 @@ const closeLoadModal = () => {
     });
   };
 
-  // ✅ 모두 완료 효과음(안정 + URL도 허용)
-  // const playFinishSound = (overrideSrc) => {
-  //   try {
-  //     if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
-
-  //     let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
-  //     src = String(src).trim();
-  //     if (!src) src = "/finish.mp3";
-
-  //     if (!src.toLowerCase().includes(".mp3")) {
-  //       src = "/finish.mp3";
-  //     }
-
-  //     if (finishAudioRef.current) {
-  //       try {
-  //         finishAudioRef.current.pause();
-  //         finishAudioRef.current.currentTime = 0;
-  //       } catch {}
-  //     }
-
-  //     const audio = new Audio(src);
-  //     audio.preload = "auto";
-  //     audio.volume = 0.9;
-
-  //     finishAudioRef.current = audio;
-
-  //     audio.play().catch((e) => {
-  //       console.warn("finish sound blocked:", e);
-  //     });
-  //   } catch (e) {
-  //     console.warn("finish sound error:", e);
-  //   }
-  // };
-
-  // ✅ 모두 완료 효과음(재사용 + 안정)
+  // ✅ 모두 완료 효과음
 const playFinishSound = (overrideSrc) => {
   try {
     if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
@@ -394,7 +360,7 @@ const playFinishSound = (overrideSrc) => {
     // mp3 아니면 fallback
     if (!src.toLowerCase().includes(".mp3")) src = "/finish.mp3";
 
-    // ✅ 오디오 객체 재사용 (매번 new Audio 하지 않기)
+    // 오디오 객체 재사용 (매번 new Audio 하지 않기)
     if (!finishAudioRef.current) {
       finishAudioRef.current = new Audio(src);
       finishAudioRef.current.preload = "auto";
@@ -407,7 +373,6 @@ const playFinishSound = (overrideSrc) => {
       a.src = src;
       a.load();
     }
-
     a.volume = 0.9;
 
     // 되감고 재생
@@ -422,8 +387,6 @@ const playFinishSound = (overrideSrc) => {
     console.warn("finish sound error:", e);
   }
 };
-
-
   // =======================
   // 날짜별 todos 조회
   // =======================
@@ -503,12 +466,12 @@ const playFinishSound = (overrideSrc) => {
     return { id: data?.id ?? null };
   };
 
-  // ✅ 자동 초기화(새 날짜가 비었을 때만)
+  //  자동 초기화(새 날짜가 비었을 때만)
   // - 내 목록 있으면: 내 목록을 자동 불러오기(교체)
   // - 내 목록 없으면: 기본 4개 자동 생성
   const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
 
-  // ✅ 기본 3개 자동 생성
+  // 기본 3개 자동 생성
   const seedDefault3Todos = async (userId, dayKey) => {
     const defaults = [
       "📌 오늘 할 일 1개 정하기",
@@ -533,7 +496,6 @@ const playFinishSound = (overrideSrc) => {
 
     if (error) throw error;
   };
-
 
   const importMySingleListSilently = async (userId, dayKey) => {
     // 1) 내 목록 set_id 찾기
@@ -563,7 +525,7 @@ const playFinishSound = (overrideSrc) => {
         title: String(x.title ?? "").trim(),
         completed: false,
 
-        // ✅ 날짜 포함: 같은 유저라도 날짜가 다르면 충돌 X
+        // 날짜 포함: 같은 유저라도 날짜가 다르면 충돌 X
         source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
       }))
 
@@ -574,7 +536,7 @@ const playFinishSound = (overrideSrc) => {
     const { error: upErr } = await supabase
       .from("todos")
       .upsert(rows, {
-        // ✅ DB 유니크(todos_user_source_set_item_unique)에 맞출 확률이 매우 높음
+        // DB 유니크(todos_user_source_set_item_unique)에 맞출 확률이 매우 높음
         onConflict: "user_id,source_set_item_key",
         ignoreDuplicates: true,
       });
@@ -614,7 +576,6 @@ const playFinishSound = (overrideSrc) => {
       console.error("autoPopulateIfEmpty error:", err);
     }
   };
-
 
   // =======================
   // 초기 로딩
@@ -725,9 +686,7 @@ const playFinishSound = (overrideSrc) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayKey, me?.id, hasMyList]);
 
-
-
-  // ✅ 모바일 자동재생 차단을 줄이기 위한 '오디오 언락'
+  //  모바일 자동재생 차단을 줄이기 위한 '오디오 언락'
   // - 첫 사용자 제스처에서 무음 재생 후 바로 멈춰두면 이후 play 성공률이 올라갑니다.
   useEffect(() => {
     const unlock = async () => {
@@ -763,10 +722,8 @@ const playFinishSound = (overrideSrc) => {
     };
   }, [profile?.finish_sound]);
 
-
-
   // =======================
-  // 명예의 전당 30분 주기 자동 새로고침
+  // 명예의 전당 자동 새로고침
   // =======================
   useEffect(() => {
     if (!me?.id) return;
@@ -798,22 +755,17 @@ const playFinishSound = (overrideSrc) => {
     }
   }, [me?.id, selectedDayKey]);
 
-
-
-  // 샘플 일정 불러오기 이슈 해결중
   // =======================
-
+  // 샘플 일정 불러오기 
+  // =======================
   const makeImportBatchId = () => {
   try {
     return crypto.randomUUID(); // 최신 브라우저
   } catch {
-    // 구형/일부 환경 대비
     return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
   }
 };
-  // =======================
-// 샘플 일정 불러오기 실행
-// =======================
+
   const importSampleTodos = async (sampleKeyOverride) => {
     if (!me?.id) return;
     if (importingSample) return;
@@ -830,7 +782,7 @@ const playFinishSound = (overrideSrc) => {
       return;
     }
 
-    // ✅ 화면/상태도 함께 맞춰두기(선택 유지용)
+    // 화면/상태도 함께 맞춰두기(선택)
     setSelectedSampleKey(useKey);
 
     try {
@@ -863,13 +815,11 @@ const playFinishSound = (overrideSrc) => {
         .map((x) => {
           const base = Number(x.sort_order ?? 0) || 0;
 
-          // ✅ 핵심 1) template_item_key에 날짜까지 포함(날짜가 다르면 절대 충돌 X)
-          //    같은 날에 같은 샘플을 또 눌러도, 아래 upsert+ignoreDuplicates로 조용히 무시됨
+          // template_item_key에 날짜까지 포함(날짜가 다르면 절대 충돌 X)
+          // 같은 날에 같은 샘플을 또 눌러도, 아래 upsert+ignoreDuplicates로 무시됨
           const itemKey = String(x.item_key ?? "").trim();
           
-          
-          //이슈해결중
-          // ✅ 추가 모드면 매번 다른 키로 만들어서 "중복 추가" 허용
+          // 추가 모드면 매번 다른 키로 만들어서 "중복 추가" 허용
           const batchId = makeImportBatchId();
 
           const tplKey = sampleModeReplace
@@ -892,13 +842,11 @@ const playFinishSound = (overrideSrc) => {
         alert("샘플 템플릿이 비어있습니다. Supabase 샘플 테이블을 확인해주세요.");
         return;
       }
-
       
-      //에러잡는중
       const { error: upErr } = await supabase
         .from("todos")
         .upsert(rows, {
-          // ✅ 샘플은 template_item_key로 중복 판단
+          // 샘플은 template_item_key로 중복 판단
           onConflict: "user_id,template_item_key",
           ignoreDuplicates: true,
         });
@@ -908,21 +856,17 @@ const playFinishSound = (overrideSrc) => {
 
       await fetchTodos(me.id, selectedDayKey);
 
-      // ✅ 요청한 UX: "이미 불러온 샘플입니다" 같은 문구는 불필요하니 성공 문구만 유지
       alert(sampleModeReplace ? "샘플 일정으로 교체했습니다." : "샘플 일정을 추가했습니다.");
       setShowLoadModal(false);
     } catch (err) {
       console.error("importSampleTodos error:", err);
 
-      // ✅ 중복이면 원래 조용히 무시되어 여기로 안 들어오는 게 정상.
-      //    혹시 다른 오류면 그대로 에러 안내만.
       const msg = String(err?.message ?? "");
       alert(msg || "샘플 일정 불러오기 중 오류가 발생했습니다.");
     } finally {
       setImportingSample(false);
     }
   };
-
 
   // =======================
   // 내 목록 저장 모달
@@ -994,7 +938,7 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
-  // 에러 잡기: 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
+  // 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
   const importMySingleList = async () => {
     if (!me?.id) return;
 
@@ -1049,7 +993,7 @@ const playFinishSound = (overrideSrc) => {
         .reduce((a, b) => Math.max(a, b), 0);
 
       // rows 생성 (templates 절대 사용 X)
-      // ✅ importMySingleList 내부 rows 생성 부분만 교체
+      // importMySingleList 내부 rows 생성 부분만 교체
         const rows = (items ?? [])
           .map((x) => {
             const base = Number(x.sort_order ?? 0) || 0;
@@ -1058,7 +1002,7 @@ const playFinishSound = (overrideSrc) => {
             return {
               user_id: me.id,
               day_key: selectedDayKey,
-              // ✅ 날짜 포함: 이 한 줄이 “계속 불러오기”를 살립니다
+              // 날짜 포함
               // source_set_item_key: `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`,
               // source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
               title: String(x.title ?? "").trim(),
@@ -1076,7 +1020,6 @@ const playFinishSound = (overrideSrc) => {
       const { error: upErr } = await supabase
         .from("todos")
         .upsert(rows, {
-          // ✅ 여기 역시 동일
           onConflict: "user_id,source_set_item_key",
           ignoreDuplicates: true,
         });
@@ -1242,60 +1185,22 @@ const playFinishSound = (overrideSrc) => {
     if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
   };
 
-  // const onToggle = async (item) => {
-  //   const current = todosRef.current;
-  //   const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
-
-  //   const { data, error } = await supabase
-  //     .from("todos")
-  //     .update({ completed: !item.completed })
-  //     .eq("id", item.id)
-  //     .select("id, user_id, day_key, title, completed, created_at, template_item_key, source_set_item_key")
-  //     .single();
-
-  //   if (error) {
-  //     console.error("toggleTodo error:", error);
-  //     alert(error.message);
-  //     return;
-  //   }
-
-  //   const nextTodos = current.map((t) => (t.id === item.id ? data : t));
-  //   setTodos(nextTodos);
-
-  //   const isAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
-
-  //   if (!wasAllCompleted && isAllCompleted) {
-  //     fireConfetti();
-  //     playFinishSound();
-  //     recordCompletionForDay(selectedDayKey);
-  //   }
-
-  //   if (wasAllCompleted && !isAllCompleted) {
-  //     removeCompletionForDay(selectedDayKey);
-  //   }
-  // };
-
   const onToggle = async (item) => {
     const current = todosRef.current ?? [];
     const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
 
-    // ✅ 1) 클릭 순간에 “토글된 결과”를 먼저 만든다 (네트워크 기다리지 않음)
     const nextTodos = current.map((t) =>
       t.id === item.id ? { ...t, completed: !t.completed } : t
     );
 
     const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
-
-    // ✅ 2) UX는 즉시: 소리/폭죽은 사용자 제스처 타이밍에 붙여서 실행
     if (!wasAllCompleted && willAllCompleted) {
       fireConfetti();
       playFinishSound();
     }
 
-    // ✅ 3) 화면도 즉시 반영 (아이 입장에서는 바로 체크가 바뀌는 게 더 자연스러움)
     setTodos(nextTodos);
 
-    // ✅ 4) 명예의 전당은 “서버 저장 성공 후”에 반영 (데이터 정합성 보호)
     try {
       const { error } = await supabase
         .from("todos")
@@ -1304,7 +1209,6 @@ const playFinishSound = (overrideSrc) => {
 
       if (error) throw error;
 
-      // 서버 저장 성공했으니, 이제 명예의 전당 반영
       if (!wasAllCompleted && willAllCompleted) {
         await recordCompletionForDay(selectedDayKey);
       }
@@ -1313,15 +1217,10 @@ const playFinishSound = (overrideSrc) => {
       }
     } catch (err) {
       console.error("toggleTodo error:", err);
-
-      // ✅ 5) 실패하면 롤백 (서버가 거절했는데 UI만 바뀐 상태 방지)
       setTodos(current);
-
-      // (선택) 필요하면 안내
       alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
     }
   };
-
 
   // =======================
   // 스탑워치/타이머/하가다 (원본 유지)
@@ -1443,7 +1342,6 @@ const playFinishSound = (overrideSrc) => {
     setRemainingSec(timerMin * 60);
   };
 
-
   // 타이머 사운드 
   const TIMER_END_SOUND = "/time1.mp3";
   const timerAudioRef = useRef(null);
@@ -1453,7 +1351,7 @@ const playFinishSound = (overrideSrc) => {
     if (remainingSec === 0 && !timerEndedRef.current) {
       timerEndedRef.current = true;
 
-      // ✅ 소리 꺼져 있으면 재생 안 함
+      // 소리 꺼져 있으면 재생 안 함
       if (!timerSoundOn) return;
 
       try {
@@ -1469,7 +1367,7 @@ const playFinishSound = (overrideSrc) => {
       }
     }
 
-    // ✅ 타이머가 다시 0보다 커지면(리셋/시간 변경) 다시 재생 가능
+  // 타이머가 다시 0보다 커지면(리셋/시간 변경) 다시 재생 가능
     if (remainingSec > 0) {
       timerEndedRef.current = false;
     }
@@ -1487,10 +1385,7 @@ const playFinishSound = (overrideSrc) => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-
   //풀스크린 로딩 스플래시
-  // if (loading) return <div className="planner-loading">로딩중...</div>;
-
   if (loading) {
     return (
       <div className="app-splash" role="status" aria-live="polite">
@@ -1503,7 +1398,6 @@ const playFinishSound = (overrideSrc) => {
     );
   }
 
-
   // =======================
   // 선택 날짜 전체 삭제
   // =======================
@@ -1514,7 +1408,6 @@ const playFinishSound = (overrideSrc) => {
     if (!ok) return;
 
     try {
-      // ✅ 실제로 몇 개가 삭제됐는지 확인(검증용)
       const { data: deletedRows, error } = await supabase
         .from("todos")
         .delete()
@@ -1527,7 +1420,7 @@ const playFinishSound = (overrideSrc) => {
       // 완료 기록도 정리
       await removeCompletionForDay(selectedDayKey);
 
-      // ✅ 서버에 진짜 남아있는지 재확인(가장 중요)
+      // 서버에 진짜 남아있는지 재확인
       const left = await fetchTodos(me.id, selectedDayKey);
 
       if ((left ?? []).length > 0) {
@@ -1543,7 +1436,6 @@ const playFinishSound = (overrideSrc) => {
       alert(err?.message ?? "전체 삭제 중 오류가 발생했습니다.");
     }
   };
-
 
   // 로그아웃
   const handleLogout = async () => {
@@ -1564,18 +1456,6 @@ const playFinishSound = (overrideSrc) => {
   };
 
   const closeCalendar = () => setShowCalendarModal(false);
-
-  // const chooseDate = (d) => {
-  //   if (!d) return;
-  //   setSelectedDate(d);
-  //   setShowCalendarModal(false);
-  // };
-
-  // const isSameDay = (a, b) =>
-  //   a && b &&
-  //   a.getFullYear() === b.getFullYear() &&
-  //   a.getMonth() === b.getMonth() &&
-  //   a.getDate() === b.getDate();
 
   return (
     <div className="planner notranslate">
@@ -1756,8 +1636,6 @@ const playFinishSound = (overrideSrc) => {
         ))}
       </ul>
 
-      
-
       <div className="finish">
         <span className="title">메모</span>
 
@@ -1839,15 +1717,12 @@ const playFinishSound = (overrideSrc) => {
         startTimer={startTimer}
         pauseTimer={pauseTimer}
         resetTimer={resetTimer}
-
         timerSoundOn={timerSoundOn}
         setTimerSoundOn={setTimerSoundOn}
-
         hagadaCount={hagadaCount}
         increaseHagada={increaseHagada}
         resetHagada={resetHagada}
       />
-
 
       <LoadScheduleModal
         open={showLoadModal}
