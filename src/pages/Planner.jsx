@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
 import supabase from "../supabaseClient";
-import "./Planner.css";
+import "./Planner.css?v=20260120";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 import { useSoundSettings } from "../context/SoundSettingsContext";
