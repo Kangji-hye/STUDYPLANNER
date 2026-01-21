@@ -73,6 +73,17 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 
+  <div id="boot-splash" aria-label="앱 로딩 중">
+    <script>
+      setTimeout(() => {
+        const s = document.getElementById("boot-splash");
+        if (s) s.remove();
+      }, 10000);
+    </script>
+    ...
+  </div>
+
+
   <style>
     html,
     body {
