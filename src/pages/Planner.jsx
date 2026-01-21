@@ -142,9 +142,88 @@ function Planner() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
+
+
+
+
+
+
+  
+  // =======================
+// ✅ 태블릿/모바일 "탭 복원" 대비: 날짜가 바뀌면 자동으로 오늘로 이동
+// - iPad/태블릿은 어제 열어둔 화면을 그대로 복원하는 경우가 많아서
+//   "앱이 다시 보이는 순간"에 오늘 날짜인지 확인해주는 게 안전합니다.
+// =======================
+useEffect(() => {
+  const LAST_ACTIVE_DAY_KEY = "planner_last_active_day_key_v1";
+
+  const syncToTodayIfNeeded = () => {
+    const todayKey = toKstDayKey(new Date());
+    const currentKey = toKstDayKey(selectedDate);
+
+    // 1) 화면에 보이는 날짜가 오늘이 아니면 오늘로 강제 이동
+    if (currentKey !== todayKey) {
+      setSelectedDate(new Date()); // 오늘로
+      return;
+    }
+
+    // 2) 보조 안전장치: 로컬에 저장된 마지막 접속일과도 비교 (복원 케이스 대응)
+    try {
+      const lastKey = localStorage.getItem(LAST_ACTIVE_DAY_KEY);
+      if (lastKey && lastKey !== todayKey) {
+        setSelectedDate(new Date());
+      }
+    } catch {
+      // localStorage 접근 실패해도 앱은 계속 동작해야 함
+    }
+  };
+
+  // 앱이 처음 보일 때 한 번 체크
+  syncToTodayIfNeeded();
+
+  // 탭/웹앱이 다시 활성화될 때마다 체크
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") syncToTodayIfNeeded();
+  };
+
+  const onFocus = () => syncToTodayIfNeeded();
+
+  // iOS/Safari의 BFCache(뒤로가기 캐시) 복원까지 대응
+  const onPageShow = () => syncToTodayIfNeeded();
+
+  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("focus", onFocus);
+  window.addEventListener("pageshow", onPageShow);
+
+  // 마지막 활성 날짜 기록(오늘 기준)
+  try {
+    localStorage.setItem(LAST_ACTIVE_DAY_KEY, toKstDayKey(new Date()));
+  } catch {}
+
+  return () => {
+    document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("focus", onFocus);
+    window.removeEventListener("pageshow", onPageShow);
+  };
+  // selectedDate가 바뀔 때도 현재 상태 재검증
+}, [selectedDate]);
+
+// 내일 테스트 해보고 정리할 것
+
+
+
+
+
+
+
+
+
   const isTodaySelected = () => {
     return selectedDayKey === toKstDayKey(new Date());
   };
+
+
+
 
   // =======================
   // 달력 모달
@@ -647,6 +726,31 @@ const playFinishSound = (overrideSrc) => {
       }
 
       const loaded = await fetchTodos(user.id, selectedDayKey);
+
+
+
+
+      // 새로운 날에 저장된 목록이 있으면 기본 목록 주입되는 에러 수정 중 
+
+      // 먼저 "내 목록 존재 여부"를 가져온다
+        const { id: myListId } = await fetchMySingleListInfo(user.id);
+
+        // 내 목록이 없는 경우에만 기본 목록 자동 주입
+        if (!myListId) {
+          await seedSampleTodosIfEmpty({
+            userId: user.id,
+            dayKey: selectedDayKey,
+            existingCount: loaded.length,
+          });
+        }
+
+        // 이후 다시 fetch
+        await fetchTodos(user.id, selectedDayKey);
+
+      // 내일이 되어 테스트 해보고 정리하기
+
+
+
 
       await seedSampleTodosIfEmpty({
         userId: user.id,

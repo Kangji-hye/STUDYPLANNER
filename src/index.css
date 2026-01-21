@@ -43,6 +43,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+ /* 초기 흰 화면(white flash) 방지: html까지 배경 고정 */
+html, body {
+  background: var(--bg);
+  min-height: 100%;
+}
+
 * { box-sizing: border-box; }
 
 body {
