@@ -74,19 +74,33 @@ export default function CalendarModal({
         </div>
 
         <div className="cal-week">
-          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          <span className="sun">일</span>
+          <span>월</span>
+          <span>화</span>
+          <span>수</span>
+          <span>목</span>
+          <span>금</span>
+          <span className="sat">토</span>
         </div>
 
         <div className="cal-grid">
           {monthCells.map((d, idx) => {
             const isSelected = d && isSameDay(d, selectedDate);
             const isToday = d && isSameDay(d, new Date());
+            const isSunday = idx % 7 === 0;
+            const isSaturday = idx % 7 === 6;
 
             return (
               <button
                 key={idx}
                 type="button"
-                className={`cal-cell ${!d ? "empty" : ""} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+                className={`cal-cell
+                            ${!d ? "empty" : ""}
+                            ${isSelected ? "selected" : ""}
+                            ${isToday ? "today" : ""}
+                            ${isSunday ? "sun" : ""}
+                            ${isSaturday ? "sat" : ""}
+                          `}
                 disabled={!d}
                 onClick={() => {
                   if (!d) return;

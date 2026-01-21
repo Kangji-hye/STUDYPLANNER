@@ -1242,6 +1242,30 @@
   border-color: rgba(255,122,162,0.35);
 }
 
+
+/* 요일 헤더 */
+.cal-week .sun {
+  color: #ef4444; /* 빨강 */
+  font-weight: 700;
+}
+
+.cal-week .sat {
+  color: #2563eb; /* 파랑 */
+  font-weight: 700;
+}
+
+/* 날짜 칸 */
+.cal-cell.sun {
+  color: #ef4444;
+}
+
+.cal-cell.sat {
+  color: #2563eb;
+}
+
+
+
+
 /* 모달 불러오기 통합 관련 추가 */
 /* ===============================
    ✅ 필터바: 좌/우 정렬 버전 (inline style 제거용)
