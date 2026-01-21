@@ -7,13 +7,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // registerType: "autoUpdate",
+      registerType: "prompt",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "masked-icon.svg"],
       manifest: {
         name: "초등 스터디 플래너",
         short_name: "스터디플래너",
         description: "초등 스터디 플래너",
-        start_url: "/",
+        // start_url: "/",
+        start_url: "/?source=pwa",
         scope: "/",
         display: "standalone",
         // background_color: "#fff7fb",

@@ -1,5 +1,7 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate  } from "react-router-dom";
+import { useEffect } from "react";
+
 import AuthLayout from "./layouts/AuthLayout";
 import AppLayout from "./layouts/AppLayout";
 
@@ -16,10 +18,40 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
 
 
+function PwaGate() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const isPwa =
+        params.get("source") === "pwa" ||
+        window.matchMedia("(display-mode: standalone)").matches;
+
+      // PWA 실행 + 루트 경로면 planner로 보정
+      if (isPwa && window.location.pathname === "/") {
+        navigate("/planner", { replace: true });
+      }
+    } catch {
+      // 실패해도 앱은 계속 진행
+    }
+  }, [navigate]);
+
+  return null;
+}
+
+
+
+
 const App = () => {
   return (
     <SoundSettingsProvider>
       <BrowserRouter>
+
+
+        <PwaGate />
+
+
         <Routes>
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />

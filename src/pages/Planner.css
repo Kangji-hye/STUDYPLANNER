@@ -1242,6 +1242,112 @@
   border-color: rgba(255,122,162,0.35);
 }
 
+
+
+
+
+/* =========================
+   달력 도장 : 참 잘했어요
+   ========================= */
+
+/* 날짜 칸 기준 잡기 */
+.cal-cell{
+  position: relative;
+}
+
+/* 도장 전체 */
+.cal-stamp{
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+
+  width: 44px; /* 도장 크기 : 모양 */
+  height: 44px;
+  border-radius: 50%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(185, 28, 28, 0.75);
+
+  color: #b91c1c;
+  font-weight: 900;
+  text-align: center;
+
+  transform: rotate(-10deg);
+  box-sizing: border-box;
+
+  font-family:
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
+    "Malgun Gothic",
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+
+  font-weight: 700;      /* 900 → 700 */
+  letter-spacing: -0.2px;
+}
+
+/* 첫 줄 : 참 */
+.cal-stamp .stamp-line1{
+  font-size: 17px;  /* 도장 크기 : 글씨 */
+  line-height: 1.05;
+}
+
+/* 둘째 줄 : 잘했어요 */
+.cal-stamp .stamp-line2{
+  font-size: 10px;   /* 도장 크기 : 글씨 */
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.cal-stamp .stamp-line1,
+.cal-stamp .stamp-line2{
+  position: relative;
+  top: -3px;   /* ⬅️ 이 값만 조절 */
+}
+
+/* =========================
+   모바일에서는 "완"으로 변경
+   ========================= */
+@media (max-width: 480px){
+  .cal-stamp{
+    width: 26px;
+    height: 26px;
+    right: 5px;
+    bottom: 5px;
+    transform: rotate(-12deg);
+  }
+
+  /* 두 줄 숨기기 */
+  .cal-stamp .stamp-line1,
+  .cal-stamp .stamp-line2{
+    display: none;
+  }
+
+  /* 대신 한 글자 "완" 표시 */
+  .cal-stamp::after{
+    content: "완";
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1;
+  }
+}
+
+
+
+
+
+
+
+
+
+
 /* 모달 불러오기 통합 관련 추가 */
 /* ===============================
    ✅ 필터바: 좌/우 정렬 버전 (inline style 제거용)

@@ -29,6 +29,7 @@ export default function CalendarModal({
   setSelectedDate,
   calMonth,
   setCalMonth,
+  doneDayKeys,
 }) {
   const monthCells = useMemo(
     () => buildMonthGrid(calMonth.y, calMonth.m),
@@ -82,6 +83,9 @@ export default function CalendarModal({
             const isSelected = d && isSameDay(d, selectedDate);
             const isToday = d && isSameDay(d, new Date());
 
+            const dayKey = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "";
+            const isDone = d && doneDayKeys && doneDayKeys.has(dayKey);
+
             return (
               <button
                 key={idx}
@@ -95,6 +99,18 @@ export default function CalendarModal({
                 }}
               >
                 {d ? d.getDate() : ""}
+                {/* {isDone && <span className="cal-stamp" aria-label="참 잘했어요">참</span>} */}
+                {isDone && (
+                  <span
+                    className="cal-stamp"
+                    aria-label="참 잘했어요"
+                    title="참 잘했어요"
+                  >
+                    <span className="stamp-line1">참</span>
+                    <span className="stamp-line2">잘했어요</span>
+                  </span>
+                )}
+
               </button>
             );
           })}

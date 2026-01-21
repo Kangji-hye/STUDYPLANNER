@@ -19,13 +19,15 @@ import StudyTools from "../components/planner/StudyTools";
 // 이모지 풀
 // =======================
 const EMOJI_POOL = [
-  "🚀", "🛸", "⚡", "🔥", "💖",
-  "🚗", "🏎️", "🚓", "🚒", "🚜",
-  "🦖", "🦕", "🦁", "🐯", "🦈",
-  "⚽", "🏀", "⚾", "🥅", "🏆",
-  "🛡️", "⚔️", "👑", "🍓", "✨",
-  "🦄", "🐰", "🐶", "🐱", "🌈",
+  "😀", "😄", "😁", "😆", "🙂", "😊", "🤩", "🤗", "😎", "🥳",
+  "😺", "🐶", "🐰", "🐻", "🐼", "🐯", "🦁", "🐣", "🦅", "🦄",
+  "🐝", "🐞", "🐜", "🪲", "🦕", "🐠", "🦈", "🐬", "🐋", "🐘",
+  "🌼", "🌻", "🌷", "🌹", "🌱", "🌿", "🍀", "🌈", "🌟", "✨", 
+  "⚡", "🔥", "☃️", "🎈", "🎉", "🎊", "🎁", "🍰", "🧁", "🍭", 
+  "🍬", "🍉", "🍇", "🍓", "🍒", "🥕", "🎲", "🧩", "🚗", "🚌", 
+  "🚓", "🚒", "🚜", "🚀", "✈️", "🚁", "🚲", "⚽", "🏀", "🏈", "🎯",
 ];
+
 
 // 명예의 전당
 const cutName6 = (name) => {
@@ -106,7 +108,7 @@ function Planner() {
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
 
-// ✅ 앱이 실제로 준비되면(Planner 로딩 완료) 부트 스플래시 제거
+//  앱이 실제로 준비되면(Planner 로딩 완료) 부트 스플래시 제거
 useEffect(() => {
   if (loading) return;
 
@@ -262,6 +264,65 @@ useEffect(() => {
     () => buildMonthGrid(calMonth.y, calMonth.m),
     [calMonth.y, calMonth.m]
   );
+
+
+
+
+
+
+  // ✅ 달력에 도장 찍기용: "이번 달에 내가 미션 완료한 day_key들"
+  const [doneDayKeys, setDoneDayKeys] = useState(() => new Set());
+
+  // ✅ 특정 월(yyyy, mm)에 대해 '내가 완료한 날짜들' 불러오기
+  const fetchDoneDaysForMonth = async (userId, y, m) => {
+    // m은 0부터 시작(0=1월)
+    const monthStart = new Date(y, m, 1);
+    const monthEnd = new Date(y, m + 1, 0);
+
+    const startKey = toKstDayKey(monthStart);
+    const endKey = toKstDayKey(monthEnd);
+
+    try {
+      const { data, error } = await supabase
+        .from("hall_of_fame")
+        .select("day_key")
+        .eq("user_id", userId)
+        .gte("day_key", startKey)
+        .lte("day_key", endKey);
+
+      if (error) throw error;
+
+      const set = new Set((data ?? []).map((x) => x.day_key));
+      setDoneDayKeys(set);
+    } catch (err) {
+      console.error("fetchDoneDaysForMonth error:", err);
+      setDoneDayKeys(new Set());
+    }
+  };
+
+
+  // ✅ 달력 모달이 열리거나, 달을 넘기면(이전/다음) 그 달 완료 기록을 다시 불러오기
+  useEffect(() => {
+    if (!showCalendarModal) return;
+    if (!me?.id) return;
+
+    fetchDoneDaysForMonth(me.id, calMonth.y, calMonth.m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCalendarModal, calMonth.y, calMonth.m, me?.id]);
+
+
+  // ✅ 달력 모달이 열리거나, 달을 넘기면(이전/다음) 그 달 완료 기록을 다시 불러오기
+  useEffect(() => {
+    if (!showCalendarModal) return;
+    if (!me?.id) return;
+
+    fetchDoneDaysForMonth(me.id, calMonth.y, calMonth.m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCalendarModal, calMonth.y, calMonth.m, me?.id]);
+
+
+
+  
 
   // =======================
   // 프로필(캐시)
@@ -579,7 +640,7 @@ const playFinishSound = (overrideSrc) => {
     const defaults = [
       "📌 오늘 할 일 1개 정하기",
       "📖 책 10분 읽기",
-      "🧹 정리정돈 1번 하기",
+      "🧩 한자 어휘 1과",
     ];
 
     const rows = defaults.map((title, idx) => ({
@@ -1883,6 +1944,7 @@ const playFinishSound = (overrideSrc) => {
         setSelectedDate={setSelectedDate}
         calMonth={calMonth}
         setCalMonth={setCalMonth}
+        doneDayKeys={doneDayKeys}
       />
 
       <footer className="planner-footer-simple">

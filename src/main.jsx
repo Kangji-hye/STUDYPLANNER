@@ -9,6 +9,14 @@ import { registerSW } from "virtual:pwa-register";
 
 registerSW({
   immediate: true, // 앱 열 때 바로 등록 (설치/실행 안정성↑)
+
+
+  onRegistered(r) {
+    r && r.update && r.update();
+  },
+
+
+
 });
 
 createRoot(document.getElementById("root")).render(
