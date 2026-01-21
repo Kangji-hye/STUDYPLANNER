@@ -573,6 +573,27 @@ const playFinishSound = (overrideSrc) => {
     return rows;
   };
 
+  // 이 유저가 "예전에 한 번이라도 todo를 만든 적이 있는지" DB로 확인
+  // - 기기가 바뀌어도 정확합니다.
+  // - 첫 방문 안내(4개) vs 빈날 기본(3개)을 구분할 때 사용합니다.
+  const hasAnyTodosEver = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("todos")
+        .select("id")
+        .eq("user_id", userId)
+        .limit(1);
+
+      if (error) throw error;
+      return (data ?? []).length > 0;
+    } catch (err) {
+      console.error("hasAnyTodosEver error:", err);
+      // 에러면 보수적으로 "있다"로 처리해서 안내 4개가 반복 주입되는 걸 막음
+      return true;
+    }
+  };
+
+
   // 처음 들어온 사용자에게 샘플 자동 주입
   const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
     const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
@@ -720,26 +741,58 @@ const playFinishSound = (overrideSrc) => {
     } catch (err) {console.error(err);}
 
     // 내 목록 있으면 내 목록 우선, 없으면 기본 4개
-    try {
-      if (hasMyList) {
-        const ok = await importMySingleListSilently(userId, dayKey);
-        if (!ok) {
-          // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
-          await seedDefault3Todos(userId, dayKey);
-        }
-      } else {
+  //   try {
+  //     if (hasMyList) {
+  //       const ok = await importMySingleListSilently(userId, dayKey);
+  //       if (!ok) {
+  //         // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
+  //         await seedDefault3Todos(userId, dayKey);
+  //       }
+  //     } else {
+  //       await seedDefault3Todos(userId, dayKey);
+  //     }
+
+  //     // 자동 초기화 완료 표시
+  //     try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
+
+  //     // 화면 갱신
+  //     await fetchTodos(userId, dayKey);
+  //   } catch (err) {
+  //     console.error("autoPopulateIfEmpty error:", err);
+  //   }
+  // };
+
+  try {
+    if (hasMyList) {
+      const ok = await importMySingleListSilently(userId, dayKey);
+      if (!ok) {
         await seedDefault3Todos(userId, dayKey);
       }
+    } else {
+      // ✅ 내 목록이 없는 사용자: "진짜 첫 사용자"면 4개 안내만
+      const ever = await hasAnyTodosEver(userId);
 
-      // 자동 초기화 완료 표시
-      try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
-
-      // 화면 갱신
-      await fetchTodos(userId, dayKey);
-    } catch (err) {
-      console.error("autoPopulateIfEmpty error:", err);
+      if (!ever) {
+        // 첫 사용자 → 4개 안내(너의 seedSampleTodosIfEmpty 로직을 재사용)
+        await seedSampleTodosIfEmpty({
+          userId,
+          dayKey,
+          existingCount: 0,
+        });
+      } else {
+        // 이미 써본 사용자 → 빈 날 기본 3개
+        await seedDefault3Todos(userId, dayKey);
+      }
     }
-  };
+
+    try { localStorage.setItem(seedKey, "1"); } catch {}
+    await fetchTodos(userId, dayKey);
+  } catch (err) {
+    console.error("autoPopulateIfEmpty error:", err);
+  }
+
+
+
 
   // =======================
   // 초기 로딩
