@@ -741,58 +741,57 @@ const playFinishSound = (overrideSrc) => {
     } catch (err) {console.error(err);}
 
     // 내 목록 있으면 내 목록 우선, 없으면 기본 4개
-  //   try {
-  //     if (hasMyList) {
-  //       const ok = await importMySingleListSilently(userId, dayKey);
-  //       if (!ok) {
-  //         // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
-  //         await seedDefault3Todos(userId, dayKey);
-  //       }
-  //     } else {
-  //       await seedDefault3Todos(userId, dayKey);
-  //     }
+    // try {
+    //   if (hasMyList) {
+    //     const ok = await importMySingleListSilently(userId, dayKey);
+    //     if (!ok) {
+    //       // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
+    //       await seedDefault3Todos(userId, dayKey);
+    //     }
+    //   } else {
+    //     await seedDefault3Todos(userId, dayKey);
+    //   }
 
-  //     // 자동 초기화 완료 표시
-  //     try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
+    //   // 자동 초기화 완료 표시
+    //   try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
 
-  //     // 화면 갱신
-  //     await fetchTodos(userId, dayKey);
-  //   } catch (err) {
-  //     console.error("autoPopulateIfEmpty error:", err);
-  //   }
-  // };
+    //   // 화면 갱신
+    //   await fetchTodos(userId, dayKey);
+    // } catch (err) {
+    //   console.error("autoPopulateIfEmpty error:", err);
+    // }
 
-  try {
-    if (hasMyList) {
-      const ok = await importMySingleListSilently(userId, dayKey);
-      if (!ok) {
-        await seedDefault3Todos(userId, dayKey);
-      }
-    } else {
-      // ✅ 내 목록이 없는 사용자: "진짜 첫 사용자"면 4개 안내만
-      const ever = await hasAnyTodosEver(userId);
 
-      if (!ever) {
-        // 첫 사용자 → 4개 안내(너의 seedSampleTodosIfEmpty 로직을 재사용)
-        await seedSampleTodosIfEmpty({
-          userId,
-          dayKey,
-          existingCount: 0,
-        });
+    try {
+      if (hasMyList) {
+        const ok = await importMySingleListSilently(userId, dayKey);
+        if (!ok) {
+          await seedDefault3Todos(userId, dayKey);
+        }
       } else {
-        // 이미 써본 사용자 → 빈 날 기본 3개
-        await seedDefault3Todos(userId, dayKey);
+        // ✅ 내 목록이 없는 사용자: "진짜 첫 사용자"면 4개 안내만
+        const ever = await hasAnyTodosEver(userId);
+
+        if (!ever) {
+          // 첫 사용자 → 4개 안내(너의 seedSampleTodosIfEmpty 로직을 재사용)
+          await seedSampleTodosIfEmpty({
+            userId,
+            dayKey,
+            existingCount: 0,
+          });
+        } else {
+          // 이미 써본 사용자 → 빈 날 기본 3개
+          await seedDefault3Todos(userId, dayKey);
+        }
       }
+
+      try { localStorage.setItem(seedKey, "1"); } catch {}
+      await fetchTodos(userId, dayKey);
+    } catch (err) {
+      console.error("autoPopulateIfEmpty error:", err);
     }
 
-    try { localStorage.setItem(seedKey, "1"); } catch {}
-    await fetchTodos(userId, dayKey);
-  } catch (err) {
-    console.error("autoPopulateIfEmpty error:", err);
-  }
-
-
-
+  };
 
   // =======================
   // 초기 로딩
@@ -800,10 +799,12 @@ const playFinishSound = (overrideSrc) => {
   useEffect(() => {
     let mounted = true;
 
+    // ✅ Planner.jsx - 초기 로딩 useEffect 안의 loadAll()만 이런 흐름으로 바꾸기
     const loadAll = async () => {
       if (!mounted) return;
       setLoading(true);
 
+      // 1) 세션/유저만 먼저 확보 (여기서 길어지면 어차피 화면도 못 띄움)
       const session = await waitForAuthSession({ timeoutMs: 5000 });
       if (!session?.user) {
         if (!mounted) return;
@@ -812,98 +813,163 @@ const playFinishSound = (overrideSrc) => {
         return;
       }
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        if (!mounted) return;
-        setLoading(false);
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const user = userData.user;
+      const user = session.user;
       if (mounted) setMe(user);
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, nickname, birthdate, is_male, finish_sound")
-        .eq("id", user.id)
-        .maybeSingle();
+      // 2) 프로필은 "캐시가 있으면 먼저 화면에 반영" (체감 속도↑)
+      //    이미 너는 localStorage 캐시를 쓰고 있으니 그 값이 있으면 먼저 세팅해두면 좋습니다.
+      //    (기존 코드 유지해도 되지만, 여기서 setProfile을 너무 늦게 하면 로딩이 길게 느껴집니다.)
+      //    -> 캐시가 이미 profile state 초기값에 들어가 있으니 여기서는 생략 가능
 
-      const nextProfile =
-        profileError || !profileData
-          ? {
-              id: user.id,
-              nickname: user.user_metadata?.nickname ?? "닉네임",
-              birthdate: user.user_metadata?.birthdate ?? null,
-              is_male: user.user_metadata?.is_male ?? true,
-              finish_sound: user.user_metadata?.finish_sound ?? "/finish.mp3",
-            }
-          : profileData;
+      // 3) 오늘 todos를 먼저 가져와서 화면을 띄울 준비
+      const rows = await fetchTodos(user.id, selectedDayKey);
 
-      if (mounted) setProfile(nextProfile);
-      try {
-        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
-      } catch (err) {
-        console.warn("프로필 캐시 저장 실패", err);
-      }
+      // ✅ 여기서 바로 로딩 종료: 화면을 먼저 보여준다
+      if (mounted) setLoading(false);
 
-      if (!profileData) {
-        const { error: upsertErr } = await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,
-              nickname: nextProfile.nickname,
-              birthdate: nextProfile.birthdate,
-              is_male: nextProfile.is_male,
-              finish_sound: nextProfile.finish_sound,
-            },
-            { onConflict: "id" }
-          );
-        if (upsertErr) console.error("profiles upsert error:", upsertErr);
-      }
+      // 4) 나머지는 백그라운드로 (병렬 실행)
+      //    - 프로필 최신화, 내 목록 여부, 명예의 전당
+      //    - 그리고 "비어 있으면 자동 채우기"는 rows 기반으로 판단
+      Promise.allSettled([
+        (async () => {
+          // 프로필 최신화(필요할 때만 업서트/갱신)
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("id, nickname, birthdate, is_male, finish_sound")
+            .eq("id", user.id)
+            .maybeSingle();
 
-      const loaded = await fetchTodos(user.id, selectedDayKey);
+          // profileData가 있으면 최신으로 덮어쓰기 (mounted 체크)
+          if (mounted && profileData) {
+            setProfile(profileData);
+            try {
+              localStorage.setItem("planner_profile_cache_v1", JSON.stringify(profileData));
+            } catch {}
+          }
+        })(),
 
+        (async () => {
+          // 내 목록 존재 여부
+          await fetchMySingleListInfo(user.id);
+        })(),
 
+        (async () => {
+          // 명예의 전당
+          await fetchHallOfFame(selectedDayKey);
+        })(),
 
-
-      // 새로운 날에 저장된 목록이 있으면 기본 목록 주입되는 에러 수정 중 
-
-      // 먼저 "내 목록 존재 여부"를 가져온다
-        const { id: myListId } = await fetchMySingleListInfo(user.id);
-
-        // 내 목록이 없는 경우에만 기본 목록 자동 주입
-        if (!myListId) {
-          await seedSampleTodosIfEmpty({
-            userId: user.id,
-            dayKey: selectedDayKey,
-            existingCount: loaded.length,
-          });
-        }
-
-        // 이후 다시 fetch
-        await fetchTodos(user.id, selectedDayKey);
-
-      // 내일이 되어 테스트 해보고 정리하기
-
-
-
-
-      await seedSampleTodosIfEmpty({
-        userId: user.id,
-        dayKey: selectedDayKey,
-        existingCount: loaded.length,
-      });
-
-      await fetchTodos(user.id, selectedDayKey);
-
-      await fetchMySingleListInfo(user.id);
-      await fetchHallOfFame(selectedDayKey);
-
-      if (!mounted) return;
-      setLoading(false);
+        (async () => {
+          // 비어있으면 자동 채우기 (중복 주입 방지 로직을 한 군데로 모아두는 게 중요)
+          await autoPopulateIfEmpty(user.id, selectedDayKey, rows ?? []);
+        })(),
+      ]);
     };
+
+
+    // const loadAll = async () => {
+    //   if (!mounted) return;
+    //   setLoading(true);
+
+    //   const session = await waitForAuthSession({ timeoutMs: 5000 });
+    //   if (!session?.user) {
+    //     if (!mounted) return;
+    //     setLoading(false);
+    //     navigate("/login", { replace: true });
+    //     return;
+    //   }
+
+    //   const { data: userData, error: userError } = await supabase.auth.getUser();
+    //   if (userError || !userData?.user) {
+    //     if (!mounted) return;
+    //     setLoading(false);
+    //     navigate("/login", { replace: true });
+    //     return;
+    //   }
+
+    //   const user = userData.user;
+    //   if (mounted) setMe(user);
+
+    //   const { data: profileData, error: profileError } = await supabase
+    //     .from("profiles")
+    //     .select("id, nickname, birthdate, is_male, finish_sound")
+    //     .eq("id", user.id)
+    //     .maybeSingle();
+
+    //   const nextProfile =
+    //     profileError || !profileData
+    //       ? {
+    //           id: user.id,
+    //           nickname: user.user_metadata?.nickname ?? "닉네임",
+    //           birthdate: user.user_metadata?.birthdate ?? null,
+    //           is_male: user.user_metadata?.is_male ?? true,
+    //           finish_sound: user.user_metadata?.finish_sound ?? "/finish.mp3",
+    //         }
+    //       : profileData;
+
+    //   if (mounted) setProfile(nextProfile);
+    //   try {
+    //     localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+    //   } catch (err) {
+    //     console.warn("프로필 캐시 저장 실패", err);
+    //   }
+
+    //   if (!profileData) {
+    //     const { error: upsertErr } = await supabase
+    //       .from("profiles")
+    //       .upsert(
+    //         {
+    //           id: user.id,
+    //           nickname: nextProfile.nickname,
+    //           birthdate: nextProfile.birthdate,
+    //           is_male: nextProfile.is_male,
+    //           finish_sound: nextProfile.finish_sound,
+    //         },
+    //         { onConflict: "id" }
+    //       );
+    //     if (upsertErr) console.error("profiles upsert error:", upsertErr);
+    //   }
+
+    //   const loaded = await fetchTodos(user.id, selectedDayKey);
+
+
+
+
+    //   // 새로운 날에 저장된 목록이 있으면 기본 목록 주입되는 에러 수정 중 
+
+    //   // 먼저 "내 목록 존재 여부"를 가져온다
+    //     const { id: myListId } = await fetchMySingleListInfo(user.id);
+
+    //     // 내 목록이 없는 경우에만 기본 목록 자동 주입
+    //     if (!myListId) {
+    //       await seedSampleTodosIfEmpty({
+    //         userId: user.id,
+    //         dayKey: selectedDayKey,
+    //         existingCount: loaded.length,
+    //       });
+    //     }
+
+    //     // 이후 다시 fetch
+    //     await fetchTodos(user.id, selectedDayKey);
+
+    //   // 내일이 되어 테스트 해보고 정리하기
+
+
+
+
+    //   await seedSampleTodosIfEmpty({
+    //     userId: user.id,
+    //     dayKey: selectedDayKey,
+    //     existingCount: loaded.length,
+    //   });
+
+    //   await fetchTodos(user.id, selectedDayKey);
+
+    //   await fetchMySingleListInfo(user.id);
+    //   await fetchHallOfFame(selectedDayKey);
+
+    //   if (!mounted) return;
+    //   setLoading(false);
+    // };
 
     loadAll();
     return () => {
@@ -914,13 +980,12 @@ const playFinishSound = (overrideSrc) => {
 
   // 날짜 바뀌면 재조회
   useEffect(() => {
+    if (loading) return;
     if (!me?.id) return;
 
     const run = async () => {
       const rows = await fetchTodos(me.id, selectedDayKey);
       await fetchHallOfFame(selectedDayKey);
-
-      // 비어 있으면 자동으로 채우기
       await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
     };
 
