@@ -61,10 +61,12 @@
 <!-- index.html body 부분 -->
 
 <body>
-  <!-- ✅ 리액트 뜨기 전 잠깐 보일 "부트 스플래시" -->
   <div id="boot-splash" aria-label="앱 로딩 중">
-    <img src="/logo.png" alt="초등 스터디 플래너 로고" />
-    <div class="boot-title">초등 스터디 플래너</div>
+    <img src="/logo.png" alt="초등 스터디 플래너 로고"
+      onerror="this.style.display='none'; document.getElementById('boot-fallback').style.display='block';" />
+    <div id="boot-fallback" style="display:none; font-weight:800; font-size:18px;">
+      초등 스터디 플래너
+    </div>
     <div class="boot-sub">불러오는 중...</div>
   </div>
 
@@ -72,7 +74,6 @@
   <script type="module" src="/src/main.jsx"></script>
 
   <style>
-    /* ✅ 초반 흰 번쩍임 방지 + 스플래시 디자인 */
     html,
     body {
       height: 100%;
@@ -90,20 +91,17 @@
       gap: 10px;
       background: #ffffff;
       color: #222;
+      z-index: 999999;
+      /* 앱 위에 확실히 */
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
         "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
     }
 
     #boot-splash img {
-      width: 140px;
-      height: 140px;
+      width: 160px;
+      height: 160px;
       object-fit: contain;
       border-radius: 28px;
-    }
-
-    .boot-title {
-      font-size: 20px;
-      font-weight: 800;
     }
 
     .boot-sub {
@@ -112,6 +110,7 @@
     }
   </style>
 </body>
+
 
 
 </html>

@@ -105,6 +105,30 @@ function Planner() {
   const { finishEnabled } = useSoundSettings();
   const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
+
+// ✅ 앱이 실제로 준비되면(Planner 로딩 완료) 부트 스플래시 제거
+useEffect(() => {
+  if (loading) return;
+
+  const splash = document.getElementById("boot-splash");
+  if (!splash) return;
+
+  // iOS에서 “보이기도 전에 제거”되는 느낌 방지: 한 프레임 늦춰 제거
+  requestAnimationFrame(() => {
+    splash.remove();
+  });
+}, [loading]);
+
+
+
+
+
+
+
+
+
+
+
   // 새로고침시 효과음 현상 // iOS Safari 오디오 언락 처리 
   useEffect(() => {
     const unlock = () => {
