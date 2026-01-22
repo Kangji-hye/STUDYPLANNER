@@ -8,52 +8,46 @@ import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 import { useSoundSettings } from "../context/SoundSettingsContext";
+
 import LoadScheduleModal from "../components/planner/LoadScheduleModal";
 import MyListSaveModal from "../components/planner/MyListSaveModal";
 import CalendarModal from "../components/planner/CalendarModal";
 import HallOfFameCard from "../components/planner/HallOfFameCard";
 import StudyTools from "../components/planner/StudyTools";
 
+// ✅ 정리된 공용 유틸/훅
+import { toKstDayKey } from "../utils/dateKst";
+import { useBootSplash } from "../hooks/useBootSplash";
+import { useRestoreToToday } from "../hooks/useRestoreToToday";
+import { useAudioUnlock } from "../hooks/useAudioUnlock";
+import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
+
 // =======================
 // 이모지 풀
 // =======================
 const EMOJI_POOL = [
   "👍", "😀", "😄", "😁", "😆", "🙂", "😊", "🥰", "😍", "🤩", "🤗", "😎", "🥳",
-  "😺", "🐶", "🐰", "🐻", "🐼", "🐯", "🦁", "🐣", "🦅", "🦄",  
+  "😺", "🐶", "🐰", "🐻", "🐼", "🐯", "🦁", "🐣", "🦅", "🦄",
   "🐝", "🐞", "🐜", "🪲", "🦕", "🐠", "🦈", "🐬", "🐋", "🐘",
   "🌼", "🌻", "🌷", "🌹", "🌱", "🌿", "🍀", "🌈", "🌟", "✨", "⚡", "🔥", "☃️",
   "🎈", "🎉", "🎊", "🎁", "🎀", "🍰", "🍭", "🍬", "🍉", "🍇", "🍓", "🍒", "🥕", "🎲", "🧩",
   "🚗", "🚌", "🚓", "🚒", "🚜", "🚀", "✈️", "🚁", "🚲", "⚽", "🏀", "🏈", "🎯",
 ];
 
-// 명예의 전당
+// 명예의 전당 닉네임 표시(6글자 제한을 예전에 하려고 했던 흔적 같지만 지금은 그대로 반환)
 const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
-  return s; 
+  return s;
 };
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
 
 // =======================
-// KST 기준 YYYY-MM-DD
+// 세션 대기 (Auth 세션이 늦게 잡히는 기기 대비)
 // =======================
-const toKstDayKey = (dateObj = new Date()) => {
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(dateObj);
-
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-};
-
-async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
+async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   const { data: s1 } = await supabase.auth.getSession();
   if (s1?.session) return s1.session;
 
@@ -72,26 +66,13 @@ async function waitForAuthSession({ timeoutMs = 4000 } = {}) {
   });
 }
 
-// =======================
-// 달력 그리드
-// =======================
-const buildMonthGrid = (year, monthIndex) => {
-  const first = new Date(year, monthIndex, 1);
-  const last = new Date(year, monthIndex + 1, 0);
-
-  const startDay = first.getDay();
-  const totalDays = last.getDate();
-
-  const cells = [];
-  for (let i = 0; i < startDay; i++) cells.push(null);
-  for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, monthIndex, d));
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-};
-
 function Planner() {
   const navigate = useNavigate();
+  const { finishEnabled } = useSoundSettings();
 
+  // =======================
+  // 기본 상태
+  // =======================
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
   const [todo, setTodo] = useState("");
@@ -101,147 +82,29 @@ function Planner() {
   const [usedEmojis, setUsedEmojis] = useState([]);
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
-  const { finishEnabled } = useSoundSettings();
-  const [timerSoundOn, setTimerSoundOn] = useState(true); //false로 할까
 
-
-// ✅ 앱이 실제로 준비되면(Planner 로딩 완료) 부트 스플래시 제거
-useEffect(() => {
-  if (loading) return;
-
-  const splash = document.getElementById("boot-splash");
-  if (!splash) return;
-
-  // iOS에서 “보이기도 전에 제거”되는 느낌 방지: 한 프레임 늦춰 제거
-  requestAnimationFrame(() => {
-    splash.remove();
-  });
-}, [loading]);
-
-
-
-
-
-
-  // 새로고침시 효과음 현상 // iOS Safari 오디오 언락 처리 
-  useEffect(() => {
-    const unlock = () => {
-      if (!finishAudioRef.current) {
-        finishAudioRef.current = new Audio("/finish.mp3");
-      }
-
-      try {
-        finishAudioRef.current.volume = 0;
-        finishAudioRef.current.play().then(() => {
-          finishAudioRef.current.pause();
-          finishAudioRef.current.currentTime = 0;
-          finishAudioRef.current.volume = 0.9;
-        }).catch(() => {});
-      } catch (err) {console.error(err);}
-
-      // 한 번만 실행
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("click", unlock);
-    };
-
-    // iOS는 touchstart가 가장 확실
-    window.addEventListener("touchstart", unlock, { once: true });
-    window.addEventListener("click", unlock, { once: true });
-
-    return () => {
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("click", unlock);
-    };
-  }, []);
+  // ✅ 부트 스플래시 제거(한 번만)
+  useBootSplash(loading);
 
   // =======================
   // 데일리: 선택 날짜
   // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  // ✅ 탭 복원 대비: "날이 바뀐 복원 상황"에서만 오늘로 복귀
+  useRestoreToToday(setSelectedDate);
+
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
-  // ✅ 지금 화면이 보고 있는 날짜(day_key)를 기억(가드용)
+  // ✅ fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
   useEffect(() => {
     selectedDayKeyRef.current = selectedDayKey;
   }, [selectedDayKey]);
 
-  // ✅ fetch 요청 순서표(가장 마지막 요청만 setTodos 허용)
   const fetchTodosSeqRef = useRef(0);
 
-
-
-
-
-
-
-
-
-
-// ✅ 태블릿/모바일 "탭 복원" 대비 (수정 버전)
-// - 사용자가 달력으로 과거/미래 날짜를 보는 건 존중해야 함
-// - "앱을 어제 켜둔 채로 오늘 다시 열린 경우"처럼 '날짜가 바뀐 복원 상황'에서만 오늘로 이동
-useEffect(() => {
-  const LAST_ACTIVE_DAY_KEY = "planner_last_active_day_key_v1";
-
-  const moveToTodayIfDayChangedWhileAway = () => {
-    const todayKey = toKstDayKey(new Date());
-
-    try {
-      const lastKey = localStorage.getItem(LAST_ACTIVE_DAY_KEY);
-
-      // ✅ 마지막으로 앱을 썼던 날짜가 오늘이 아니면 → 오늘로 이동
-      // (이 경우가 "탭 복원"으로 어제 화면이 그대로 뜨는 대표 케이스)
-      if (lastKey && lastKey !== todayKey) {
-        setSelectedDate(new Date());
-      }
-
-      // ✅ 오늘 날짜로 기록 갱신
-      localStorage.setItem(LAST_ACTIVE_DAY_KEY, todayKey);
-    } catch {
-      // localStorage 실패해도 앱은 정상 동작
-    }
-  };
-
-  // 앱이 처음 보일 때 한 번 체크
-  moveToTodayIfDayChangedWhileAway();
-
-  // 탭/웹앱이 다시 활성화될 때마다 체크
-  const onVisibility = () => {
-    if (document.visibilityState === "visible") moveToTodayIfDayChangedWhileAway();
-  };
-  const onFocus = () => moveToTodayIfDayChangedWhileAway();
-  const onPageShow = () => moveToTodayIfDayChangedWhileAway();
-
-  document.addEventListener("visibilitychange", onVisibility);
-  window.addEventListener("focus", onFocus);
-  window.addEventListener("pageshow", onPageShow);
-
-  return () => {
-    document.removeEventListener("visibilitychange", onVisibility);
-    window.removeEventListener("focus", onFocus);
-    window.removeEventListener("pageshow", onPageShow);
-  };
-}, []); // ✅ selectedDate 의존성 제거(사용자가 날짜 바꾸는 것 방해하지 않게)
-
-
-
-
-
-
-
-
-
-
-
-
-
-  const isTodaySelected = () => {
-    return selectedDayKey === toKstDayKey(new Date());
-  };
-
-
-
+  const isTodaySelected = () => selectedDayKey === toKstDayKey(new Date());
 
   // =======================
   // 달력 모달
@@ -252,58 +115,12 @@ useEffect(() => {
     return { y: d.getFullYear(), m: d.getMonth() };
   });
 
-
-// ✅ 달력에 도장 찍기용: "이번 달에 내가 미션 완료한 day_key들"
-// - Set(집합)은 "있다/없다" 확인이 엄청 빨라서 달력에 딱 좋아요.
-const [doneDayKeys, setDoneDayKeys] = useState(() => new Set());
-
-// ✅ 특정 월(yyyy, mm)에 대해 '내가 완료한 날짜들' 불러오기
-// - hall_of_fame 테이블에는 day_key가 들어 있으니, 그걸 한 달 범위로 가져옵니다.
-const fetchDoneDaysForMonth = async (userId, y, m) => {
-  // m은 0부터 시작(0=1월)
-  const monthStart = new Date(y, m, 1);
-  const monthEnd = new Date(y, m + 1, 0);
-
-  // 너는 day_key를 "YYYY-MM-DD" 형태로 쓰고 있으니, 같은 형식으로 범위를 만들면 됩니다.
-  const startKey = toKstDayKey(monthStart);
-  const endKey = toKstDayKey(monthEnd);
-
-  try {
-    const { data, error } = await supabase
-      .from("hall_of_fame")
-      .select("day_key")
-      .eq("user_id", userId)
-      .gte("day_key", startKey)
-      .lte("day_key", endKey);
-
-    if (error) throw error;
-
-    // ["2026-01-01", "2026-01-03"...] 같은 걸 Set으로 바꿔서 저장
-    const set = new Set((data ?? []).map((x) => x.day_key));
-    setDoneDayKeys(set);
-  } catch (err) {
-    console.error("fetchDoneDaysForMonth error:", err);
-    setDoneDayKeys(new Set());
-  }
-};
-
-// ✅ 달력 모달이 열리거나, 달을 넘기면(이전/다음) 그 달 완료 기록을 다시 불러오기
-useEffect(() => {
-  if (!showCalendarModal) return;
-  if (!me?.id) return;
-
-  fetchDoneDaysForMonth(me.id, calMonth.y, calMonth.m);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [showCalendarModal, calMonth.y, calMonth.m, me?.id]);
-
-
-
-
-
-  const monthCells = useMemo(
-    () => buildMonthGrid(calMonth.y, calMonth.m),
-    [calMonth.y, calMonth.m]
-  );
+  // ✅ 달력 도장(완료한 날짜 Set)
+  const doneDayKeys = useDoneDaysForMonth({
+    open: showCalendarModal,
+    userId: me?.id,
+    calMonth,
+  });
 
   // =======================
   // 프로필(캐시)
@@ -321,8 +138,11 @@ useEffect(() => {
   // 날씨
   const weatherCode = useWeatherYongin();
 
-  // 완료 사운드
+  // 완료 사운드(재사용)
   const finishAudioRef = useRef(null);
+
+  // ✅ 오디오 언락(중복 useEffect 제거)
+  useAudioUnlock(finishAudioRef, profile?.finish_sound ?? "/finish.mp3");
 
   // 최신 todos 참조
   const todosRef = useRef([]);
@@ -331,34 +151,14 @@ useEffect(() => {
   }, [todos]);
 
   // =======================
-  // 통합: 목록 불러오기 모달
+  // 목록 불러오기 모달
   // =======================
   const [showLoadModal, setShowLoadModal] = useState(false);
 
-// 모달에서 선택하는 항목을 하나로 통합
-// "my" | "vacation" | "weekday" | "weekend"
-const [loadChoice, setLoadChoice] = useState("vacation");
+  // "my" | "vacation" | "weekday" | "weekend"
+  const [loadChoice, setLoadChoice] = useState("vacation");
 
-const openLoadModal = () => {
-  // 내 목록이 있으면 기본을 "내가 만든 목록"으로, 없으면 방학 샘플로
-  setLoadChoice(hasMyList ? "my" : "vacation");
-
-  // 체크박스(교체) 기본은 OFF
-  setSampleModeReplace(false);
-  setLoadReplace(false);
-
-  setShowLoadModal(true);
-};
-
-const closeLoadModal = () => {
-  // 불러오는 중엔 닫기 막기(중복 클릭 방지)
-  if (importingSample || busyMyList) return;
-  setShowLoadModal(false);
-};
-
-  // =======================
   // 샘플(테이블 3개)
-  // =======================
   const [sampleModeReplace, setSampleModeReplace] = useState(false); // true면 교체
   const [importingSample, setImportingSample] = useState(false);
 
@@ -376,17 +176,29 @@ const closeLoadModal = () => {
 
   const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
 
-  // =======================
   // 내 목록 모달(저장만 유지)
-  // =======================
   const [showMyListModal, setShowMyListModal] = useState(false);
   const [_myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
   const [loadReplace, setLoadReplace] = useState(false);
   const [busyMyList, setBusyMyList] = useState(false);
   const [hasMyList, setHasMyList] = useState(false);
 
+  const openLoadModal = () => {
+    // 내 목록이 있으면 기본을 "내가 만든 목록"으로, 없으면 방학 샘플로
+    setLoadChoice(hasMyList ? "my" : "vacation");
+    // 체크박스(교체) 기본은 OFF
+    setSampleModeReplace(false);
+    setLoadReplace(false);
+    setShowLoadModal(true);
+  };
+
+  const closeLoadModal = () => {
+    if (importingSample || busyMyList) return;
+    setShowLoadModal(false);
+  };
+
   // =======================
-  // 명예의 전당(선택 날짜 기준)
+  // 명예의 전당
   // =======================
   const [hof, setHof] = useState([]);
   const [hofLoading, setHofLoading] = useState(false);
@@ -409,9 +221,7 @@ const closeLoadModal = () => {
         .eq("day_key", dayKey);
 
       if (error) throw error;
-
-      const shuffled = shuffleArray(data ?? []);
-      setHof(shuffled);
+      setHof(shuffleArray(data ?? []));
     } catch (err) {
       console.error("fetchHallOfFame error:", err);
       setHof([]);
@@ -422,8 +232,8 @@ const closeLoadModal = () => {
 
   const recordCompletionForDay = async (dayKey) => {
     if (!me?.id) return;
-
     const nickname = profile?.nickname ?? "익명";
+
     try {
       const { error } = await supabase
         .from("hall_of_fame")
@@ -457,7 +267,7 @@ const closeLoadModal = () => {
   };
 
   // =======================
-  // 날짜 표시
+  // UI: 날짜 표시
   // =======================
   const formatSelectedKorean = () => {
     const d = selectedDate;
@@ -476,7 +286,6 @@ const closeLoadModal = () => {
     const available = EMOJI_POOL.filter((emoji) => !usedEmojis.includes(emoji));
     const pool = available.length > 0 ? available : EMOJI_POOL;
     const selected = pool[Math.floor(Math.random() * pool.length)];
-
     setUsedEmojis((prev) => (available.length > 0 ? [...prev, selected] : [selected]));
     return selected;
   };
@@ -493,79 +302,48 @@ const closeLoadModal = () => {
     });
   };
 
-  // ✅ 모두 완료 효과음
-const playFinishSound = (overrideSrc) => {
-  try {
-    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+  const playFinishSound = (overrideSrc) => {
+    try {
+      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-    let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
-    src = String(src).trim();
-    if (!src) src = "/finish.mp3";
+      let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
+      src = String(src).trim();
+      if (!src) src = "/finish.mp3";
+      if (!src.toLowerCase().includes(".mp3")) src = "/finish.mp3";
 
-    // mp3 아니면 fallback
-    if (!src.toLowerCase().includes(".mp3")) src = "/finish.mp3";
+      if (!finishAudioRef.current) {
+        finishAudioRef.current = new Audio(src);
+        finishAudioRef.current.preload = "auto";
+      }
 
-    // 오디오 객체 재사용 (매번 new Audio 하지 않기)
-    if (!finishAudioRef.current) {
-      finishAudioRef.current = new Audio(src);
-      finishAudioRef.current.preload = "auto";
+      const a = finishAudioRef.current;
+
+      if (a.src !== new URL(src, window.location.origin).href) {
+        a.src = src;
+        a.load();
+      }
+
+      a.volume = 0.9;
+      try {
+        a.pause();
+      } catch {}
+      a.currentTime = 0;
+
+      a.play().catch((e) => console.warn("finish sound blocked:", e));
+    } catch (e) {
+      console.warn("finish sound error:", e);
     }
+  };
 
-    const a = finishAudioRef.current;
-
-    // src가 바뀌면 교체
-    if (a.src !== new URL(src, window.location.origin).href) {
-      a.src = src;
-      a.load();
-    }
-    a.volume = 0.9;
-
-    // 되감고 재생
-    try { a.pause(); } catch (err) {console.error(err);}
-    a.currentTime = 0;
-
-    a.play().catch((e) => {
-      // 모바일에서 막힐 수 있음. 아래 “오디오 언락”까지 추가하면 훨씬 줄어듭니다.
-      console.warn("finish sound blocked:", e);
-    });
-  } catch (e) {
-    console.warn("finish sound error:", e);
-  }
-};
   // =======================
-  // 날짜별 todos 조회
+  // 날짜별 todos 조회(레이스 방지)
   // =======================
-  // const fetchTodos = async (userId, dayKey) => {
-  //   const { data, error } = await supabase
-  //     .from("todos")
-  //     .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
-  //     .eq("user_id", userId)
-  //     .eq("day_key", dayKey)
-  //     .order("sort_order", { ascending: true, nullsFirst: true })
-  //     .order("created_at", { ascending: false });
-
-  //   if (error) {
-  //     console.error("fetchTodos error:", error);
-  //     alert(error.message);
-  //     return [];
-  //   }
-  //   const rows = data ?? [];
-
-  //   setTodos(rows);
-  //   return rows;
-  // };
-
-    const fetchTodos = async (userId, dayKey) => {
-    // ✅ 1) 이번 요청에 번호를 매깁니다.
-    // - 화면에서 날짜를 연속으로 바꾸면 fetchTodos가 여러 번 동시에 돌 수 있어요.
-    // - 가장 마지막 요청만 화면에 반영하도록 막아주는 장치입니다.
+  const fetchTodos = async (userId, dayKey) => {
     const mySeq = ++fetchTodosSeqRef.current;
 
     const { data, error } = await supabase
       .from("todos")
-      .select(
-        "id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key"
-      )
+      .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
       .eq("user_id", userId)
       .eq("day_key", dayKey)
       .order("sort_order", { ascending: true, nullsFirst: true })
@@ -579,30 +357,16 @@ const playFinishSound = (overrideSrc) => {
 
     const rows = data ?? [];
 
-    // ✅ 2) 내가 "마지막 요청"이 아니면 setTodos 금지 (늦게 온 옛날 응답이 화면 덮는 것 방지)
-    if (mySeq !== fetchTodosSeqRef.current) {
-      return rows;
+    // 마지막 요청 + 현재 보고 있는 날짜만 화면 반영
+    if (mySeq === fetchTodosSeqRef.current && dayKey === selectedDayKeyRef.current) {
+      setTodos(rows);
     }
-
-    // ✅ 3) 응답이 돌아온 순간, 화면이 보고 있는 날짜가 다르면 setTodos 금지
-    // - 예: 어제 누르고(요청 A) → 오늘 누르고(요청 B)
-    //   그런데 A가 늦게 도착하면, A가 오늘 화면을 덮어버리는 문제를 막습니다.
-    if (dayKey !== selectedDayKeyRef.current) {
-      return rows;
-    }
-
-    // ✅ 여기까지 통과한 응답만 화면 반영
-    setTodos(rows);
     return rows;
   };
 
-
-
-
-
-
-
-  // 처음 들어온 사용자에게 샘플 자동 주입
+  // =======================
+  // 첫 진입 샘플 자동 주입
+  // =======================
   const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
     const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
 
@@ -636,7 +400,7 @@ const playFinishSound = (overrideSrc) => {
       console.error("seedSampleTodosIfEmpty error:", err);
       try {
         localStorage.removeItem(seededKey);
-      } catch (err) {console.error(err);}
+      } catch {}
     }
   };
 
@@ -659,18 +423,11 @@ const playFinishSound = (overrideSrc) => {
     return { id: data?.id ?? null };
   };
 
-  //  자동 초기화(새 날짜가 비었을 때만)
-  // - 내 목록 있으면: 내 목록을 자동 불러오기(교체)
-  // - 내 목록 없으면: 기본 4개 자동 생성
+  // 자동 초기화(새 날짜 비었을 때)
   const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
 
-  // 기본 3개 자동 생성
   const seedDefault3Todos = async (userId, dayKey) => {
-    const defaults = [
-      "📌 오늘 할 일 1개 정하기",
-      "📖 책 10분 읽기",
-      "📐 수학 1장 풀기",
-    ];
+    const defaults = ["📌 오늘 할 일 1개 정하기", "📖 책 10분 읽기", "📐 수학 1장 풀기"];
 
     const rows = defaults.map((title, idx) => ({
       user_id: userId,
@@ -680,18 +437,15 @@ const playFinishSound = (overrideSrc) => {
       template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
     }));
 
-    const { error } = await supabase
-      .from("todos")
-      .upsert(rows, {
-        onConflict: "user_id,day_key,template_item_key",
-        ignoreDuplicates: true,
-      });
+    const { error } = await supabase.from("todos").upsert(rows, {
+      onConflict: "user_id,day_key,template_item_key",
+      ignoreDuplicates: true,
+    });
 
     if (error) throw error;
   };
 
   const importMySingleListSilently = async (userId, dayKey) => {
-    // 1) 내 목록 set_id 찾기
     const { data: setRow, error: setErr } = await supabase
       .from("todo_sets")
       .select("id")
@@ -702,7 +456,6 @@ const playFinishSound = (overrideSrc) => {
     if (setErr) throw setErr;
     if (!setRow?.id) return false;
 
-    // 2) 내 목록 아이템 읽기
     const { data: items, error: itemsErr } = await supabase
       .from("todo_set_items")
       .select("item_key, title, sort_order")
@@ -717,53 +470,41 @@ const playFinishSound = (overrideSrc) => {
         day_key: dayKey,
         title: String(x.title ?? "").trim(),
         completed: false,
-
-        // 날짜 포함: 같은 유저라도 날짜가 다르면 충돌 X
         source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
       }))
-
       .filter((x) => x.title.length > 0 && x.source_set_item_key);
 
     if (rows.length === 0) return false;
 
-    const { error: upErr } = await supabase
-      .from("todos")
-      .upsert(rows, {
-        // DB 유니크(todos_user_source_set_item_unique)에 맞출 확률이 매우 높음
-        onConflict: "user_id,source_set_item_key",
-        ignoreDuplicates: true,
-      });
+    const { error: upErr } = await supabase.from("todos").upsert(rows, {
+      onConflict: "user_id,source_set_item_key",
+      ignoreDuplicates: true,
+    });
 
     if (upErr) throw upErr;
-
+    return true;
   };
 
   const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
-    // 이미 할 일이 있으면 아무 것도 안 함
     if ((currentRows ?? []).length > 0) return;
 
-    // 이미 이 날짜에 자동 초기화를 한 적 있으면 반복 방지
     const seedKey = getAutoSeedKey(userId, dayKey);
     try {
       if (localStorage.getItem(seedKey) === "1") return;
-    } catch (err) {console.error(err);}
+    } catch {}
 
-    // 내 목록 있으면 내 목록 우선, 없으면 기본 4개
     try {
       if (hasMyList) {
         const ok = await importMySingleListSilently(userId, dayKey);
-        if (!ok) {
-          // hasMyList는 true인데 실제 데이터가 비었을 수도 있으니 fallback
-          await seedDefault3Todos(userId, dayKey);
-        }
+        if (!ok) await seedDefault3Todos(userId, dayKey);
       } else {
         await seedDefault3Todos(userId, dayKey);
       }
 
-      // 자동 초기화 완료 표시
-      try { localStorage.setItem(seedKey, "1"); } catch (err) {console.error(err);}
+      try {
+        localStorage.setItem(seedKey, "1");
+      } catch {}
 
-      // 화면 갱신
       await fetchTodos(userId, dayKey);
     } catch (err) {
       console.error("autoPopulateIfEmpty error:", err);
@@ -780,7 +521,7 @@ const playFinishSound = (overrideSrc) => {
       if (!mounted) return;
       setLoading(true);
 
-      const session = await waitForAuthSession({ timeoutMs: 5000 });
+      const session = await waitForAuthSession({ timeoutMs: 1500 });
       if (!session?.user) {
         if (!mounted) return;
         setLoading(false);
@@ -817,11 +558,10 @@ const playFinishSound = (overrideSrc) => {
           : profileData;
 
       if (mounted) setProfile(nextProfile);
+
       try {
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
-      } catch (err) {
-        console.warn("프로필 캐시 저장 실패", err);
-      }
+      } catch {}
 
       if (!profileData) {
         const { error: upsertErr } = await supabase
@@ -840,35 +580,28 @@ const playFinishSound = (overrideSrc) => {
       }
 
       const loaded = await fetchTodos(user.id, selectedDayKey);
-      // ===== Simplified initialization logic =====
-      // 중복 호출을 줄이기 위해 아래 로직을 단순화합니다.
-      {
-        const { id: myListId } = await fetchMySingleListInfo(user.id);
-        // 할 일 목록이 비어 있고, 내 목록이 없는 경우에만 샘플을 주입합니다.
-        if (!myListId && loaded.length === 0) {
-          await seedSampleTodosIfEmpty({
-            userId: user.id,
-            dayKey: selectedDayKey,
-            existingCount: loaded.length,
-          });
-          // 샘플을 주입한 뒤에는 목록을 한 번만 다시 불러옵니다.
-          await fetchTodos(user.id, selectedDayKey);
-        }
-        // 최신 myList 상태와 명예의 전당을 갱신합니다.
-        await fetchMySingleListInfo(user.id);
-        await fetchHallOfFame(selectedDayKey);
-        // 초기화 완료: 로딩 상태를 false로 설정하고 loadAll을 종료합니다.
-        if (mounted) setLoading(false);
-        return;
+
+      // 내 목록 상태 확인(1회)
+      const { id: myListId } = await fetchMySingleListInfo(user.id);
+
+      // 내 목록이 없고, 오늘 할 일도 없으면 샘플 주입
+      if (!myListId && loaded.length === 0) {
+        await seedSampleTodosIfEmpty({
+          userId: user.id,
+          dayKey: selectedDayKey,
+          existingCount: loaded.length,
+        });
+        await fetchTodos(user.id, selectedDayKey);
       }
 
+      // 명예의 전당 로딩
+      await fetchHallOfFame(selectedDayKey);
 
-
-
-      // (이전 중복 로직 제거됨)
+      if (mounted) setLoading(false);
     };
 
     loadAll();
+
     return () => {
       mounted = false;
     };
@@ -882,8 +615,6 @@ const playFinishSound = (overrideSrc) => {
     const run = async () => {
       const rows = await fetchTodos(me.id, selectedDayKey);
       await fetchHallOfFame(selectedDayKey);
-
-      // 비어 있으면 자동으로 채우기
       await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
     };
 
@@ -891,62 +622,19 @@ const playFinishSound = (overrideSrc) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayKey, me?.id, hasMyList]);
 
-  //  모바일 자동재생 차단을 줄이기 위한 '오디오 언락'
-  // - 첫 사용자 제스처에서 무음 재생 후 바로 멈춰두면 이후 play 성공률이 올라갑니다.
-  useEffect(() => {
-    const unlock = async () => {
-      try {
-        if (!finishAudioRef.current) {
-          finishAudioRef.current = new Audio(profile?.finish_sound ?? "/finish.mp3");
-          finishAudioRef.current.preload = "auto";
-        }
-        const a = finishAudioRef.current;
-
-        // 이미 언락 되었으면 스킵
-        if (a.__unlocked) return;
-
-        a.muted = true;
-        await a.play();     // 사용자 제스처 타이밍에서만 성공 가능
-        a.pause();
-        a.currentTime = 0;
-        a.muted = false;
-
-        a.__unlocked = true; // 커스텀 플래그
-      } catch {
-        // 실패해도 괜찮습니다. 다음 제스처에서 다시 시도됩니다.
-      }
-    };
-
-    // 클릭/터치/키보드 입력 등 “사용자 제스처”에 반응
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, [profile?.finish_sound]);
-
-  // =======================
   // 명예의 전당 자동 새로고침
-  // =======================
   useEffect(() => {
     if (!me?.id) return;
 
-    const INTERVAL_MS = 5 * 60 * 1000; //5분
-
+    const INTERVAL_MS = 5 * 60 * 1000;
     const intervalId = setInterval(() => {
-      // 오늘 선택된 날짜 기준으로만 갱신
       fetchHallOfFame(selectedDayKey);
     }, INTERVAL_MS);
 
-    // 컴포넌트 언마운트 / 날짜 변경 시 정리
-    return () => {
-      clearInterval(intervalId);
-    };
+    return () => clearInterval(intervalId);
   }, [me?.id, selectedDayKey]);
 
-  // "공부 다하면" 메모 불러오기
+  // 메모 불러오기
   useEffect(() => {
     if (!me?.id) return;
 
@@ -954,22 +642,21 @@ const playFinishSound = (overrideSrc) => {
     try {
       const saved = localStorage.getItem(key);
       setAfterStudyText(saved ?? "");
-    } catch (e) {
-      console.warn("afterStudyText localStorage read fail:", e);
+    } catch {
       setAfterStudyText("");
     }
   }, [me?.id, selectedDayKey]);
 
   // =======================
-  // 샘플 일정 불러오기 
+  // 샘플/내목록 불러오기 공통
   // =======================
   const makeImportBatchId = () => {
-  try {
-    return crypto.randomUUID(); // 최신 브라우저
-  } catch {
-    return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  }
-};
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    }
+  };
 
   const importSampleTodos = async (sampleKeyOverride) => {
     if (!me?.id) return;
@@ -987,7 +674,6 @@ const playFinishSound = (overrideSrc) => {
       return;
     }
 
-    // 화면/상태도 함께 맞춰두기(선택)
     setSelectedSampleKey(useKey);
 
     try {
@@ -1001,7 +687,6 @@ const playFinishSound = (overrideSrc) => {
           .eq("day_key", selectedDayKey);
 
         if (delErr) throw delErr;
-
         await removeCompletionForDay(selectedDayKey);
       }
 
@@ -1019,18 +704,12 @@ const playFinishSound = (overrideSrc) => {
       const rows = (templates ?? [])
         .map((x) => {
           const base = Number(x.sort_order ?? 0) || 0;
-
-          // template_item_key에 날짜까지 포함(날짜가 다르면 절대 충돌 X)
-          // 같은 날에 같은 샘플을 또 눌러도, 아래 upsert+ignoreDuplicates로 무시됨
           const itemKey = String(x.item_key ?? "").trim();
-          
-          // 추가 모드면 매번 다른 키로 만들어서 "중복 추가" 허용
           const batchId = makeImportBatchId();
 
           const tplKey = sampleModeReplace
-            ? `${selectedDayKey}:${useKey}:${itemKey}`                 // 교체: 고정 키
-            : `${selectedDayKey}:${useKey}:${itemKey}:${batchId}`;     // 추가: 매번 새 키
-
+            ? `${selectedDayKey}:${useKey}:${itemKey}`
+            : `${selectedDayKey}:${useKey}:${itemKey}:${batchId}`;
 
           return {
             user_id: me.id,
@@ -1047,17 +726,12 @@ const playFinishSound = (overrideSrc) => {
         alert("샘플 템플릿이 비어있습니다. Supabase 샘플 테이블을 확인해주세요.");
         return;
       }
-      
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, {
-          // 샘플은 template_item_key로 중복 판단
-          onConflict: "user_id,template_item_key",
-          ignoreDuplicates: true,
-        });
 
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        onConflict: "user_id,template_item_key",
+        ignoreDuplicates: true,
+      });
       if (upErr) throw upErr;
-
 
       await fetchTodos(me.id, selectedDayKey);
 
@@ -1065,17 +739,13 @@ const playFinishSound = (overrideSrc) => {
       setShowLoadModal(false);
     } catch (err) {
       console.error("importSampleTodos error:", err);
-
-      const msg = String(err?.message ?? "");
-      alert(msg || "샘플 일정 불러오기 중 오류가 발생했습니다.");
+      alert(String(err?.message ?? "") || "샘플 일정 불러오기 중 오류가 발생했습니다.");
     } finally {
       setImportingSample(false);
     }
   };
 
-  // =======================
   // 내 목록 저장 모달
-  // =======================
   const openMyListSaveModal = () => {
     setMyListMode("save");
     setShowMyListModal(true);
@@ -1086,7 +756,6 @@ const playFinishSound = (overrideSrc) => {
     setShowMyListModal(false);
   };
 
-  // 내 목록 저장
   const saveMySingleList = async () => {
     if (!me?.id) return;
 
@@ -1143,17 +812,14 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
-  // 통합 모달에서 "내가 만든 목록" 불러오기 (templates 사용 금지: items로만)
   const importMySingleList = async () => {
     if (!me?.id) return;
 
-    // 지난 날짜에서는 불러오기 금지
     if (!isTodaySelected()) {
       alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.");
       return;
     }
 
-    // 세션 없으면 로그인으로
     const { data } = await supabase.auth.getSession();
     if (!data?.session) {
       navigate("/login", { replace: true });
@@ -1161,7 +827,6 @@ const playFinishSound = (overrideSrc) => {
     }
 
     try {
-      // 내 목록(set) id 찾기
       const { id: setId } = await fetchMySingleListInfo(me.id);
       if (!setId) {
         alert("저장된 내가 만든 목록이 없습니다. 먼저 '내 목록 저장'을 해주세요.");
@@ -1170,7 +835,6 @@ const playFinishSound = (overrideSrc) => {
 
       setBusyMyList(true);
 
-      // 교체 모드면 현재 날짜 todos 삭제
       if (loadReplace) {
         const { error: delErr } = await supabase
           .from("todos")
@@ -1179,11 +843,9 @@ const playFinishSound = (overrideSrc) => {
           .eq("day_key", selectedDayKey);
 
         if (delErr) throw delErr;
-
         await removeCompletionForDay(selectedDayKey);
       }
 
-      // 내가 만든 목록 아이템 읽기 (여기가 items!)
       const { data: items, error: itemsErr } = await supabase
         .from("todo_set_items")
         .select("item_key, title, sort_order")
@@ -1192,42 +854,33 @@ const playFinishSound = (overrideSrc) => {
 
       if (itemsErr) throw itemsErr;
 
-      // 현재 todos의 max sort
       const maxSort = (todosRef.current ?? [])
         .map((t) => Number(t.sort_order ?? 0))
         .reduce((a, b) => Math.max(a, b), 0);
 
-      // rows 생성 (templates 절대 사용 X)
-      // importMySingleList 내부 rows 생성 부분만 교체
-        const rows = (items ?? [])
-          .map((x) => {
-            const base = Number(x.sort_order ?? 0) || 0;
-            const batchId = makeImportBatchId();
+      const rows = (items ?? [])
+        .map((x) => {
+          const base = Number(x.sort_order ?? 0) || 0;
+          const batchId = makeImportBatchId();
+          const itemKey = String(x.item_key ?? "").trim();
 
-            return {
-              user_id: me.id,
-              day_key: selectedDayKey,
-              // 날짜 포함
-              // source_set_item_key: `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`,
-              // source_set_item_key: `single:${String(x.item_key ?? "").trim()}`,
-              title: String(x.title ?? "").trim(),
-              completed: false,
-              sort_order: loadReplace ? base : (maxSort + base),
-              source_set_item_key: loadReplace
-                ? `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}`                 // 교체: 날짜 고정
-                : `${selectedDayKey}:single:${String(x.item_key ?? "").trim()}:${batchId}`,    // 추가: 매번 새 키
-            };
-          })
-          
-          .filter((x) => x.source_set_item_key && x.title);
+          return {
+            user_id: me.id,
+            day_key: selectedDayKey,
+            title: String(x.title ?? "").trim(),
+            completed: false,
+            sort_order: loadReplace ? base : maxSort + base,
+            source_set_item_key: loadReplace
+              ? `${selectedDayKey}:single:${itemKey}`
+              : `${selectedDayKey}:single:${itemKey}:${batchId}`,
+          };
+        })
+        .filter((x) => x.source_set_item_key && x.title);
 
-
-      const { error: upErr } = await supabase
-        .from("todos")
-        .upsert(rows, {
-          onConflict: "user_id,source_set_item_key",
-          ignoreDuplicates: true,
-        });
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        onConflict: "user_id,source_set_item_key",
+        ignoreDuplicates: true,
+      });
 
       if (upErr) throw upErr;
 
@@ -1236,18 +889,7 @@ const playFinishSound = (overrideSrc) => {
       setShowLoadModal(false);
     } catch (err) {
       console.error("importMySingleList error:", err);
-
-      const msg = String(err?.message ?? "");
-      if (loadReplace) {
-        if (msg.includes("duplicate key value") || msg.includes("unique")) {
-          alert("교체 중 중복 문제가 발생했어요. 다시 시도해주세요.");
-        } else {
-          alert(msg || "내 일정 불러오기 중 오류가 발생했습니다.");
-        }
-      } else {
-        alert(msg || "내 일정 추가 중 오류가 발생했습니다.");
-      }
-
+      alert(String(err?.message ?? "") || "내 일정 불러오기 중 오류가 발생했습니다.");
     } finally {
       setBusyMyList(false);
     }
@@ -1261,7 +903,6 @@ const playFinishSound = (overrideSrc) => {
 
     const current = todosRef.current ?? [];
     const needs = current.some((x) => x.sort_order === null || x.sort_order === undefined);
-
     if (!needs) return;
 
     for (let i = 0; i < current.length; i++) {
@@ -1269,7 +910,6 @@ const playFinishSound = (overrideSrc) => {
       const nextOrder = i + 1;
       if (t.sort_order === nextOrder) continue;
 
-       
       const { error } = await supabase.from("todos").update({ sort_order: nextOrder }).eq("id", t.id);
       if (error) {
         console.error("ensureSortOrderForDay error:", error);
@@ -1355,15 +995,15 @@ const playFinishSound = (overrideSrc) => {
 
     const { error } = await supabase
       .from("todos")
-      .insert([{
-        user_id: me.id,
-        day_key: selectedDayKey,
-        title: titleWithEmoji,
-        completed: false,
-        sort_order: nextSort,
-      }])
-      .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
-      .single();
+      .insert([
+        {
+          user_id: me.id,
+          day_key: selectedDayKey,
+          title: titleWithEmoji,
+          completed: false,
+          sort_order: nextSort,
+        },
+      ]);
 
     if (error) {
       console.error("addTodo error:", error);
@@ -1414,12 +1054,8 @@ const playFinishSound = (overrideSrc) => {
 
       if (error) throw error;
 
-      if (!wasAllCompleted && willAllCompleted) {
-        await recordCompletionForDay(selectedDayKey);
-      }
-      if (wasAllCompleted && !willAllCompleted) {
-        await removeCompletionForDay(selectedDayKey);
-      }
+      if (!wasAllCompleted && willAllCompleted) await recordCompletionForDay(selectedDayKey);
+      if (wasAllCompleted && !willAllCompleted) await removeCompletionForDay(selectedDayKey);
     } catch (err) {
       console.error("toggleTodo error:", err);
       setTodos(current);
@@ -1430,14 +1066,13 @@ const playFinishSound = (overrideSrc) => {
   // =======================
   // 스탑워치/타이머/하가다 (원본 유지)
   // =======================
+  const [timerSoundOn, setTimerSoundOn] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    return () => clearInterval(timerRef.current);
-  }, []);
+  useEffect(() => () => clearInterval(timerRef.current), []);
 
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -1488,13 +1123,9 @@ const playFinishSound = (overrideSrc) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timerMin]);
 
-  useEffect(() => {
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
+  useEffect(() => () => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    timerIntervalRef.current = null;
   }, []);
 
   const formatMMSS = (sec) => {
@@ -1513,7 +1144,6 @@ const playFinishSound = (overrideSrc) => {
     timerIntervalRef.current = setInterval(() => {
       setRemainingSec((prev) => {
         const next = prev - 1;
-
         if (next <= 0) {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
@@ -1547,7 +1177,7 @@ const playFinishSound = (overrideSrc) => {
     setRemainingSec(timerMin * 60);
   };
 
-  // 타이머 사운드 
+  // 타이머 종료 소리
   const TIMER_END_SOUND = "/time1.mp3";
   const timerAudioRef = useRef(null);
   const timerEndedRef = useRef(false);
@@ -1555,15 +1185,10 @@ const playFinishSound = (overrideSrc) => {
   useEffect(() => {
     if (remainingSec === 0 && !timerEndedRef.current) {
       timerEndedRef.current = true;
-
-      // 소리 꺼져 있으면 재생 안 함
       if (!timerSoundOn) return;
 
       try {
-        if (!timerAudioRef.current) {
-          timerAudioRef.current = new Audio(TIMER_END_SOUND);
-        }
-
+        if (!timerAudioRef.current) timerAudioRef.current = new Audio(TIMER_END_SOUND);
         timerAudioRef.current.currentTime = 0;
         timerAudioRef.current.volume = 0.9;
         timerAudioRef.current.play().catch(() => {});
@@ -1572,13 +1197,10 @@ const playFinishSound = (overrideSrc) => {
       }
     }
 
-  // 타이머가 다시 0보다 커지면(리셋/시간 변경) 다시 재생 가능
-    if (remainingSec > 0) {
-      timerEndedRef.current = false;
-    }
+    if (remainingSec > 0) timerEndedRef.current = false;
   }, [remainingSec, timerSoundOn]);
 
-  //하가다
+  // 하가다
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
@@ -1590,8 +1212,14 @@ const playFinishSound = (overrideSrc) => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  //풀스크린 로딩 스플래시
+  // ✅ 풀스크린 로딩 스플래시 (이중 스플래시 방지)
+  // - index.html의 boot-splash가 있으면 여기서는 또 띄우지 않음
   if (loading) {
+    const hasBootSplash =
+      typeof document !== "undefined" && document.getElementById("boot-splash");
+
+    if (hasBootSplash) return null;
+
     return (
       <div className="app-splash" role="status" aria-live="polite">
         <div className="app-splash-inner">
@@ -1609,7 +1237,9 @@ const playFinishSound = (overrideSrc) => {
   const deleteAllTodos = async () => {
     if (!me?.id) return;
 
-    const ok = window.confirm("선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다.");
+    const ok = window.confirm(
+      "선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
+    );
     if (!ok) return;
 
     try {
@@ -1630,7 +1260,10 @@ const playFinishSound = (overrideSrc) => {
 
       if ((left ?? []).length > 0) {
         alert("삭제가 완전히 적용되지 않았어요. 네트워크/권한/날짜 선택을 확인해주세요.");
-        console.warn("deleteAllTodos: rows still left", { deletedCount: deletedRows?.length ?? 0, left });
+        console.warn("deleteAllTodos: rows still left", {
+          deletedCount: deletedRows?.length ?? 0,
+          left,
+        });
         return;
       }
 
@@ -1642,18 +1275,26 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
+  // =======================
   // 로그아웃
+  // =======================
   const handleLogout = async () => {
     await supabase.auth.signOut({ scope: "local" });
+
+    // PROFILE_CACHE_KEY는 위에서 선언되어 있어야 합니다.
+    // (만약 위에서 지웠다면: const PROFILE_CACHE_KEY = "planner_profile_cache_v1"; 를 다시 넣어주세요.)
     try {
       localStorage.removeItem(PROFILE_CACHE_KEY);
     } catch (e) {
       console.warn("프로필 캐시 삭제 실패", e);
     }
+
     navigate("/login");
   };
 
-  // 달력 모달
+  // =======================
+  // 달력 모달 열기/닫기
+  // =======================
   const openCalendar = () => {
     const d = selectedDate;
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
@@ -1662,6 +1303,9 @@ const playFinishSound = (overrideSrc) => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
+  // =======================
+  // 렌더
+  // =======================
   return (
     <div className="planner notranslate">
       <header className="top-header">
@@ -1720,7 +1364,6 @@ const playFinishSound = (overrideSrc) => {
       {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
-          {/* 통합: 모록 불러오기 */}
           <button
             type="button"
             className="preset-btn preset-btn-primary"
@@ -1730,7 +1373,6 @@ const playFinishSound = (overrideSrc) => {
             {importingSample || busyMyList ? "불러오는 중..." : "📂 목록 불러오기"}
           </button>
 
-          {/* 내 목록 저장은 그대로 */}
           <button className="preset-btn preset-btn-ghost" onClick={openMyListSaveModal}>
             💾 내 목록 저장
           </button>
@@ -1895,15 +1537,10 @@ const playFinishSound = (overrideSrc) => {
             />
           )}
         </div>
-      </div> 
+      </div>
 
       {/* 명예의 전당 */}
-      <HallOfFameCard
-        hofLoading={hofLoading}
-        hof={hof}
-        meId={me?.id}
-        cutName6={cutName6}
-      />
+      <HallOfFameCard hofLoading={hofLoading} hof={hof} meId={me?.id} cutName6={cutName6} />
 
       {/* 학습 도구들 */}
       <StudyTools
@@ -1965,7 +1602,9 @@ const playFinishSound = (overrideSrc) => {
 
       <footer className="planner-footer-simple">
         <div className="footer-links">
-          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>😊마이페이지</a>
+          <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
+            😊마이페이지
+          </a>
           <span>|</span>
           <a onClick={handleLogout}>로그아웃</a>
         </div>

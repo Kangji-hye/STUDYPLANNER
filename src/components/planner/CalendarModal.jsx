@@ -1,33 +1,7 @@
 // src/components/planner/CalendarModal.jsx
 //달력 모달
 import React, { useMemo } from "react";
-
-const normalizeNoon = (dateObj) => {
-  if (!dateObj) return null;
-  return new Date(
-    dateObj.getFullYear(),
-    dateObj.getMonth(),
-    dateObj.getDate(),
-    12, 0, 0, 0
-  );
-};
-
-/* KST 기준 YYYY-MM-DD 만들기 */
-const toKstDayKey = (dateObj) => {
-  if (!dateObj) return "";
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(dateObj);
-
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-};
-
+import { toKstDayKey, normalizeNoon } from "../../utils/dateKst";
 
 const buildMonthGrid = (year, monthIndex) => {
   const first = new Date(year, monthIndex, 1);
