@@ -160,75 +160,73 @@ useEffect(() => {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
-
-  //  지금 화면이 보고 있는 day_key를 항상 최신으로 기억해두는 용도
-  // - fetchTodos가 늦게 돌아왔을 때 "옛날 날짜 응답"이면 화면에 반영하지 않게 막아줍니다.
+  // ✅ 지금 화면이 보고 있는 날짜(day_key)를 기억(가드용)
   const selectedDayKeyRef = useRef(selectedDayKey);
-
   useEffect(() => {
     selectedDayKeyRef.current = selectedDayKey;
   }, [selectedDayKey]);
 
-  // =======================
-//  태블릿/모바일 "탭 복원" 대비: 날짜가 바뀌면 자동으로 오늘로 이동
-// iPad/태블릿은 어제 열어둔 화면을 그대로 복원하는 경우가 많아서
-//  "앱이 다시 보이는 순간"에 오늘 날짜인지 확인
-// =======================
+  // ✅ fetch 요청 순서표(가장 마지막 요청만 setTodos 허용)
+  const fetchTodosSeqRef = useRef(0);
+
+
+
+
+
+
+
+
+
+
+// ✅ 태블릿/모바일 "탭 복원" 대비 (수정 버전)
+// - 사용자가 달력으로 과거/미래 날짜를 보는 건 존중해야 함
+// - "앱을 어제 켜둔 채로 오늘 다시 열린 경우"처럼 '날짜가 바뀐 복원 상황'에서만 오늘로 이동
 useEffect(() => {
   const LAST_ACTIVE_DAY_KEY = "planner_last_active_day_key_v1";
 
-  const syncToTodayIfNeeded = () => {
+  const moveToTodayIfDayChangedWhileAway = () => {
     const todayKey = toKstDayKey(new Date());
-    const currentKey = toKstDayKey(selectedDate);
 
-    // 1) 화면에 보이는 날짜가 오늘이 아니면 오늘로 강제 이동
-    if (currentKey !== todayKey) {
-      setSelectedDate(new Date()); // 오늘로
-      return;
-    }
-
-    // 2) 보조 안전장치: 로컬에 저장된 마지막 접속일과도 비교 (복원 케이스 대응)
     try {
       const lastKey = localStorage.getItem(LAST_ACTIVE_DAY_KEY);
+
+      // ✅ 마지막으로 앱을 썼던 날짜가 오늘이 아니면 → 오늘로 이동
+      // (이 경우가 "탭 복원"으로 어제 화면이 그대로 뜨는 대표 케이스)
       if (lastKey && lastKey !== todayKey) {
         setSelectedDate(new Date());
       }
+
+      // ✅ 오늘 날짜로 기록 갱신
+      localStorage.setItem(LAST_ACTIVE_DAY_KEY, todayKey);
     } catch {
-      // localStorage 접근 실패해도 앱은 계속 동작해야 함
+      // localStorage 실패해도 앱은 정상 동작
     }
   };
 
   // 앱이 처음 보일 때 한 번 체크
-  syncToTodayIfNeeded();
+  moveToTodayIfDayChangedWhileAway();
 
   // 탭/웹앱이 다시 활성화될 때마다 체크
   const onVisibility = () => {
-    if (document.visibilityState === "visible") syncToTodayIfNeeded();
+    if (document.visibilityState === "visible") moveToTodayIfDayChangedWhileAway();
   };
-
-  const onFocus = () => syncToTodayIfNeeded();
-
-  // iOS/Safari의 BFCache(뒤로가기 캐시) 복원까지 대응
-  const onPageShow = () => syncToTodayIfNeeded();
+  const onFocus = () => moveToTodayIfDayChangedWhileAway();
+  const onPageShow = () => moveToTodayIfDayChangedWhileAway();
 
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("focus", onFocus);
   window.addEventListener("pageshow", onPageShow);
-
-  // 마지막 활성 날짜 기록(오늘 기준)
-  try {
-    localStorage.setItem(LAST_ACTIVE_DAY_KEY, toKstDayKey(new Date()));
-  } catch {}
 
   return () => {
     document.removeEventListener("visibilitychange", onVisibility);
     window.removeEventListener("focus", onFocus);
     window.removeEventListener("pageshow", onPageShow);
   };
-  // selectedDate가 바뀔 때도 현재 상태 재검증
-}, [selectedDate]);
+}, []); // ✅ selectedDate 의존성 제거(사용자가 날짜 바꾸는 것 방해하지 않게)
 
-// 내일 테스트 해보고 정리할 것
+
+
+
 
 
 
@@ -537,10 +535,37 @@ const playFinishSound = (overrideSrc) => {
   // =======================
   // 날짜별 todos 조회
   // =======================
-  const fetchTodos = async (userId, dayKey) => {
+  // const fetchTodos = async (userId, dayKey) => {
+  //   const { data, error } = await supabase
+  //     .from("todos")
+  //     .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
+  //     .eq("user_id", userId)
+  //     .eq("day_key", dayKey)
+  //     .order("sort_order", { ascending: true, nullsFirst: true })
+  //     .order("created_at", { ascending: false });
+
+  //   if (error) {
+  //     console.error("fetchTodos error:", error);
+  //     alert(error.message);
+  //     return [];
+  //   }
+  //   const rows = data ?? [];
+
+  //   setTodos(rows);
+  //   return rows;
+  // };
+
+    const fetchTodos = async (userId, dayKey) => {
+    // ✅ 1) 이번 요청에 번호를 매깁니다.
+    // - 화면에서 날짜를 연속으로 바꾸면 fetchTodos가 여러 번 동시에 돌 수 있어요.
+    // - 가장 마지막 요청만 화면에 반영하도록 막아주는 장치입니다.
+    const mySeq = ++fetchTodosSeqRef.current;
+
     const { data, error } = await supabase
       .from("todos")
-      .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
+      .select(
+        "id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key"
+      )
       .eq("user_id", userId)
       .eq("day_key", dayKey)
       .order("sort_order", { ascending: true, nullsFirst: true })
@@ -551,12 +576,31 @@ const playFinishSound = (overrideSrc) => {
       alert(error.message);
       return [];
     }
+
     const rows = data ?? [];
 
+    // ✅ 2) 내가 "마지막 요청"이 아니면 setTodos 금지 (늦게 온 옛날 응답이 화면 덮는 것 방지)
+    if (mySeq !== fetchTodosSeqRef.current) {
+      return rows;
+    }
 
+    // ✅ 3) 응답이 돌아온 순간, 화면이 보고 있는 날짜가 다르면 setTodos 금지
+    // - 예: 어제 누르고(요청 A) → 오늘 누르고(요청 B)
+    //   그런데 A가 늦게 도착하면, A가 오늘 화면을 덮어버리는 문제를 막습니다.
+    if (dayKey !== selectedDayKeyRef.current) {
+      return rows;
+    }
+
+    // ✅ 여기까지 통과한 응답만 화면 반영
     setTodos(rows);
     return rows;
   };
+
+
+
+
+
+
 
   // 처음 들어온 사용자에게 샘플 자동 주입
   const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {

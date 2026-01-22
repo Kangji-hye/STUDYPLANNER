@@ -2,6 +2,16 @@
 //달력 모달
 import React, { useMemo } from "react";
 
+const normalizeNoon = (dateObj) => {
+  if (!dateObj) return null;
+  return new Date(
+    dateObj.getFullYear(),
+    dateObj.getMonth(),
+    dateObj.getDate(),
+    12, 0, 0, 0
+  );
+};
+
 /* KST 기준 YYYY-MM-DD 만들기 */
 const toKstDayKey = (dateObj) => {
   if (!dateObj) return "";
@@ -28,7 +38,9 @@ const buildMonthGrid = (year, monthIndex) => {
 
   const cells = [];
   for (let i = 0; i < startDay; i++) cells.push(null);
-  for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, monthIndex, d));
+  // for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, monthIndex, d));
+  for (let d = 1; d <= totalDays; d++) cells.push(new Date(year, monthIndex, d, 12, 0, 0, 0));
+
   while (cells.length % 7 !== 0) cells.push(null);
   return cells;
 };
@@ -125,8 +137,14 @@ export default function CalendarModal({
                 disabled={!d}
                 onClick={() => {
                   if (!d) return;
-                  setSelectedDate(d);
-                  onClose();
+                  // setSelectedDate(d);
+                  // onClose();
+                  // ✅ 선택한 날짜를 정오로 고정해서 안정화
+                  setSelectedDate(normalizeNoon(d));
+
+                  // ✅ 닫기는 한 프레임 뒤 (iOS에서 클릭/닫힘 타이밍 충돌 방지)
+                  requestAnimationFrame(() => onClose());
+                  
                 }}
               >
                 {d ? d.getDate() : ""}
@@ -143,7 +161,7 @@ export default function CalendarModal({
         </div>
 
         <div className="cal-actions">
-          <button
+          {/* <button
             type="button"
             className="cal-today-btn"
             onClick={() => {
@@ -154,7 +172,36 @@ export default function CalendarModal({
             }}
           >
             오늘로 가기
+          </button> */}
+
+          <button
+            type="button"
+            className="cal-today-btn"
+            onClick={(e) => {
+              // ✅ 바깥(backdrop) 클릭으로 닫히는 이벤트와 섞이지 않게 안전장치
+              e.preventDefault();
+              e.stopPropagation();
+
+              const now = new Date();
+
+              // ✅ "오늘"을 시간 포함(Date.now())으로 넣지 말고, 날짜만 뽑아서 정오로 고정
+              const todayNoon = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate(),
+                12, 0, 0, 0
+              );
+
+              setSelectedDate(todayNoon);
+              setCalMonth({ y: todayNoon.getFullYear(), m: todayNoon.getMonth() });
+
+              // ✅ 닫기는 한 프레임 뒤 (상태 반영 안정화)
+              requestAnimationFrame(() => onClose());
+            }}
+          >
+            오늘로 가기
           </button>
+
         </div>
       </div>
     </div>
