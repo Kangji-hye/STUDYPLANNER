@@ -1314,8 +1314,8 @@ function Planner() {
 const openGrapeSeed = () => {
     const userAgent = navigator.userAgent.toLowerCase();
     const appSchema = "grapeseed-student://"; // grapeSeed 앱 전용 스키마
-    const playStore = "market://details?id=com.grapeseed.student"; // 안드로이드 예시
-    const appStore = "https://apps.apple.com/app/idXXXXXX"; // iOS 예시
+    const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn&pcampaignid=web_share"; // 안드로이드 예시
+    const appStore = "https://apps.apple.com/app/id1286949700"; // iOS 예시
 
     // 앱 실행 시도
     window.location.href = appSchema;
@@ -1327,7 +1327,7 @@ const openGrapeSeed = () => {
       } else if (userAgent.contains("iphone") || userAgent.contains("ipad")) {
         window.location.href = appStore;
       } else {
-        window.open("https://www.grapeseed.com", "_blank"); // PC 버전
+        window.open("https://students.grapeseed.com", "_blank"); // PC 버전
       }
     }, 1500);
 };
