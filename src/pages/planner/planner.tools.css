@@ -1,0 +1,204 @@
+/* =========================
+   Planner: 학습 도구(스탑워치/타이머/하가다)
+   ========================= */
+
+/* (예전 stopwatch 스타일이 남아있다면 유지) */
+.stopwatch {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.stopwatch .title {
+  font-weight: 800;
+  font-family: "Poor Story";
+  white-space: nowrap;
+  font-size: 1.15rem;
+}
+
+.stopwatch .time {
+  font-size: 1rem;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: var(--primary);
+  margin: 6px 0;
+
+  width: auto;
+  min-width: 134px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 숫자 전용 폰트 */
+@font-face {
+  font-family: "TimerNumber";
+  src: local("JetBrains Mono");
+  unicode-range: U+0030-0039;
+}
+
+/* 한글 전용 폰트 */
+@font-face {
+  font-family: "TimerKorean";
+  src: local("Gamja Flower");
+  unicode-range: U+AC00-D7A3;
+}
+
+.stopwatch .time {
+  font-family: "TimerNumber", "TimerKorean", sans-serif;
+}
+
+.stopwatch button {
+  flex: 0 0 auto;
+  margin-right: 6px;
+  margin-top: 4px;
+  white-space: nowrap;
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  font-size: var(--fs-small);
+}
+
+.stopwatch button:first-of-type {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+}
+
+.stopwatch button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ===============================
+   StudyTools(현재 사용 중인 박스)
+================================ */
+:root {
+  --tool-title-w: 92px;
+  --tool-display-w: 230px;
+}
+
+.study-tools {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(241, 215, 230, 0.65);
+}
+
+.tool-row {
+  padding: 12px 6px;
+  display: grid;
+  grid-template-columns: var(--tool-title-w) var(--tool-display-w) 1fr;
+  grid-template-areas: "title display actions";
+  column-gap: 12px;
+  align-items: center;
+}
+
+.tool-row + .tool-row {
+  border-top: 1px dashed var(--line);
+}
+
+.tool-title {
+  grid-area: title;
+  font-weight: 900;
+  font-family: "Poor Story";
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.tool-display {
+  grid-area: display;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  font-family: "TimerNumber", "TimerKorean", "JetBrains Mono", monospace;
+  font-weight: 900;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.tool-display-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.tool-display-timer select {
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+
+.timer-value {
+  font-weight: 900;
+}
+
+.tool-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.tool-actions button {
+  border-radius: 14px;
+  padding: 10px 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: none;
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.tool-actions button:first-child {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+}
+
+.tool-actions button:disabled,
+.tool-display-timer select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tool-title-with-toggle {
+  display: flex;
+  align-items: center;
+}
+
+.timer-sound-toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.1rem;
+}

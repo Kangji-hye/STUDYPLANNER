@@ -1,0 +1,233 @@
+/* =========================
+   Planner: 투두바 + 버튼 + 필터
+   ========================= */
+
+.todo-bar-grid {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.todo-bar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.todo-bar-inputs {
+  display: flex;
+  gap: 10px;
+}
+
+/* 버튼 */
+.preset-btn,
+.todo-add-btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.06s ease, opacity 0.2s ease;
+  font-size: var(--fs-button);
+}
+
+.preset-btn:hover,
+.todo-add-btn:hover {
+  transform: translateY(-1px);
+}
+
+.preset-btn:disabled,
+.todo-add-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 입력 버튼 */
+.todo-add-btn {
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.28);
+  transition: filter 0.15s ease, transform 0.08s ease, opacity 0.15s ease;
+}
+
+.todo-add-btn:hover {
+  filter: brightness(1.03);
+}
+
+/* disabled 상태 – 색은 유지, 느낌만 약하게 */
+.todo-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+/* hover는 활성 상태에서만 */
+.todo-add-btn.active:hover {
+  filter: brightness(1.03);
+}
+
+/* 입력 */
+.todo-input {
+  flex: 1;
+  min-width: 220px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+  background: var(--card);
+  font-size: var(--fs-input);
+}
+
+.todo-input:focus {
+  border-color: rgba(255, 122, 162, 0.8);
+  box-shadow: 0 0 0 4px rgba(255, 122, 162, 0.18);
+}
+
+/* todo list */
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+/* ===============================
+   필터 버튼 (좌측 정렬)
+================================ */
+.filter-bar {
+  display: flex;
+  justify-content: flex-start;
+  margin: 14px 0;
+}
+
+.filter-group-left {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--text);
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: var(--fs-small);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 6px 16px rgba(255, 122, 162, 0.25);
+}
+
+.reorder-hint {
+  color: var(--primary);
+  font-weight: 400;
+  font-family: "Poor Story";
+  font-size: 1.05rem;
+  padding: 10px 2px;
+  letter-spacing: -0.2px;
+  user-select: none;
+}
+
+/* ===============================
+   기본 템플릿 버튼 (톤 다운)
+================================ */
+.preset-btn-ghost {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.preset-btn-ghost:hover {
+  opacity: 1;
+  background: #fafafa;
+}
+
+.todo-bar-actions .preset-btn-ghost {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  opacity: 0.9;
+  font-weight: 400;
+  letter-spacing: -0.9px;
+}
+
+.todo-bar-actions .preset-btn-ghost:hover {
+  opacity: 1;
+  background: #fafafa;
+}
+
+/* ===============================
+   프라이머리(핑크) 버튼
+================================ */
+.preset-btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 22px rgba(255, 122, 162, 0.22);
+}
+
+.preset-btn-primary:hover {
+  filter: brightness(1.02);
+}
+
+/* 내 목록 + 전체삭제 미니 버튼 */
+.mylist-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mini-danger-btn {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: var(--fs-small);
+  box-shadow: none;
+}
+
+.mini-danger-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ✅ 필터바: 좌/우 정렬 버전 (inline style 제거용) */
+.filter-bar.filter-bar-split {
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 폭이 좁을 때도 깨지지 않게 */
+.top-row,
+.sub-row {
+  min-width: 0;
+}
+
+.weather {
+  flex: 0 0 auto;
+}
+
+.date-stack {
+  min-width: 0;
+}
+
+/* TodoItem 버튼 최소 폭 */
+.todo-list li button {
+  min-width: 55px;
+  font-size: var(--fs-small);
+}

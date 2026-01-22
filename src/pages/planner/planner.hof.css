@@ -1,0 +1,74 @@
+/* =========================
+   Planner: 명예의 전당(HOF)
+   ========================= */
+
+.hof-card {
+  margin: 16px 0 0;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px dashed var(--line);
+  box-shadow: var(--shadow);
+}
+
+.hof-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.hof-title {
+  font-family: "Poor Story";
+  font-weight: 900;
+  font-size: 1.05rem;
+  min-width: 0;
+}
+
+.hof-chips {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  align-items: stretch;
+}
+
+.hof-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(241, 215, 230, 0.7);
+  box-shadow: none;
+  min-height: 40px;
+  min-width: 130px;
+}
+
+.hof-chip-name {
+  font-weight: 400;
+  font-size: 1.02rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.hof-chip.is-me {
+  background: #fff;
+  border-color: rgba(255, 122, 162, 0.55);
+}
+
+.hof-chip.is-me .hof-chip-name {
+  color: rgba(255, 122, 162, 0.95);
+  font-weight: 400;
+}
+
+.hof-empty {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  padding: 8px 2px 2px;
+}

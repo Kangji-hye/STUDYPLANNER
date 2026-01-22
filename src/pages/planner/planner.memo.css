@@ -1,0 +1,57 @@
+/* =========================
+   Planner: 메모(공부 다하면)
+   ========================= */
+
+.finish {
+  background: var(--bg);
+  margin: 20px 0 10px 0;
+  padding: 10px 20px 20px 20px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+}
+
+.finish .title {
+  font-weight: 700;
+  font-family: "Poor Story";
+  font-size: 1.05rem;
+}
+
+.finish input {
+  margin-top: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: var(--fs-input);
+}
+
+.afterstudy-box {
+  margin-top: 6px;
+}
+
+/* 평소엔 텍스트(메모)처럼 */
+.afterstudy-text {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: var(--fs-input);
+  color: var(--text);
+  cursor: text;
+}
+
+.afterstudy-text.is-empty {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* 편집 모드에서만 input */
+.afterstudy-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  font-size: var(--fs-input);
+  background: #fff;
+}

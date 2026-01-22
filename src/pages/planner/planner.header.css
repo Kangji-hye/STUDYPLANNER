@@ -1,0 +1,108 @@
+/* =========================
+   Planner: 기본 + 헤더 + 스플래시
+   ========================= */
+
+.planner {
+  margin: 0 auto;
+}
+
+.planner-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* 헤더 */
+.top-header {
+  margin-bottom: 14px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title {
+  font-weight: 800;
+  cursor: default;
+  font-family: "Poor Story";
+}
+
+.app-title-link {
+  cursor: pointer;
+}
+
+.sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.kid-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-family: "Poor Story";
+  font-size: var(--fs-kid);
+}
+
+.kid-name img {
+  width: 32px;
+  height: 32px;
+}
+
+.kid-name.clickable {
+  cursor: pointer;
+}
+
+.kid-name.clickable:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.today {
+  font-size: 1rem;
+  font-family: "Poor Story";
+  color: var(--muted);
+  font-weight: 800;
+}
+
+/* ✅ 풀스크린 스플래시(아이패드에서 체감 개선) */
+.app-splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  z-index: 9999;
+}
+
+.app-splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+}
+
+.app-splash-logo {
+  width: 92px;
+  height: 92px;
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.app-splash-text {
+  font-weight: 900;
+  font-size: 1.1rem;
+  font-family: "Poor Story";
+}
+
+.app-splash-sub {
+  font-size: 0.95rem;
+  opacity: 0.6;
+}

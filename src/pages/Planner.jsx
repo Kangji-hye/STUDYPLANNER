@@ -579,7 +579,7 @@ const playFinishSound = (overrideSrc) => {
     const defaults = [
       "📌 오늘 할 일 1개 정하기",
       "📖 책 10분 읽기",
-      "🧹 정리정돈 1번 하기",
+      "📐 수학 1장 풀기",
     ];
 
     const rows = defaults.map((title, idx) => ({
@@ -750,45 +750,32 @@ const playFinishSound = (overrideSrc) => {
       }
 
       const loaded = await fetchTodos(user.id, selectedDayKey);
-
-
-
-
-      // 새로운 날에 저장된 목록이 있으면 기본 목록 주입되는 에러 수정 중 
-
-      // 먼저 "내 목록 존재 여부"를 가져온다
+      // ===== Simplified initialization logic =====
+      // 중복 호출을 줄이기 위해 아래 로직을 단순화합니다.
+      {
         const { id: myListId } = await fetchMySingleListInfo(user.id);
-
-        // 내 목록이 없는 경우에만 기본 목록 자동 주입
-        if (!myListId) {
+        // 할 일 목록이 비어 있고, 내 목록이 없는 경우에만 샘플을 주입합니다.
+        if (!myListId && loaded.length === 0) {
           await seedSampleTodosIfEmpty({
             userId: user.id,
             dayKey: selectedDayKey,
             existingCount: loaded.length,
           });
+          // 샘플을 주입한 뒤에는 목록을 한 번만 다시 불러옵니다.
+          await fetchTodos(user.id, selectedDayKey);
         }
+        // 최신 myList 상태와 명예의 전당을 갱신합니다.
+        await fetchMySingleListInfo(user.id);
+        await fetchHallOfFame(selectedDayKey);
+        // 초기화 완료: 로딩 상태를 false로 설정하고 loadAll을 종료합니다.
+        if (mounted) setLoading(false);
+        return;
+      }
 
-        // 이후 다시 fetch
-        await fetchTodos(user.id, selectedDayKey);
-
-      // 내일이 되어 테스트 해보고 정리하기
 
 
 
-
-      await seedSampleTodosIfEmpty({
-        userId: user.id,
-        dayKey: selectedDayKey,
-        existingCount: loaded.length,
-      });
-
-      await fetchTodos(user.id, selectedDayKey);
-
-      await fetchMySingleListInfo(user.id);
-      await fetchHallOfFame(selectedDayKey);
-
-      if (!mounted) return;
-      setLoading(false);
+      // (이전 중복 로직 제거됨)
     };
 
     loadAll();

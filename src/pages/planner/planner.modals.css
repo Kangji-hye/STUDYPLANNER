@@ -1,0 +1,181 @@
+/* =========================
+   Planner: 공용 모달 + 일정불러오기 + 하가다 바텀시트
+   ========================= */
+
+/* 모달 */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: start;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+.modal-card {
+  width: min(520px, 100%);
+  background: var(--card);
+  border-radius: 18px;
+  padding: 14px;
+  margin: 20px auto 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-weight: 900;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.modal-body {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.modal-help {
+  font-size: var(--fs-modal-help);
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.modal-primary {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  font-size: var(--fs-button);
+}
+
+.modal-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-modal-help);
+}
+
+/* ===============================
+   일정 불러오기 모달(리스트 한눈에)
+================================ */
+
+.load-divider {
+  height: 1px;
+  background: rgba(241, 215, 230, 0.9);
+  margin: 10px 0;
+}
+
+.load-divider.thin {
+  opacity: 0.75;
+  margin: 8px 0;
+}
+
+.load-list {
+  display: grid;
+  gap: 8px;
+}
+
+label.load-item input {
+  width: 10px;
+}
+
+.modal-check input {
+  width: 20px;
+}
+
+.load-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.load-item input {
+  flex: 0 0 auto;
+}
+
+.load-item-text {
+  font-weight: 700;
+}
+
+.load-item-badge {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.load-help {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* =========================
+   하가다 바텀 모달(바텀시트)
+   ========================= */
+
+.hagada-modal {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(720px, 100%);
+  max-height: 70vh;
+  border-radius: 22px 22px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: hagada-slide-up 0.25s ease-out;
+}
+
+@keyframes hagada-slide-up {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.hagada-modal .modal-body {
+  max-height: calc(70vh - 60px);
+  overflow-y: auto;
+}
+
+.modal-backdrop.modal-backdrop-bottom {
+  align-items: flex-end;
+  padding: 0;
+}
+
+@media (max-width: 480px) {
+  .hagada-modal {
+    max-height: 80vh;
+    border-radius: 18px 18px 0 0;
+  }
+}

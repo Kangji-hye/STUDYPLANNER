@@ -1,0 +1,256 @@
+/* =========================
+   Planner: 달력 모달 + 요일 색 + 도장
+   ========================= */
+
+/* 모달 안 달력 */
+.calendar-modal {
+  width: min(520px, 100%);
+  margin: 20px auto 0;
+}
+
+/* 달력 상단 (월/이동) */
+.cal-head {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cal-nav {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+  padding: 0;
+  line-height: 1;
+}
+
+.cal-month-label {
+  text-align: center;
+  font-weight: 900;
+  font-family: "Poor Story";
+}
+
+/* 요일 라인 */
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 12px 0 6px;
+  text-align: center;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* 날짜 그리드 */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
+/* 날짜 셀 */
+.cal-cell {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(241, 215, 230, 0.85);
+  background: #fff;
+  box-shadow: none;
+
+  padding: 0;
+  margin: 0;
+  line-height: 44px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  /* 도장 위치 기준 */
+  position: relative;
+}
+
+/* 빈칸 셀 */
+.cal-cell.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  opacity: 0.35;
+  line-height: 44px;
+}
+
+/* 오늘/선택 표시 */
+.cal-cell.today {
+  border-color: rgba(79, 140, 255, 0.55);
+}
+
+.cal-cell.selected {
+  background: rgba(255, 122, 162, 0.14);
+  border-color: rgba(255, 122, 162, 0.65);
+}
+
+/* 하단 버튼 */
+.cal-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.cal-today-btn {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+}
+
+/* 날짜 + 달력 버튼 */
+.today-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+  cursor: pointer;
+
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cal-btn:active {
+  transform: translateY(1px);
+}
+
+.cal-btn-ico {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.cal-btn-text {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  font-weight: 600;
+  font-family: "Poor Story";
+}
+
+.cal-btn:hover {
+  background: #fff8fb;
+  border-color: rgba(255, 122, 162, 0.35);
+}
+
+/* =========================
+   토/일 파랑/빨강
+   ========================= */
+
+/* 요일 헤더 */
+.cal-week .sun {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.cal-week .sat {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+/* 날짜 칸 */
+.cal-cell.sun {
+  color: #ef4444;
+}
+
+.cal-cell.sat {
+  color: #2563eb;
+}
+
+/* =========================
+   달력 도장 : 참 잘했어요
+   ========================= */
+
+.cal-stamp {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(185, 28, 28, 0.75);
+
+  color: #b91c1c;
+  font-weight: 700;
+  text-align: center;
+
+  transform: rotate(-10deg);
+  box-sizing: border-box;
+
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic",
+    system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  letter-spacing: -0.2px;
+}
+
+.cal-stamp .stamp-line1 {
+  font-size: 17px;
+  line-height: 1.05;
+}
+
+.cal-stamp .stamp-line2 {
+  font-size: 10px;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.cal-stamp .stamp-line1,
+.cal-stamp .stamp-line2 {
+  position: relative;
+  top: -3px;
+}
+
+/* ✅ 모바일에서도 "참/잘했어요" 유지(‘완’ 제거 버전) */
+@media (max-width: 480px) {
+  .cal-stamp {
+    width: 30px;
+    height: 30px;
+    right: 5px;
+    bottom: 5px;
+    transform: rotate(-12deg);
+    border-width: 2px;
+  }
+
+  .cal-stamp .stamp-line1,
+  .cal-stamp .stamp-line2 {
+    display: block;
+    top: -1px;
+  }
+
+  .cal-stamp .stamp-line1 {
+    font-size: 11px;
+  }
+
+  .cal-stamp .stamp-line2 {
+    font-size: 7px;
+  }
+
+  .cal-stamp::after {
+    content: none;
+  }
+}
