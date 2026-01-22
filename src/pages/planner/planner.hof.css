@@ -32,30 +32,37 @@
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   align-items: stretch;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .hof-chip {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 10px 10px;
+  padding: 10px 12px;
   border-radius: 14px;
   background: #fff;
   border: 1px solid rgba(241, 215, 230, 0.7);
   box-shadow: none;
   min-height: 40px;
-  min-width: 130px;
+  min-width: 190px;
+  justify-content: flex-start; 
+  gap: 8px;                 
 }
 
 .hof-chip-name {
+  flex: 0 0 auto;           /* 줄어들지 않게(잘림 방지) */
   font-weight: 400;
   font-size: 1.02rem;
   color: var(--text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  min-width: 0;  
+  overflow: visible;        /* hidden 금지 */
+  /* text-overflow: ellipsis; */
+  text-overflow: clip;      /* 금지 */
+  /* max-width: 100%;   */
+  max-width: none;          /* 폭 제한 금지 */
 }
+
 
 .hof-chip.is-me {
   background: #fff;
@@ -77,4 +84,10 @@
 .hof-medal {
   margin-right: 4px;
   font-size: 1rem;
+}
+
+.hof-chip-badge{
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  line-height: 1;
 }

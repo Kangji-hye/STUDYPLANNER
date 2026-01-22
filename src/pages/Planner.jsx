@@ -35,11 +35,16 @@ const EMOJI_POOL = [
 ];
 
 // 명예의 전당 닉네임 표시(6글자 제한을 예전에 하려고 했던 흔적 같지만 지금은 그대로 반환)
+// 명예의 전당: 이름은 "6글자"까지만 보여주기(유니코드 안전)
 const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
-  return s;
+
+  const chars = Array.from(s); // 이모지/한글 안전하게 자르기
+  if (chars.length <= 6) return s;
+  return chars.slice(0, 6).join(""); // 6글자까지만 (…는 원하면 붙일 수 있음)
 };
+
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
@@ -1304,6 +1309,32 @@ function Planner() {
   const closeCalendar = () => setShowCalendarModal(false);
 
   // =======================
+  // 푸터
+  // =======================
+  // - 딥링크 스킴/링크는 예시입니다. 실제 그레이프시드에서 제공하는 링크가 있으면 그걸로 바꾸면 성공률이 확 올라갑니다.
+  const openGrapeSeed = () => {
+    // 1) 앱 열기 시도(예시 스킴)
+    const appUrl = "grapeseed://"; // ✅ 실제 스킴이 다를 수 있음 (확정되면 여길 교체)
+
+    // 2) 앱이 없을 때 이동할 곳(예시)
+    // - 안드: Play Store, iOS: App Store 링크로 바꾸면 됩니다.
+    const fallbackUrl = "https://www.grapeseed.com/"; // ✅ 임시: 실제 앱스토어 링크로 교체 추천
+
+    // iOS/일부 브라우저는 새 탭보다 "현재 탭 이동"이 앱 호출 성공률이 더 높습니다.
+    const startedAt = Date.now();
+
+    // 앱 열기 시도
+    window.location.href = appUrl;
+
+    // 일정 시간 뒤에도 화면이 그대로면(앱이 못 열렸다고 판단) fallback 이동
+    setTimeout(() => {
+      // 너무 빨리 fallback하면 앱이 열리기 전에 웹으로 튕기는 경우가 있어서 1200~1800ms 권장
+      if (Date.now() - startedAt < 1500) return;
+      window.location.href = fallbackUrl;
+    }, 1600);
+  };
+
+  // =======================
   // 렌더
   // =======================
   return (
@@ -1581,7 +1612,6 @@ function Planner() {
         busyMyList={busyMyList}
         importMySingleList={importMySingleList}
         importSampleTodos={importSampleTodos}
-        userId={me?.id}
       />
 
       <MyListSaveModal
@@ -1605,6 +1635,25 @@ function Planner() {
         <div className="footer-links">
           <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
             😊마이페이지
+          </a>
+          <span>|</span>
+          <a
+            className="footer-link-secondary"
+            onClick={openGrapeSeed}
+            role="button"
+            title="그레이프시드 앱 열기"
+          >
+            🍇그레이프시드
+          </a>
+          <span>|</span>
+          <a
+            className="footer-link-secondary"
+            href="https://rd.dreamschool.or.kr/"
+            target="blank"
+            role="button"
+            title="리딩레이스"
+          >
+           🏃‍♂️리딩레이스
           </a>
           <span>|</span>
           <a onClick={handleLogout}>로그아웃</a>

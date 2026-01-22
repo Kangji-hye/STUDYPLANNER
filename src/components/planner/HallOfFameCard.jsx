@@ -3,6 +3,23 @@
 import React from "react";
 
 export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
+  // ✅ 닉네임 앞에 붙은 메달/이모지를 분리해서 폭을 안정화
+  // 예: "🥇 지혜" → badge="🥇", name="지혜"
+  // 예: "🏅민준" (띄어쓰기 없음) → 분리 어려워서 name으로 그대로 둠(그래도 CSS로 폭 확보)
+  const splitBadgeAndName = (nickname) => {
+    const s = String(nickname ?? "").trim();
+    if (!s) return { badge: "", name: "익명" };
+
+    const parts = s.split(/\s+/);
+    // 첫 토큰이 이모지처럼 보이고(길이 짧음), 뒤에 이름이 있으면 badge로 분리
+    if (parts.length >= 2 && Array.from(parts[0]).length <= 3) {
+      return { badge: parts[0], name: parts.slice(1).join(" ") };
+    }
+
+    return { badge: "", name: s };
+  };
+
+
   return (
     <div className="hof-card">
       <div className="hof-head">
@@ -25,7 +42,18 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
                 title={x.nickname ?? ""}
               >
                 <span className="hof-medal" aria-hidden="true">🏅</span>
-                <span className="hof-chip-name">{cutName6(x.nickname)}</span>
+
+                {(() => {
+                  const { badge, name } = splitBadgeAndName(x.nickname);
+                  return (
+                    <>
+                      {badge && <span className="hof-chip-badge" aria-hidden="true">{badge}</span>}
+                      <span className="hof-chip-name">{cutName6(name)}</span>
+                    </>
+                  );
+                })()}
+
+                
               </div>
             );
           })}
