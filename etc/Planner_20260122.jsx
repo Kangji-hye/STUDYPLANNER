@@ -11,7 +11,7 @@ import { useSoundSettings } from "../src/context/SoundSettingsContext";
 
 import LoadScheduleModal from "../src/components/planner/LoadScheduleModal";
 import MyListSaveModal from "../src/components/planner/MyListSaveModal";
-import CalendarModal from "../src/components/planner/CalendarModal";
+import CalendarModal from "../src/components/planner/CalendarModal_20260122";
 import HallOfFameCard from "../src/components/planner/HallOfFameCard";
 import StudyTools from "../src/components/planner/StudyTools";
 

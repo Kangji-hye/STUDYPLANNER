@@ -8,7 +8,6 @@ import "./Planner.css";
 import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 import { useSoundSettings } from "../context/SoundSettingsContext";
-
 import LoadScheduleModal from "../components/planner/LoadScheduleModal";
 import MyListSaveModal from "../components/planner/MyListSaveModal";
 import CalendarModal from "../components/planner/CalendarModal";
@@ -124,11 +123,6 @@ useEffect(() => {
 
 
 
-
-
-
-
-
   // 새로고침시 효과음 현상 // iOS Safari 오디오 언락 처리 
   useEffect(() => {
     const unlock = () => {
@@ -165,10 +159,6 @@ useEffect(() => {
   // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
-
-
-
-
 
 
 
@@ -257,6 +247,54 @@ useEffect(() => {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
   });
+
+
+// ✅ 달력에 도장 찍기용: "이번 달에 내가 미션 완료한 day_key들"
+// - Set(집합)은 "있다/없다" 확인이 엄청 빨라서 달력에 딱 좋아요.
+const [doneDayKeys, setDoneDayKeys] = useState(() => new Set());
+
+// ✅ 특정 월(yyyy, mm)에 대해 '내가 완료한 날짜들' 불러오기
+// - hall_of_fame 테이블에는 day_key가 들어 있으니, 그걸 한 달 범위로 가져옵니다.
+const fetchDoneDaysForMonth = async (userId, y, m) => {
+  // m은 0부터 시작(0=1월)
+  const monthStart = new Date(y, m, 1);
+  const monthEnd = new Date(y, m + 1, 0);
+
+  // 너는 day_key를 "YYYY-MM-DD" 형태로 쓰고 있으니, 같은 형식으로 범위를 만들면 됩니다.
+  const startKey = toKstDayKey(monthStart);
+  const endKey = toKstDayKey(monthEnd);
+
+  try {
+    const { data, error } = await supabase
+      .from("hall_of_fame")
+      .select("day_key")
+      .eq("user_id", userId)
+      .gte("day_key", startKey)
+      .lte("day_key", endKey);
+
+    if (error) throw error;
+
+    // ["2026-01-01", "2026-01-03"...] 같은 걸 Set으로 바꿔서 저장
+    const set = new Set((data ?? []).map((x) => x.day_key));
+    setDoneDayKeys(set);
+  } catch (err) {
+    console.error("fetchDoneDaysForMonth error:", err);
+    setDoneDayKeys(new Set());
+  }
+};
+
+// ✅ 달력 모달이 열리거나, 달을 넘기면(이전/다음) 그 달 완료 기록을 다시 불러오기
+useEffect(() => {
+  if (!showCalendarModal) return;
+  if (!me?.id) return;
+
+  fetchDoneDaysForMonth(me.id, calMonth.y, calMonth.m);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [showCalendarModal, calMonth.y, calMonth.m, me?.id]);
+
+
+
+
 
   const monthCells = useMemo(
     () => buildMonthGrid(calMonth.y, calMonth.m),
@@ -1870,6 +1908,7 @@ const playFinishSound = (overrideSrc) => {
         setSelectedDate={setSelectedDate}
         calMonth={calMonth}
         setCalMonth={setCalMonth}
+        doneDayKeys={doneDayKeys}
       />
 
       <footer className="planner-footer-simple">

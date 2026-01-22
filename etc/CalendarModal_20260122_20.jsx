@@ -2,23 +2,6 @@
 //달력 모달
 import React, { useMemo } from "react";
 
-/* KST 기준 YYYY-MM-DD 만들기 */
-const toKstDayKey = (dateObj) => {
-  if (!dateObj) return "";
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(dateObj);
-
-  const y = parts.find((p) => p.type === "year")?.value;
-  const m = parts.find((p) => p.type === "month")?.value;
-  const d = parts.find((p) => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-};
-
-
 const buildMonthGrid = (year, monthIndex) => {
   const first = new Date(year, monthIndex, 1);
   const last = new Date(year, monthIndex + 1, 0);
@@ -39,6 +22,23 @@ const isSameDay = (a, b) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
+// Helper: convert a Date object to KST YYYY-MM-DD key
+// This mirrors the toKstDayKey function in Planner.jsx. We duplicate
+// it here so the calendar can determine if a given day has a completed
+// plan when a list of finished day keys is provided via props.
+const toKstDayKeyLocal = (dateObj = new Date()) => {
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(dateObj);
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+  return `${y}-${m}-${d}`;
+};
+
 export default function CalendarModal({
   open,
   onClose,
@@ -46,7 +46,8 @@ export default function CalendarModal({
   setSelectedDate,
   calMonth,
   setCalMonth,
-  doneDayKeys,
+  // Array of YYYY-MM-DD strings indicating which days have completed plans.
+  finishedDayKeys = [],
 }) {
   const monthCells = useMemo(
     () => buildMonthGrid(calMonth.y, calMonth.m),
@@ -107,9 +108,10 @@ export default function CalendarModal({
             const isToday = d && isSameDay(d, new Date());
             const isSunday = idx % 7 === 0;
             const isSaturday = idx % 7 === 6;
-
-            const dayKey = d ? toKstDayKey(d) : "";
-            const isDone = Boolean(d && doneDayKeys && doneDayKeys.has(dayKey));
+            // Determine if this date is marked as completed by comparing the KST day key.
+            const isCompleted = d
+              ? finishedDayKeys?.includes(toKstDayKeyLocal(d))
+              : false;
 
             return (
               <button
@@ -129,10 +131,11 @@ export default function CalendarModal({
                   onClose();
                 }}
               >
+                {/* The day number */}
                 {d ? d.getDate() : ""}
-                {/* ✅ 완료한 날이면 "참 잘했어요" 도장 */}
-                {isDone && (
-                  <span className="cal-stamp" aria-label="참 잘했어요" title="참 잘했어요">
+                {/* If the plan for this day is finished, show the stamp */}
+                {isCompleted && (
+                  <span className="cal-stamp">
                     <span className="stamp-line1">참</span>
                     <span className="stamp-line2">잘했어요</span>
                   </span>
