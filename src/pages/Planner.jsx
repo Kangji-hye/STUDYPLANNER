@@ -1311,31 +1311,27 @@ function Planner() {
   // =======================
   // 푸터
   // =======================
-  // ✅ GrapeSEED Student 앱 열기 (iPhone 대응 최종본)
-// - 앱이 설치되어 있으면: 앱으로 열림 (Universal Link 대응 시)
-// - 앱이 없으면: App Store로 이동
 const openGrapeSeed = () => {
-  // ✅ GrapeSEED Student 앱이 사용하는 공식 웹 진입 주소
-  // (앱이 설치되어 있으면 iOS가 앱으로 넘겨줄 수 있음)
-  const studentWebUrl = "https://remote.grapeseed.com/";
+    const userAgent = navigator.userAgent.toLowerCase();
+    const appSchema = "grapeseed-student://"; // grapeSeed 앱 전용 스키마
+    const playStore = "market://details?id=com.grapeseed.student"; // 안드로이드 예시
+    const appStore = "https://apps.apple.com/app/idXXXXXX"; // iOS 예시
 
-  // ✅ GrapeSEED Student iOS App Store (한국)
-  const appStoreStudent =
-    "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
+    // 앱 실행 시도
+    window.location.href = appSchema;
 
-  const start = Date.now();
-
-  // 1️⃣ 먼저 웹 URL로 이동 (유니버설 링크 시 앱으로 열림)
-  window.location.href = studentWebUrl;
-
-  // 2️⃣ 일정 시간 후에도 앱 전환이 안 됐으면 App Store로 안내
-  setTimeout(() => {
-    // 앱이 열리면 브라우저가 백그라운드로 가므로 여기까지 안 옴 → 성공
-    if (Date.now() - start < 1200) return;
-
-    window.location.href = appStoreStudent;
-  }, 1300);
+    // 잠시 후에도 화면 변화가 없다면 앱이 없는 것으로 간주하고 스토어로 이동
+    setTimeout(() => {
+      if (userAgent.contains("android")) {
+        window.location.href = playStore;
+      } else if (userAgent.contains("iphone") || userAgent.contains("ipad")) {
+        window.location.href = appStore;
+      } else {
+        window.open("https://www.grapeseed.com", "_blank"); // PC 버전
+      }
+    }, 1500);
 };
+
 
 
 
@@ -1647,7 +1643,7 @@ const openGrapeSeed = () => {
             className="footer-link-secondary"
             onClick={openGrapeSeed}
             role="button"
-            title="그레이프시드 앱 열기"
+            title="그레이프시드 Student 앱 열기"
           >
             🍇그레이프시드
           </a>
