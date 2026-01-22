@@ -1311,45 +1311,32 @@ function Planner() {
   // =======================
   // 푸터
   // =======================
-  // ✅ 그레이프시드 열기 (iOS에서 가장 성공률 높은 방식)
-  // 1) https(유니버설 링크 가능)로 먼저 시도
-  // 2) 그래도 안 되면 App Store로 안내(앱 설치/업데이트 유도)
-  const openGrapeSeed = () => {
-    // ✅ 1차: 공식 접속 URL (문서에서 안내되는 주소들)
-    // - 앱이 Universal Link를 지원하면 여기서 "앱으로" 열릴 수 있어요.
-    const primaryWebUrl = "https://remote.grapeseed.com/"; // Connect 접속 안내에 등장 :contentReference[oaicite:2]{index=2}
-    const secondaryWebUrl = "https://portal.grapeseed.com/"; // 포털 로그인 :contentReference[oaicite:3]{index=3}
+  // ✅ GrapeSEED Student 앱 열기 (iPhone 대응 최종본)
+// - 앱이 설치되어 있으면: 앱으로 열림 (Universal Link 대응 시)
+// - 앱이 없으면: App Store로 이동
+const openGrapeSeed = () => {
+  // ✅ GrapeSEED Student 앱이 사용하는 공식 웹 진입 주소
+  // (앱이 설치되어 있으면 iOS가 앱으로 넘겨줄 수 있음)
+  const studentWebUrl = "https://remote.grapeseed.com/";
 
-    // ✅ 2차: App Store (한국 스토어 링크)
-    // - 어떤 앱을 쓰는지에 따라 둘 중 하나를 쓰면 돼요.
-    const appStoreStudent = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700"; // :contentReference[oaicite:4]{index=4}
-    const appStoreConnect  = "https://apps.apple.com/kr/app/grapeseed-connect/id1638056937"; // :contentReference[oaicite:5]{index=5}
+  // ✅ GrapeSEED Student iOS App Store (한국)
+  const appStoreStudent =
+    "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
 
-    // 사용자가 어떤 앱을 쓰는지 모르면, 우선 Student로 보내고(가정용이 많음)
-    // 필요하면 Connect로 바꿔도 됩니다.
-    const fallbackStoreUrl = appStoreStudent;
+  const start = Date.now();
 
-    // iOS에서 앱 열기 시도는 "현재 탭 이동"이 가장 안정적입니다.
-    // 1) 우선 primaryWebUrl로 이동
-    window.location.href = primaryWebUrl;
+  // 1️⃣ 먼저 웹 URL로 이동 (유니버설 링크 시 앱으로 열림)
+  window.location.href = studentWebUrl;
 
-    // 2) 일정 시간 후에도 그대로라면(유니버설 링크로 앱이 안 열렸다면)
-    //    secondaryWebUrl → 그래도 안 되면 App Store 순으로 안내
-    const startedAt = Date.now();
+  // 2️⃣ 일정 시간 후에도 앱 전환이 안 됐으면 App Store로 안내
+  setTimeout(() => {
+    // 앱이 열리면 브라우저가 백그라운드로 가므로 여기까지 안 옴 → 성공
+    if (Date.now() - start < 1200) return;
 
-    setTimeout(() => {
-      // 앱이 열려서 브라우저가 백그라운드로 가면 이 코드가 의미가 없어지는데,
-      // 그건 "성공"이므로 괜찮습니다.
-      if (Date.now() - startedAt < 900) return;
+    window.location.href = appStoreStudent;
+  }, 1300);
+};
 
-      // 2차 웹으로 한번 더
-      window.location.href = secondaryWebUrl;
-
-      setTimeout(() => {
-        window.location.href = fallbackStoreUrl;
-      }, 900);
-    }, 900);
-  };
 
 
 
