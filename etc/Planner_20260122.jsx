@@ -121,14 +121,6 @@ useEffect(() => {
 
 
 
-
-
-
-
-
-
-
-
   // 새로고침시 효과음 현상 // iOS Safari 오디오 언락 처리 
   useEffect(() => {
     const unlock = () => {
