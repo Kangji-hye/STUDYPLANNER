@@ -53,3 +53,32 @@
   font-size: var(--fs-footer-copy);
   opacity: 0.6;
 }
+
+
+/* ✅ 풋터: 화면이 좁아져도 안 깨지게(줄바꿈 + 구분자 처리) */
+.footer-links{
+  flex-wrap: wrap;          /* ✅ 좁아지면 자동 줄바꿈 */
+  row-gap: 6px;             /* ✅ 두 줄이 될 때 위아래 간격 */
+  column-gap: 12px;         /* 기존 gap 역할 */
+  align-items: center;
+}
+
+/* 링크 텍스트는 한 덩어리로(중간에서 잘리지 않게) */
+.footer-links a{
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;      /* ✅ "😊마이페이지" 같은 텍스트가 중간에서 찢어지는 것 방지 */
+  padding: 2px 2px;         /* ✅ 터치 영역 살짝 확보(선택) */
+}
+
+/* ✅ 아주 좁은 화면에서는 '|' 구분자 숨기고, gap으로만 구분 */
+@media (max-width: 420px){
+  .footer-links span{
+    display: none;
+  }
+
+  .footer-links{
+    column-gap: 14px;       /* 구분자 대신 링크 사이 간격 살짝 늘리기 */
+    justify-content: center;
+  }
+}
