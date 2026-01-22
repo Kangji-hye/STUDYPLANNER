@@ -1311,26 +1311,42 @@ function Planner() {
   // =======================
   // 푸터
   // =======================
+  // ✅ 가장 안전한 방식: "학생 웹"을 먼저 열고(앱이 유니버설링크 지원하면 앱으로 전환),
+// 없으면 그대로 웹/스토어로 안내하는 형태
 const openGrapeSeed = () => {
-    const userAgent = navigator.userAgent.toLowerCase();
-    const appSchema = "grapeseed-student://"; // grapeSeed 앱 전용 스키마
-    const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn&pcampaignid=web_share"; // 안드로이드 예시
-    const appStore = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700"; // iOS 예시
+  const ua = navigator.userAgent.toLowerCase();
 
-    // 앱 실행 시도
-    window.location.href = appSchema;
+  // 1) PC/모바일 공통으로 먼저 시도할 "학생 웹"
+  //    (앱이 Universal Link를 지원하면, 여기서 앱으로 넘어갈 수도 있어요)
+  const studentWeb = "https://students.grapeseed.com"; // 공식 학생 웹(일반적으로 이쪽이 기본)
 
-    // 잠시 후에도 화면 변화가 없다면 앱이 없는 것으로 간주하고 스토어로 이동
-    setTimeout(() => {
-      if (userAgent.contains("android")) {
-        window.location.href = playStore;
-      } else if (userAgent.contains("iphone") || userAgent.contains("ipad")) {
-        window.location.href = appStore;
-      } else {
-        window.open("https://students.grapeseed.com", "_blank"); // PC 버전
-      }
-    }, 1500);
+  // 2) 스토어 링크 (너가 적어준 것 그대로 OK)
+  const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn";
+  const appStore  = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
+
+  // ✅ 0) 문자열 includes 사용 (contains는 JS에 없음!)
+  const isAndroid = ua.includes("android");
+  const isIOS = ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
+
+  // ✅ 1) 일단 학생 웹을 열어본다 (유효하지 않다 팝업이 안 뜸)
+  //    - 같은 탭에서 열면 사용자가 "뒤로가기"도 편함
+  window.location.href = studentWeb;
+
+  // ✅ 2) '웹으로 갔는데도 앱이 안 열리는' 사용자에게 선택권을 주기 위해
+  //    잠깐 뒤 스토어로 유도(원하면 이 부분은 confirm으로 바꿔도 됨)
+  setTimeout(() => {
+    if (isAndroid) {
+      window.location.href = playStore;
+    } else if (isIOS) {
+      window.location.href = appStore;
+    } else {
+      // PC는 이미 studentWeb로 갔을 테니, 여기선 추가 동작 없어도 됨
+      // 필요하면 새 탭으로 열기:
+      // window.open(studentWeb, "_blank");
+    }
+  }, 1500);
 };
+
 
 
 
