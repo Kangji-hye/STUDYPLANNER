@@ -24,6 +24,7 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
                 className={`hof-chip ${isMe ? "is-me" : ""}`}
                 title={x.nickname ?? ""}
               >
+                <span className="hof-medal" aria-hidden="true">🏅</span>
                 <span className="hof-chip-name">{cutName6(x.nickname)}</span>
               </div>
             );

@@ -72,3 +72,9 @@
   font-size: var(--fs-small);
   padding: 8px 2px 2px;
 }
+
+/* 명예의 전당 메달 아이콘 스타일 */
+.hof-medal {
+  margin-right: 4px;
+  font-size: 1rem;
+}
