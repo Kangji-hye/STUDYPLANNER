@@ -1,6 +1,18 @@
 // src/components/TodoItem.jsx
 import React, { useEffect, useRef } from "react";
 
+let DONE_AUDIO = null;
+
+const getDoneAudio = () => {
+  if (!DONE_AUDIO) {
+    DONE_AUDIO = new Audio("/done.mp3");
+    DONE_AUDIO.preload = "auto";
+    DONE_AUDIO.volume = 0.9;
+  }
+  return DONE_AUDIO;
+};
+
+
 const TodoItem = ({
   t,
   onToggle,
@@ -14,22 +26,17 @@ const TodoItem = ({
   const doneAudioRef = useRef(null);
 
   useEffect(() => {
-    doneAudioRef.current = new Audio("/done.mp3");
-    doneAudioRef.current.preload = "auto";
-
-    return () => {
-      if (doneAudioRef.current) {
-        doneAudioRef.current.pause();
-        doneAudioRef.current = null;
-      }
-    };
+    // ✅ 첫 렌더에서 미리 로딩만
+    getDoneAudio();
   }, []);
 
+
   const playDoneSound = () => {
-    const audio = doneAudioRef.current;
-    if (!audio) return;
-    audio.currentTime = 0;
-    audio.play().catch(() => {});
+    try {
+      const audio = getDoneAudio();
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch {}
   };
 
   return (
@@ -108,7 +115,6 @@ const TodoItem = ({
               if (!t.completed) {
                 playDoneSound();
               }
-
               onToggle(t);
             }}
           >
