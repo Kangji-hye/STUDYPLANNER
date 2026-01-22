@@ -161,12 +161,18 @@ useEffect(() => {
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
 
+  //  지금 화면이 보고 있는 day_key를 항상 최신으로 기억해두는 용도
+  // - fetchTodos가 늦게 돌아왔을 때 "옛날 날짜 응답"이면 화면에 반영하지 않게 막아줍니다.
+  const selectedDayKeyRef = useRef(selectedDayKey);
 
-  
+  useEffect(() => {
+    selectedDayKeyRef.current = selectedDayKey;
+  }, [selectedDayKey]);
+
   // =======================
-// ✅ 태블릿/모바일 "탭 복원" 대비: 날짜가 바뀌면 자동으로 오늘로 이동
-// - iPad/태블릿은 어제 열어둔 화면을 그대로 복원하는 경우가 많아서
-//   "앱이 다시 보이는 순간"에 오늘 날짜인지 확인해주는 게 안전합니다.
+//  태블릿/모바일 "탭 복원" 대비: 날짜가 바뀌면 자동으로 오늘로 이동
+// iPad/태블릿은 어제 열어둔 화면을 그대로 복원하는 경우가 많아서
+//  "앱이 다시 보이는 순간"에 오늘 날짜인지 확인
 // =======================
 useEffect(() => {
   const LAST_ACTIVE_DAY_KEY = "planner_last_active_day_key_v1";
@@ -546,6 +552,8 @@ const playFinishSound = (overrideSrc) => {
       return [];
     }
     const rows = data ?? [];
+
+
     setTodos(rows);
     return rows;
   };

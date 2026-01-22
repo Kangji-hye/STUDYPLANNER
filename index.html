@@ -69,16 +69,23 @@
     </div>
     <div class="boot-sub">불러오는 중...</div>
   </div>
+  <script>
+    //  혹시 앱에서 제거가 늦어져도, 최대 1초만 보여주고 사라지게(보험)
+    setTimeout(() => {
+      const s = document.getElementById("boot-splash");
+      if (s) s.remove();
+    }, 1000);
+  </script>
 
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 
-  <script>
+  <!-- <script>
     setTimeout(() => {
       const s = document.getElementById("boot-splash");
       if (s) s.remove();
     }, 10000);
-  </script>
+  </script> -->
 
   <style>
     html,
