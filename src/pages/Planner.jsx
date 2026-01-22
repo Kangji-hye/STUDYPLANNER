@@ -1311,28 +1311,47 @@ function Planner() {
   // =======================
   // 푸터
   // =======================
-  // - 딥링크 스킴/링크는 예시입니다. 실제 그레이프시드에서 제공하는 링크가 있으면 그걸로 바꾸면 성공률이 확 올라갑니다.
+  // ✅ 그레이프시드 열기 (iOS에서 가장 성공률 높은 방식)
+  // 1) https(유니버설 링크 가능)로 먼저 시도
+  // 2) 그래도 안 되면 App Store로 안내(앱 설치/업데이트 유도)
   const openGrapeSeed = () => {
-    // 1) 앱 열기 시도(예시 스킴)
-    const appUrl = "grapeseed://"; // ✅ 실제 스킴이 다를 수 있음 (확정되면 여길 교체)
+    // ✅ 1차: 공식 접속 URL (문서에서 안내되는 주소들)
+    // - 앱이 Universal Link를 지원하면 여기서 "앱으로" 열릴 수 있어요.
+    const primaryWebUrl = "https://remote.grapeseed.com/"; // Connect 접속 안내에 등장 :contentReference[oaicite:2]{index=2}
+    const secondaryWebUrl = "https://portal.grapeseed.com/"; // 포털 로그인 :contentReference[oaicite:3]{index=3}
 
-    // 2) 앱이 없을 때 이동할 곳(예시)
-    // - 안드: Play Store, iOS: App Store 링크로 바꾸면 됩니다.
-    const fallbackUrl = "https://www.grapeseed.com/"; // ✅ 임시: 실제 앱스토어 링크로 교체 추천
+    // ✅ 2차: App Store (한국 스토어 링크)
+    // - 어떤 앱을 쓰는지에 따라 둘 중 하나를 쓰면 돼요.
+    const appStoreStudent = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700"; // :contentReference[oaicite:4]{index=4}
+    const appStoreConnect  = "https://apps.apple.com/kr/app/grapeseed-connect/id1638056937"; // :contentReference[oaicite:5]{index=5}
 
-    // iOS/일부 브라우저는 새 탭보다 "현재 탭 이동"이 앱 호출 성공률이 더 높습니다.
+    // 사용자가 어떤 앱을 쓰는지 모르면, 우선 Student로 보내고(가정용이 많음)
+    // 필요하면 Connect로 바꿔도 됩니다.
+    const fallbackStoreUrl = appStoreStudent;
+
+    // iOS에서 앱 열기 시도는 "현재 탭 이동"이 가장 안정적입니다.
+    // 1) 우선 primaryWebUrl로 이동
+    window.location.href = primaryWebUrl;
+
+    // 2) 일정 시간 후에도 그대로라면(유니버설 링크로 앱이 안 열렸다면)
+    //    secondaryWebUrl → 그래도 안 되면 App Store 순으로 안내
     const startedAt = Date.now();
 
-    // 앱 열기 시도
-    window.location.href = appUrl;
-
-    // 일정 시간 뒤에도 화면이 그대로면(앱이 못 열렸다고 판단) fallback 이동
     setTimeout(() => {
-      // 너무 빨리 fallback하면 앱이 열리기 전에 웹으로 튕기는 경우가 있어서 1200~1800ms 권장
-      if (Date.now() - startedAt < 1500) return;
-      window.location.href = fallbackUrl;
-    }, 1600);
+      // 앱이 열려서 브라우저가 백그라운드로 가면 이 코드가 의미가 없어지는데,
+      // 그건 "성공"이므로 괜찮습니다.
+      if (Date.now() - startedAt < 900) return;
+
+      // 2차 웹으로 한번 더
+      window.location.href = secondaryWebUrl;
+
+      setTimeout(() => {
+        window.location.href = fallbackStoreUrl;
+      }, 900);
+    }, 900);
   };
+
+
 
   // =======================
   // 렌더
@@ -1649,7 +1668,7 @@ function Planner() {
           <a
             className="footer-link-secondary"
             href="https://rd.dreamschool.or.kr/"
-            target="blank"
+            target="_blank"
             role="button"
             title="리딩레이스"
           >
