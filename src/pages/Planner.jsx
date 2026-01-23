@@ -1543,7 +1543,7 @@ function Planner() {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "수학 1장 풀기 45초 만에 성공!!"}
+              {afterStudyText.trim() ? afterStudyText : "수학 10문제 45초 만에 성공!!"}
             </div>
           ) : (
             <input
@@ -1551,7 +1551,7 @@ function Planner() {
               type="text"
               autoFocus
               value={afterStudyText}
-              placeholder="수학 1장 풀기 45초 만에 성공!!"
+              placeholder="수학 10문제 45초 만에 성공!!"
               onChange={(e) => {
                 const v = e.target.value;
                 setAfterStudyText(v);
