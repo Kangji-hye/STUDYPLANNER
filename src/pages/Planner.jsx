@@ -12,10 +12,12 @@ import { useSoundSettings } from "../context/SoundSettingsContext";
 import LoadScheduleModal from "../components/planner/LoadScheduleModal";
 import MyListSaveModal from "../components/planner/MyListSaveModal";
 import CalendarModal from "../components/planner/CalendarModal";
+import HelpModal from "../components/planner/HelpModal";
+import OnboardingTour from "../components/planner/OnboardingTour";
+
 import HallOfFameCard from "../components/planner/HallOfFameCard";
 import StudyTools from "../components/planner/StudyTools";
 
-// ✅ 정리된 공용 유틸/훅
 import { toKstDayKey } from "../utils/dateKst";
 import { useBootSplash } from "../hooks/useBootSplash";
 import { useRestoreToToday } from "../hooks/useRestoreToToday";
@@ -88,7 +90,7 @@ function Planner() {
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
 
-  // ✅ 부트 스플래시 제거(한 번만)
+  // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
 
   // =======================
@@ -96,12 +98,12 @@ function Planner() {
   // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
-  // ✅ 탭 복원 대비: "날이 바뀐 복원 상황"에서만 오늘로 복귀
+  // 탭 복원 대비: "날이 바뀐 복원 상황"에서만 오늘로 복귀
   useRestoreToToday(setSelectedDate);
 
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
-  // ✅ fetch 레이스 방지(마지막 요청만 반영)
+  // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
   useEffect(() => {
     selectedDayKeyRef.current = selectedDayKey;
@@ -120,12 +122,22 @@ function Planner() {
     return { y: d.getFullYear(), m: d.getMonth() };
   });
 
-  // ✅ 달력 도장(완료한 날짜 Set)
+  // 달력 도장(완료한 날짜 Set)
   const doneDayKeys = useDoneDaysForMonth({
     open: showCalendarModal,
     userId: me?.id,
     calMonth,
   });
+
+  
+//도움말
+const [showHelpModal, setShowHelpModal] = useState(false);
+
+const openHelp = () => setShowHelpModal(true);
+const closeHelp = () => setShowHelpModal(false);
+
+
+  
 
   // =======================
   // 프로필(캐시)
@@ -146,7 +158,7 @@ function Planner() {
   // 완료 사운드(재사용)
   const finishAudioRef = useRef(null);
 
-  // ✅ 오디오 언락(중복 useEffect 제거)
+  // 오디오 언락(중복 useEffect 제거)
   useAudioUnlock(finishAudioRef, profile?.finish_sound ?? "/finish.mp3");
 
   // 최신 todos 참조
@@ -429,6 +441,7 @@ function Planner() {
   };
 
   // 자동 초기화(새 날짜 비었을 때)
+  
   const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
 
   const seedDefault3Todos = async (userId, dayKey) => {
@@ -749,6 +762,7 @@ function Planner() {
       setImportingSample(false);
     }
   };
+
 
   // 내 목록 저장 모달
   const openMyListSaveModal = () => {
@@ -1076,6 +1090,118 @@ function Planner() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
   const timerRef = useRef(null);
+  
+
+
+    // =======================
+  // ✅ 첫 방문 말풍선 단계 안내(온보딩 투어)
+  // - 도움말 "창" 대신, 화면 위에 말풍선을 단계별로 띄워서 안내합니다.
+  // - 처음 1번만 자동으로 뜨고, 이후엔 푸터의 "도움말"로 다시 볼 수 있게 합니다.
+  // =======================
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+
+  // 말풍선이 "가리킬" 대상들 (ref = 여기! 라고 찍어주는 표지판)
+  const refCalendarBtn = useRef(null);
+  const refInput = useRef(null);
+  const refAddBtn = useRef(null);
+  const refLoadBtn = useRef(null);
+  const refTodoList = useRef(null);
+
+  const startTour = () => {
+    setTourStep(0);
+    setTourOpen(true);
+  };
+
+  const closeTour = () => {
+    setTourOpen(false);
+
+    // ✅ "봤다" 표시 저장 (다음부터 자동 오픈 안 하게)
+    try {
+      const uid = me?.id ?? "anon";
+      localStorage.setItem(`planner_tour_seen_v1:${uid}`, "1");
+    } catch {
+      // localStorage 실패해도 앱은 계속 동작해야 함
+    }
+  };
+
+  // 말풍선 단계들(무슨 말을 할지)
+  const tourSteps = useMemo(
+    () => [
+      {
+        title: "📂 목록 불러오기",
+        body: (
+          <>
+            여기서 기본 목록/내 목록을 불러올 수 있어요.<br />
+            처음이라면 한 번 눌러서 목록을 채워보세요.
+          </>
+        ),
+        targetRef: refLoadBtn,
+      },
+      {
+        title: "✏️ 할 일 적기",
+        body: (
+          <>
+            여기에 오늘 할 일을 적어요.<br />
+            예) \"수학 1장\", \"영어 10분\" 같은 식으로요.
+          </>
+        ),
+        targetRef: refInput,
+      },
+      {
+        title: "➕ 입력 버튼",
+        body: (
+          <>
+            다 적었으면 \"입력\"을 눌러서 목록에 추가해요.<br />
+            키보드 Enter로도 추가할 수 있어요.
+          </>
+        ),
+        targetRef: refAddBtn,
+      },
+      {
+        title: "✅ 오늘 할 일 목록",
+        body: (
+          <>
+            할 일을 끝내면 완료(체크)를 눌러요.<br />
+            다 끝내면 축하 효과도 나와요 🎉
+          </>
+        ),
+        targetRef: refTodoList,
+      },
+      {
+        title: "🗓️ 달력으로 날짜 바꾸기",
+        body: (
+          <>
+            어제/내일 할 일을 보고 싶으면 달력을 눌러요.<br />
+            완료한 날에는 도장이 찍혀요.
+          </>
+        ),
+        targetRef: refCalendarBtn,
+      },
+    ],
+    []
+  );
+
+  // ✅ 첫 방문이면 자동으로 투어 시작
+  useEffect(() => {
+    if (loading) return;
+
+    try {
+      const uid = me?.id ?? "anon";
+      const key = `planner_tour_seen_v1:${uid}`;
+
+      const seen = localStorage.getItem(key);
+      if (seen === "1") return;
+
+      startTour();
+    } catch {
+      startTour();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, me?.id]);
+
+
+
 
   useEffect(() => () => clearInterval(timerRef.current), []);
 
@@ -1311,28 +1437,25 @@ function Planner() {
   // =======================
   // 푸터
   // =======================
-  // ✅ 가장 안전한 방식: "학생 웹"을 먼저 열고(앱이 유니버설링크 지원하면 앱으로 전환),
-  // 없으면 그대로 웹/스토어로 안내하는 형태
   const openGrapeSeed = () => {
     const ua = navigator.userAgent.toLowerCase();
 
     // 1) PC/모바일 공통으로 먼저 시도할 "학생 웹"
-    //    (앱이 Universal Link를 지원하면, 여기서 앱으로 넘어갈 수도 있어요)
     const studentWeb = "https://students.grapeseed.com"; // 공식 학생 웹(일반적으로 이쪽이 기본)
 
     // 2) 스토어 링크 (너가 적어준 것 그대로 OK)
     const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn";
     const appStore  = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
 
-    // ✅ 0) 문자열 includes 사용 (contains는 JS에 없음!)
+    // 0) 문자열 includes 사용 (contains는 JS에 없음!)
     const isAndroid = ua.includes("android");
     const isIOS = ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
 
-    // ✅ 1) 일단 학생 웹을 열어본다 (유효하지 않다 팝업이 안 뜸)
+    // 1) 일단 학생 웹을 열어본다 (유효하지 않다 팝업이 안 뜸)
     //    - 같은 탭에서 열면 사용자가 "뒤로가기"도 편함
     window.location.href = studentWeb;
 
-    // ✅ 2) '웹으로 갔는데도 앱이 안 열리는' 사용자에게 선택권을 주기 위해
+    // 2) '웹으로 갔는데도 앱이 안 열리는' 사용자에게 선택권을 주기 위해
     //    잠깐 뒤 스토어로 유도(원하면 이 부분은 confirm으로 바꿔도 됨)
     setTimeout(() => {
       if (isAndroid) {
@@ -1382,7 +1505,7 @@ function Planner() {
             <div className="today-row" title="선택한 날짜">
               <span className="today">{formatSelectedKorean()}</span>
 
-              <button type="button" className="cal-btn" onClick={openCalendar} title="달력 열기">
+              <button type="button" className="cal-btn" ref={refCalendarBtn} onClick={openCalendar} title="달력 열기">
                 <svg
                   className="cal-btn-ico"
                   width="16"
@@ -1412,6 +1535,7 @@ function Planner() {
           <button
             type="button"
             className="preset-btn preset-btn-primary"
+            ref={refLoadBtn}
             onClick={openLoadModal}
             disabled={importingSample || busyMyList}
           >
@@ -1436,6 +1560,7 @@ function Planner() {
             value={todo}
             onChange={handleChange}
             placeholder="새로운 내용을 입력하세요"
+            ref={refInput}
             className="todo-input"
             onKeyDown={(e) => {
               if (e.key === "Enter" && todo.trim()) addTodo();
@@ -1443,6 +1568,7 @@ function Planner() {
           />
           <button
             className={`todo-add-btn ${todo.trim() ? "active" : ""}`}
+            ref={refAddBtn}
             onClick={addTodo}
             disabled={!todo.trim()}
           >
@@ -1512,7 +1638,7 @@ function Planner() {
         )}
       </div>
 
-      <ul className="todo-list">
+      <ul ref={refTodoList} className="todo-list" >
         {filteredTodos.map((t, idx) => (
           <TodoItem
             key={t.id}
@@ -1645,6 +1771,16 @@ function Planner() {
         doneDayKeys={doneDayKeys}
       />
 
+      <HelpModal open={showHelpModal} onClose={closeHelp} />
+
+      <OnboardingTour
+        open={tourOpen}
+        stepIndex={tourStep}
+        steps={tourSteps}
+        onClose={closeTour}
+        onChangeStep={setTourStep}
+      />
+
       <footer className="planner-footer-simple">
         <div className="footer-links">
           <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
@@ -1670,6 +1806,10 @@ function Planner() {
             🍇그레이프시드
           </a>
           <span>|</span>
+        
+          <a onClick={openHelp}>❓도움말</a>
+           <span>|</span>
+
           <a onClick={handleLogout}>로그아웃</a>
         </div>
         <div className="footer-copy">© {new Date().getFullYear()} Study Planner</div>
