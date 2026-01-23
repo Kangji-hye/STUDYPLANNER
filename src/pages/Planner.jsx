@@ -343,6 +343,7 @@ const closeHelp = () => setShowHelpModal(false);
       a.volume = 0.9;
       try {
         a.pause();
+      // eslint-disable-next-line no-empty
       } catch {}
       a.currentTime = 0;
 
@@ -417,6 +418,7 @@ const closeHelp = () => setShowHelpModal(false);
       console.error("seedSampleTodosIfEmpty error:", err);
       try {
         localStorage.removeItem(seededKey);
+      // eslint-disable-next-line no-empty
       } catch {}
     }
   };
@@ -509,6 +511,7 @@ const closeHelp = () => setShowHelpModal(false);
     const seedKey = getAutoSeedKey(userId, dayKey);
     try {
       if (localStorage.getItem(seedKey) === "1") return;
+    // eslint-disable-next-line no-empty
     } catch {}
 
     try {
@@ -521,6 +524,7 @@ const closeHelp = () => setShowHelpModal(false);
 
       try {
         localStorage.setItem(seedKey, "1");
+      // eslint-disable-next-line no-empty
       } catch {}
 
       await fetchTodos(userId, dayKey);
@@ -579,6 +583,7 @@ const closeHelp = () => setShowHelpModal(false);
 
       try {
         localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+      // eslint-disable-next-line no-empty
       } catch {}
 
       if (!profileData) {
