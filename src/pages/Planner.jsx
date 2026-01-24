@@ -76,6 +76,7 @@ async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
 function Planner() {
   const navigate = useNavigate();
   const { finishEnabled } = useSoundSettings();
+  const DEFAULT_FINISH_SOUND = "/finish1.mp3";
 
   // =======================
   // 기본 상태
@@ -89,12 +90,12 @@ function Planner() {
   const [usedEmojis, setUsedEmojis] = useState([]);
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
-
-  // ✅ 삭제 모드(체크박스로 다중 선택 삭제)
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
+  const [verseLines, setVerseLines] = useState([]); 
+  const [verseRef, setVerseRef] = useState("");
 
-
+  
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
 
@@ -134,6 +135,17 @@ function Planner() {
     calMonth,
   });
 
+//말씀
+ const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
+
+function pickStableColor(seedText) {
+  // 아주 간단한 해시(문자 코드 합) → 같은 seed는 같은 색
+  const s = String(seedText ?? "");
+  let sum = 0;
+  for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+  return VERSE_COLORS[sum % VERSE_COLORS.length];
+}
+
   
 //도움말
 const [showHelpModal, setShowHelpModal] = useState(false);
@@ -141,8 +153,6 @@ const [showHelpModal, setShowHelpModal] = useState(false);
 const openHelp = () => setShowHelpModal(true);
 const closeHelp = () => setShowHelpModal(false);
 
-
-  
 
   // =======================
   // 프로필(캐시)
@@ -164,13 +174,15 @@ const closeHelp = () => setShowHelpModal(false);
   const finishAudioRef = useRef(null);
 
   // 오디오 언락(중복 useEffect 제거)
-  useAudioUnlock(finishAudioRef, profile?.finish_sound ?? "/finish.mp3");
+  useAudioUnlock(finishAudioRef, profile?.finish_sound ?? DEFAULT_FINISH_SOUND);
 
   // 최신 todos 참조
   const todosRef = useRef([]);
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
+
+  
 
   // =======================
   // 목록 불러오기 모달
@@ -324,39 +336,69 @@ const closeHelp = () => setShowHelpModal(false);
     });
   };
 
-  const playFinishSound = (overrideSrc) => {
-    try {
-      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+  // ✅ 모두 완료 효과음 (안전형)
+// - profile.finish_sound(마이페이지에서 고른 값) 우선
+// - 이상하면 DEFAULT_FINISH_SOUND로 자동 fallback
+const playFinishSound = (overrideSrc) => {
+  try {
+    // 소리 설정 OFF면 재생하지 않음
+    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-      let src = (overrideSrc ?? profile?.finish_sound ?? "/finish.mp3");
-      src = String(src).trim();
-      if (!src) src = "/finish.mp3";
-      if (!src.toLowerCase().includes(".mp3")) src = "/finish.mp3";
+    // 1) 재생할 소스 결정 (우선순위: override > profile > 기본값)
+    let src = String(overrideSrc ?? profile?.finish_sound ?? DEFAULT_FINISH_SOUND).trim();
+    if (!src) src = DEFAULT_FINISH_SOUND;
 
-      if (!finishAudioRef.current) {
-        finishAudioRef.current = new Audio(src);
-        finishAudioRef.current.preload = "auto";
-      }
-
-      const a = finishAudioRef.current;
-
-      if (a.src !== new URL(src, window.location.origin).href) {
-        a.src = src;
-        a.load();
-      }
-
-      a.volume = 0.9;
-      try {
-        a.pause();
-      // eslint-disable-next-line no-empty
-      } catch {}
-      a.currentTime = 0;
-
-      a.play().catch((e) => console.warn("finish sound blocked:", e));
-    } catch (e) {
-      console.warn("finish sound error:", e);
+    // 2) 확장자 체크(지금 프로젝트는 mp3만 쓰는 전제)
+    //    혹시 다른 값이 들어오면 기본값으로 되돌림
+    if (!src.toLowerCase().endsWith(".mp3")) {
+      src = DEFAULT_FINISH_SOUND;
     }
-  };
+
+    // 3) 오디오 객체는 재사용 (매번 new Audio 하면 모바일에서 불안정해질 수 있어요)
+    if (!finishAudioRef.current) {
+      finishAudioRef.current = new Audio();
+      finishAudioRef.current.preload = "auto";
+    }
+
+    const a = finishAudioRef.current;
+
+    // 4) src가 바뀌면 교체 + 로드
+    const nextHref = new URL(src, window.location.origin).href;
+    if (a.src !== nextHref) {
+      a.src = src;
+      a.load();
+    }
+
+    // 5) 볼륨/되감기
+    a.volume = 0.9;
+    try { a.pause(); } catch {}
+    a.currentTime = 0;
+
+    // 6) 재생 (실패하면 기본값으로 1번 더 시도)
+    a.play().catch((e) => {
+      console.warn("finish sound blocked:", e);
+
+      // NotSupportedError면 대부분 "파일 없음/오디오 아님/코덱 문제"라서
+      // 기본값으로 한 번 더 바꿔서 재생 시도
+      if (String(e?.name) === "NotSupportedError") {
+        try {
+          const fallbackHref = new URL(DEFAULT_FINISH_SOUND, window.location.origin).href;
+          if (a.src !== fallbackHref) {
+            a.src = DEFAULT_FINISH_SOUND;
+            a.load();
+          }
+          a.currentTime = 0;
+          a.play().catch((e2) => console.warn("finish sound fallback failed:", e2));
+        } catch (e3) {
+          console.warn("finish sound fallback error:", e3);
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("finish sound error:", e);
+  }
+};
+
 
   // =======================
   // 날짜별 todos 조회(레이스 방지)
@@ -569,7 +611,7 @@ const closeHelp = () => setShowHelpModal(false);
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("id, nickname, birthdate, is_male, finish_sound")
+        .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual, is_admin")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -580,9 +622,10 @@ const closeHelp = () => setShowHelpModal(false);
               nickname: user.user_metadata?.nickname ?? "닉네임",
               birthdate: user.user_metadata?.birthdate ?? null,
               is_male: user.user_metadata?.is_male ?? true,
-              finish_sound: user.user_metadata?.finish_sound ?? "/finish.mp3",
+              finish_sound: user.user_metadata?.finish_sound ?? DEFAULT_FINISH_SOUND,
             }
           : profileData;
+          
 
       if (mounted) setProfile(nextProfile);
 
@@ -600,7 +643,9 @@ const closeHelp = () => setShowHelpModal(false);
               nickname: nextProfile.nickname,
               birthdate: nextProfile.birthdate,
               is_male: nextProfile.is_male,
-              finish_sound: nextProfile.finish_sound,
+              finish_sound:
+            (profileData.finish_sound && String(profileData.finish_sound).trim()) ||
+            DEFAULT_FINISH_SOUND,
             },
             { onConflict: "id" }
           );
@@ -1159,18 +1204,16 @@ const deleteSelectedTodos = async () => {
 
 
   // =======================
-  // 스탑워치/타이머/하가다 (원본 유지)
+  // 스탑워치/타이머/하가다/
   // =======================
   const [timerSoundOn, setTimerSoundOn] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
   const timerRef = useRef(null);
-  
-
 
     // =======================
-  // ✅ 첫 방문 말풍선 단계 안내(온보딩 투어)
+  //  첫 방문 말풍선 단계 안내(온보딩 투어)
   // - 도움말 "창" 대신, 화면 위에 말풍선을 단계별로 띄워서 안내합니다.
   // - 처음 1번만 자동으로 뜨고, 이후엔 푸터의 "도움말"로 다시 볼 수 있게 합니다.
   // =======================
@@ -1412,6 +1455,48 @@ const deleteSelectedTodos = async () => {
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
 
+
+ //관리자
+  useEffect(() => {
+  if (!me?.id) return;
+  const grade = Number(profile?.grade_code);
+
+  // 학년이 아직 없으면 말씀 표시를 안 함
+  if (!Number.isFinite(grade)) {
+    setVerseLines([]);
+    return;
+  }
+
+  const run = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("daily_verses")
+        .select("ref_text, content")
+        .eq("day_key", selectedDayKey)
+        .eq("grade_code", grade)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      setVerseRef(String(data?.ref_text ?? "").trim()); 
+      const lines = String(data?.content ?? "")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      setVerseLines(lines);
+    } catch (err) {
+      console.error("load daily_verses error:", err);
+      setVerseLines([]);
+    }
+  };
+
+  run();
+}, [me?.id, selectedDayKey, profile?.grade_code]);
+
+
+
+
   // =======================
   // 아이콘/닉네임
   // =======================
@@ -1510,6 +1595,7 @@ const deleteSelectedTodos = async () => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
+
   // =======================
   // 푸터
   // =======================
@@ -1562,9 +1648,36 @@ const deleteSelectedTodos = async () => {
             초등 스터디 플래너
           </h1>
 
-          <div className="weather" title="오늘의 날씨">
-            <WeatherIcon code={weatherCode} size={52} />
+
+
+        {/* 관리자버튼 */}
+          <div className="top-right">
+            {/* 관리자만 보이는 버튼 */}
+            {(me?.email === "kara@kara.com" || profile?.is_admin === true) && (
+              <button
+                type="button"
+                className="admin-link-btn"
+                onClick={() => navigate("/admin")}
+                title="관리자 페이지"
+              >
+                관리자
+              </button>
+            )}
+
+            <div className="weather" title="오늘의 날씨">
+              <WeatherIcon code={weatherCode} size={52} />
+            </div>
           </div>
+
+
+
+
+          {/* <div className="weather" title="오늘의 날씨">
+            <WeatherIcon code={weatherCode} size={52} />
+          </div> */}
+
+          
+
         </div>
 
         <div className="sub-row">
@@ -1899,6 +2012,29 @@ const deleteSelectedTodos = async () => {
         increaseHagada={increaseHagada}
         resetHagada={resetHagada}
       />
+
+      {verseLines.length > 0 && (
+        <div className="verse-box" aria-label="오늘의 말씀">
+          <div className="verse-title">오늘의 말씀</div>
+
+          {verseRef ? <div className="verse-ref">{verseRef}</div> : null}
+
+          <div className="verse-text">
+            {verseLines.map((line, idx) => (
+              <span
+                key={`${selectedDayKey}-${idx}`}
+                className="verse-chunk"
+                style={{
+                  color: pickStableColor(`${selectedDayKey}:${idx}`),
+                }}
+              >
+                {line}{idx < verseLines.length - 1 ? " " : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       <LoadScheduleModal
         open={showLoadModal}

@@ -602,3 +602,23 @@ label.gender {
     height: 42px;
   }
 }
+
+/* 관리자 */
+.grade-auto-btn{
+  margin-left: 10px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.grade-hint{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+

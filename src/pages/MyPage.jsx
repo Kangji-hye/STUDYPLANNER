@@ -6,11 +6,7 @@ import "./MyPage.css";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
-/**
- * ✅ 모두 완료 기본 효과음
- * - "요란한 축하"를 기본값으로 고정
- * - Planner(완료 시 재생) 쪽 기본값도 같은 값으로 맞추는 걸 추천
- */
+/*모두 완료 기본 효과음*/
 const DEFAULT_FINISH_SOUND = "/finish1.mp3";
 
 // 음악 리스트(옵션)
@@ -49,6 +45,8 @@ const MyPage = () => {
     birthdate: "",
     is_male: true,
     finish_sound: DEFAULT_FINISH_SOUND,
+    grade_code: null,
+    grade_manual: false,
   });
 
   // 셀렉트 박스 UI 전용 상태
@@ -70,7 +68,7 @@ const MyPage = () => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("id, nickname, birthdate, is_male, finish_sound")
+      .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual")
       .eq("id", user.id)
       .single();
 
@@ -89,6 +87,18 @@ const MyPage = () => {
           finish_sound: profileData?.finish_sound || DEFAULT_FINISH_SOUND,
         };
 
+    // src/pages/MyPage.jsx (loadMyProfile 내부, nextProfile 만든 다음쯤)
+    const autoCode = calcGradeCodeFromBirthdate(nextProfile.birthdate);
+
+    // grade_manual이 true면 사용자가 고른 값을 존중
+    // grade_manual이 false면 자동 계산값을 사용
+    const finalGradeCode =
+      nextProfile?.grade_manual ? nextProfile?.grade_code : autoCode;
+
+    // nextProfile에도 반영(화면/저장 일치)
+    nextProfile.grade_code = finalGradeCode;
+    nextProfile.grade_manual = Boolean(nextProfile?.grade_manual);
+
     setProfile(nextProfile);
 
     setForm({
@@ -96,6 +106,9 @@ const MyPage = () => {
       birthdate: nextProfile.birthdate ?? "",
       is_male: Boolean(nextProfile.is_male),
       finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
+
+      grade_code: nextProfile.grade_code ?? null,
+      grade_manual: Boolean(nextProfile.grade_manual),
     });
 
     // ✅ 셀렉트는 항상 플레이스홀더가 보이게 초기화
@@ -166,6 +179,8 @@ const MyPage = () => {
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
       finish_sound: form.finish_sound || DEFAULT_FINISH_SOUND,
+      grade_code: form.grade_code,
+      grade_manual: Boolean(form.grade_manual),
     };
 
     const { data, error } = await supabase
@@ -201,7 +216,24 @@ const MyPage = () => {
   };
 
   
-  
+  //관리자
+  function calcGradeCodeFromBirthdate(birthdateStr) {
+  // birthdateStr: "2018-03-10" 이런 형태
+  const s = String(birthdateStr ?? "").trim();
+  if (!s) return null;
+
+  const y = Number(s.slice(0, 4));
+  if (!Number.isFinite(y)) return null;
+
+  const currentYear = new Date().getFullYear(); // 2026년이면 2026
+  const code = currentYear - y - 6;
+
+  // 허용 범위(-1~6)로만 제한
+  if (code < -1) return -1;
+  if (code > 6) return 6;
+  return code;
+}
+
 
 
   // 비밀번호 바꾸기
@@ -302,6 +334,55 @@ const MyPage = () => {
             />
           </span>
         </div>
+
+        {/* 학년 */}
+        <div className="row">
+          <span className="label">학년</span>
+          <span className="value">
+            <select
+              value={form.grade_code ?? ""}
+              onChange={(e) => {
+                const v = e.target.value === "" ? null : Number(e.target.value);
+                setForm((p) => ({
+                  ...p,
+                  grade_code: v,
+                  grade_manual: true, // ✅ 사용자가 만진 순간 "수동"으로 전환
+                }));
+              }}
+            >
+              <option value="">자동(생년월일 기준)</option>
+              <option value={-1}>6세</option>
+              <option value={0}>7세</option>
+              <option value={1}>1학년</option>
+              <option value={2}>2학년</option>
+              <option value={3}>3학년</option>
+              <option value={4}>4학년</option>
+              <option value={5}>5학년</option>
+              <option value={6}>6학년</option>
+            </select>
+
+            <button
+              type="button"
+              className="grade-auto-btn"
+              onClick={() => {
+                const auto = calcGradeCodeFromBirthdate(form.birthdate);
+                setForm((p) => ({
+                  ...p,
+                  grade_code: auto,
+                  grade_manual: false, // ✅ 다시 자동 모드로
+                }));
+              }}
+              title="생년월일로 자동 설정"
+            >
+              자동으로 맞추기
+            </button>
+
+            <div className="grade-hint">
+              예) 2018년생은 2026년에 2학년이에요.
+            </div>
+          </span>
+        </div>
+
 
         {/* 성별 */}
         <div className="row gender">

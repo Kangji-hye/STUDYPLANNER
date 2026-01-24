@@ -5,6 +5,7 @@ import AppLayout from "./layouts/AppLayout";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Admin from "./pages/Admin";
 import Find from "./pages/Find";
 import ResetPassword from "./pages/ResetPassword";
 
@@ -46,6 +47,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <MyPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
                 </ProtectedRoute>
               }
             />
