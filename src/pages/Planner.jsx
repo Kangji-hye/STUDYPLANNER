@@ -90,6 +90,11 @@ function Planner() {
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
 
+  // ✅ 삭제 모드(체크박스로 다중 선택 삭제)
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
+
+
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
 
@@ -638,7 +643,7 @@ const closeHelp = () => setShowHelpModal(false);
     const run = async () => {
       const rows = await fetchTodos(me.id, selectedDayKey);
       await fetchHallOfFame(selectedDayKey);
-      await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
+      // await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
     };
 
     run();
@@ -1087,6 +1092,72 @@ const closeHelp = () => setShowHelpModal(false);
     }
   };
 
+  
+
+//삭제 관련
+// 체크박스 1개 선택/해제
+const toggleSelectForDelete = (todoId) => {
+  setSelectedDeleteIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(todoId)) next.delete(todoId);
+    else next.add(todoId);
+    return next;
+  });
+};
+
+// 모두 선택 / 모두 해제
+const selectAllForDelete = () => {
+  const ids = (filteredTodos ?? []).map((t) => t.id);
+  setSelectedDeleteIds(new Set(ids));
+};
+
+const clearAllForDelete = () => {
+  setSelectedDeleteIds(new Set());
+};
+
+// ✅ 선택 삭제(다중 삭제)
+const deleteSelectedTodos = async () => {
+  if (!me?.id) return;
+
+  const ids = Array.from(selectedDeleteIds);
+  if (ids.length === 0) {
+    alert("삭제할 항목을 선택해 주세요.");
+    return;
+  }
+
+  const ok = window.confirm(`선택한 ${ids.length}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`);
+  if (!ok) return;
+
+  try {
+    // ✅ 한 번에 삭제
+    const { error } = await supabase
+      .from("todos")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+
+    // ✅ 화면에서도 즉시 반영
+    const next = (todosRef.current ?? []).filter((t) => !selectedDeleteIds.has(t.id));
+    setTodos(next);
+
+    // ✅ 완료 기록(명예의 전당)도 상태에 맞게 정리
+    const isAllCompleted = next.length > 0 && next.every((t) => t.completed);
+    if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
+
+    // ✅ 선택/모드 정리
+    clearAllForDelete();
+    setDeleteMode(false);
+  } catch (err) {
+    console.error("deleteSelectedTodos error:", err);
+    alert(err?.message ?? "삭제 중 오류가 발생했습니다.");
+  }
+};
+
+
+
+
+
   // =======================
   // 스탑워치/타이머/하가다 (원본 유지)
   // =======================
@@ -1370,46 +1441,46 @@ const closeHelp = () => setShowHelpModal(false);
   // =======================
   // 선택 날짜 전체 삭제
   // =======================
-  const deleteAllTodos = async () => {
-    if (!me?.id) return;
+  // const deleteAllTodos = async () => {
+  //   if (!me?.id) return;
 
-    const ok = window.confirm(
-      "선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
-    );
-    if (!ok) return;
+  //   const ok = window.confirm(
+  //     "선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
+  //   );
+  //   if (!ok) return;
 
-    try {
-      const { data: deletedRows, error } = await supabase
-        .from("todos")
-        .delete()
-        .eq("user_id", me.id)
-        .eq("day_key", selectedDayKey)
-        .select("id");
+  //   try {
+  //     const { data: deletedRows, error } = await supabase
+  //       .from("todos")
+  //       .delete()
+  //       .eq("user_id", me.id)
+  //       .eq("day_key", selectedDayKey)
+  //       .select("id");
 
-      if (error) throw error;
+  //     if (error) throw error;
 
-      // 완료 기록도 정리
-      await removeCompletionForDay(selectedDayKey);
+  //     // 완료 기록도 정리
+  //     await removeCompletionForDay(selectedDayKey);
 
-      // 서버에 진짜 남아있는지 재확인
-      const left = await fetchTodos(me.id, selectedDayKey);
+  //     // 서버에 진짜 남아있는지 재확인
+  //     const left = await fetchTodos(me.id, selectedDayKey);
 
-      if ((left ?? []).length > 0) {
-        alert("삭제가 완전히 적용되지 않았어요. 네트워크/권한/날짜 선택을 확인해주세요.");
-        console.warn("deleteAllTodos: rows still left", {
-          deletedCount: deletedRows?.length ?? 0,
-          left,
-        });
-        return;
-      }
+  //     if ((left ?? []).length > 0) {
+  //       alert("삭제가 완전히 적용되지 않았어요. 네트워크/권한/날짜 선택을 확인해주세요.");
+  //       console.warn("deleteAllTodos: rows still left", {
+  //         deletedCount: deletedRows?.length ?? 0,
+  //         left,
+  //       });
+  //       return;
+  //     }
 
-      // fetchTodos가 setTodos까지 해주지만, 확실히 비우기
-      setTodos([]);
-    } catch (err) {
-      console.error("deleteAllTodos error:", err);
-      alert(err?.message ?? "전체 삭제 중 오류가 발생했습니다.");
-    }
-  };
+  //     // fetchTodos가 setTodos까지 해주지만, 확실히 비우기
+  //     setTodos([]);
+  //   } catch (err) {
+  //     console.error("deleteAllTodos error:", err);
+  //     alert(err?.message ?? "전체 삭제 중 오류가 발생했습니다.");
+  //   }
+  // };
 
   // =======================
   // 로그아웃
@@ -1551,13 +1622,13 @@ const closeHelp = () => setShowHelpModal(false);
             💾 내 목록 저장
           </button>
 
-          <button
+          {/* <button
             className="preset-btn mini-danger-btn"
             title="선택한 날짜 목록 전체 삭제"
             onClick={deleteAllTodos}
           >
             ❌ 오늘 목록 모두 삭제
-          </button>
+          </button> */}
         </div>
 
         <div className="todo-bar-inputs">
@@ -1644,20 +1715,107 @@ const closeHelp = () => setShowHelpModal(false);
       </div>
 
       <ul ref={refTodoList} className="todo-list" >
-        {filteredTodos.map((t, idx) => (
-          <TodoItem
-            key={t.id}
-            t={t}
-            onToggle={onToggle}
-            onDelete={onDelete}
-            reorderMode={reorderMode}
-            onMoveUp={moveTodoUp}
-            onMoveDown={moveTodoDown}
-            isFirst={idx === 0}
-            isLast={idx === filteredTodos.length - 1}
-          />
-        ))}
+        {/* 할 일 목록 영역 */}
+        {(filteredTodos ?? []).length === 0 ? (
+          <div className="empty-todo">
+            오늘 일정이 없습니다.
+          </div>
+        ) : (
+          <ul>
+            {filteredTodos.map((t, idx) => (
+              <TodoItem
+                key={t.id}
+                t={t}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                reorderMode={reorderMode}
+                onMoveUp={moveTodoUp}
+                onMoveDown={moveTodoDown}
+                isFirst={idx === 0}
+                isLast={idx === filteredTodos.length - 1}
+
+                /* 삭제 모드용 */
+                deleteMode={deleteMode}
+                deleteChecked={selectedDeleteIds.has(t.id)}
+                onToggleDeleteCheck={() => toggleSelectForDelete(t.id)}
+              />
+            ))}
+          </ul>
+        )}
+
       </ul>
+
+      {/* 삭제 툴바 */}
+        <div className="delete-toolbar">
+          {!deleteMode ? (
+            <button
+              type="button"
+              className={`filter-btn reorder-btn ${deleteMode ? "active" : ""}`}
+              onClick={() => {
+                if ((filteredTodos ?? []).length === 0) {
+                  alert("삭제할 것이 없어요 🙂");
+                  return;
+                }
+
+                setDeleteMode(true);
+                clearAllForDelete();
+              }}
+            >
+              삭제
+            </button>
+
+          ) : (
+            <div className="delete-mode-row">
+              <div className="filter-group-left" style={{ flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="filter-btn reorder-btn"
+                  onClick={selectAllForDelete}
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredTodos?.length > 0 &&
+                      selectedDeleteIds.size === filteredTodos.length
+                    }
+                    readOnly
+                    onClick={(e) => e.stopPropagation()}
+                    className="select-all-checkbox"
+                  />
+                  모두 선택
+                </button>
+
+
+
+                <button type="button" className="filter-btn" onClick={clearAllForDelete}>
+                  선택 해제
+                </button>
+
+                <button
+                  type="button"
+                  className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
+                  onClick={deleteSelectedTodos}
+                  disabled={selectedDeleteIds.size === 0}
+                  title={selectedDeleteIds.size === 0 ? "삭제할 항목을 먼저 체크해 주세요" : "선택 항목 삭제"}
+                >
+                  선택 삭제 ({selectedDeleteIds.size})
+                </button>
+
+                <button
+                  type="button"
+                  className="filter-btn"
+                  onClick={() => {
+                    setDeleteMode(false);
+                    clearAllForDelete();
+                  }}
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
 
       <div className="finish">
         <span className="title">메모</span>

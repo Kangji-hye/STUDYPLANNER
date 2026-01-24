@@ -206,7 +206,7 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
-/* ✅ 필터바: 좌/우 정렬 버전 (inline style 제거용) */
+/* 필터바: 좌/우 정렬 버전 (inline style 제거용) */
 .filter-bar.filter-bar-split {
   justify-content: space-between;
   align-items: center;
@@ -230,4 +230,31 @@
 .todo-list li button {
   min-width: 55px;
   font-size: var(--fs-small);
+}
+
+
+/* =========================
+   할 일 없을 때 안내 문구
+========================= */
+.empty-todo{
+  margin: 24px 0 32px;
+  padding: 28px 12px;
+
+  text-align: center;
+  font-size: 1.05rem;
+  color: var(--muted);
+
+  border-radius: 18px;
+  background: rgba(255,255,255,0.6);
+  border: 2px dashed var(--line);
+}
+
+
+
+/* =========================
+   "모두 선택" 버튼 안 체크박스
+========================= */
+.select-all-checkbox{
+  margin-right: 6px; 
+  pointer-events: none;
 }
