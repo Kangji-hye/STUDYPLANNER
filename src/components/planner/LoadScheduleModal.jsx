@@ -1,6 +1,6 @@
 // src/components/planner/LoadScheduleModal.jsx
 // 일정불러오기
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import supabase from "../../supabaseClient";
 
 export default function LoadScheduleModal({
@@ -26,13 +26,10 @@ export default function LoadScheduleModal({
   importMySingleList,
   importSampleTodos,
 
+  // ✅ 미리보기용 유저 id
   userId,
 }) {
-  if (!open) return null;
-
-  const disabledAll = importingSample || busyMyList;
-
-  // ✅ 미리보기: 선택한 옵션의 목록을 미리 보여주기
+  // ✅ Hook은 무조건 최상단(early return 위)
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewItems, setPreviewItems] = useState([]); // string[] (title만)
 
@@ -46,7 +43,19 @@ export default function LoadScheduleModal({
     []
   );
 
-  const fetchPreview = async () => {
+  const disabledAll = importingSample || busyMyList;
+
+  // ✅ 체크박스는 UI 하나지만 로직은 둘 다 씀 → 동기화
+  const isReplaceChecked = loadChoice === "my" ? loadReplace : sampleModeReplace;
+
+  const setReplaceChecked = (v) => {
+    setSampleModeReplace(v);
+    setLoadReplace(v);
+  };
+
+  // ✅ 미리보기 불러오기 (useCallback으로 의존성 안전하게)
+  const fetchPreview = useCallback(async () => {
+    // 모달 닫혀있으면 아무것도 안 함
     if (!open) return;
 
     // 1) 내가 만든 목록 미리보기
@@ -67,6 +76,7 @@ export default function LoadScheduleModal({
           .maybeSingle();
 
         if (setErr) throw setErr;
+
         if (!setRow?.id) {
           setPreviewItems([]);
           return;
@@ -123,14 +133,16 @@ export default function LoadScheduleModal({
     } finally {
       setPreviewLoading(false);
     }
-  };
+  }, [open, loadChoice, userId, hasMyList, SAMPLE_TABLE_BY_KEY]);
 
   // ✅ 모달 열릴 때 + 라디오 선택 바뀔 때 미리보기 새로고침
   useEffect(() => {
+    if (!open) return;
     fetchPreview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, loadChoice, userId, hasMyList]);
+  }, [open, fetchPreview]);
 
+  // ✅ 여기서부터 early return (Hook 아래로 내려야 규칙 통과)
+  if (!open) return null;
 
   // 버튼 문구 자동 변경
   const actionLabel =
@@ -139,14 +151,6 @@ export default function LoadScheduleModal({
       : loadChoice === "my"
         ? "내 일정 불러오기"
         : "샘플 추가하기";
-
-  const isReplaceChecked = loadChoice === "my" ? loadReplace : sampleModeReplace;
-
-  const setReplaceChecked = (v) => {
-    // UI는 하나지만 로직은 둘 다 씀 → 동기화
-    setSampleModeReplace(v);
-    setLoadReplace(v);
-  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -226,9 +230,7 @@ export default function LoadScheduleModal({
               background: "#fff",
             }}
           >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              미리보기
-            </div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>미리보기</div>
 
             {previewLoading ? (
               <div style={{ color: "var(--muted)" }}>불러오는 중...</div>
@@ -239,16 +241,10 @@ export default function LoadScheduleModal({
                   : "샘플 목록이 비어있어요."}
               </div>
             ) : (
-              <div
-                style={{
-                  maxHeight: 140,
-                  overflow: "auto",
-                  paddingRight: 4,
-                }}
-              >
+              <div style={{ maxHeight: 140, overflow: "auto", paddingRight: 4 }}>
                 {previewItems.slice(0, 12).map((t, i) => (
                   <div
-                    key={i}
+                    key={`${t}-${i}`}
                     style={{
                       fontSize: 14,
                       lineHeight: 1.35,
@@ -260,6 +256,7 @@ export default function LoadScheduleModal({
                     {t}
                   </div>
                 ))}
+
                 {previewItems.length > 12 && (
                   <div style={{ color: "var(--muted)", marginTop: 6 }}>
                     …그 외 {previewItems.length - 12}개 더 있어요
@@ -270,7 +267,6 @@ export default function LoadScheduleModal({
           </div>
 
           <div className="load-divider" />
-
 
           <label className="modal-check">
             <input
@@ -292,7 +288,6 @@ export default function LoadScheduleModal({
                 await importMySingleList();
                 return;
               }
-              // vacation/weekday/weekend
               await importSampleTodos(loadChoice);
             }}
           >
