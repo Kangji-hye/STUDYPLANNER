@@ -165,7 +165,6 @@ const MyPage = () => {
       nickname,
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
-      // ✅ 비어있으면 기본값으로 저장
       finish_sound: form.finish_sound || DEFAULT_FINISH_SOUND,
     };
 
@@ -183,7 +182,7 @@ const MyPage = () => {
       return;
     }
 
-    // ✅ 저장 결과도 기본값 보정
+    // 저장 결과도 기본값 보정
     const normalized = {
       ...data,
       finish_sound: data?.finish_sound || DEFAULT_FINISH_SOUND,
@@ -200,6 +199,38 @@ const MyPage = () => {
 
     alert("저장되었습니다.");
   };
+
+  
+  
+
+
+  // 비밀번호 바꾸기
+  const changePassword = async () => {
+    const newPassword = prompt("새 비밀번호를 입력해 주세요 (8자 이상)");
+
+    if (!newPassword) return;
+
+    if (newPassword.length < 8) {
+      alert("비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      alert("비밀번호 변경 중 오류가 발생했습니다.");
+      return;
+    }
+
+    alert("비밀번호가 변경되었습니다. 다음 로그인부터 적용됩니다.");
+  };
+
+
+
+
+
 
   if (loading) {
     return (
@@ -220,7 +251,7 @@ const MyPage = () => {
     );
   }
 
-  // ✅ 현재 적용 중인 효과음 라벨(아래 표시용)
+  //  현재 적용 중인 효과음 라벨(아래 표시용)
   const currentSoundLabel = getSoundLabelByValue(form.finish_sound);
 
   return (
@@ -258,6 +289,8 @@ const MyPage = () => {
             />
           </span>
         </div>
+
+      
 
         <div className="row">
           <span className="label">생년월일</span>
@@ -366,6 +399,7 @@ const MyPage = () => {
         <button className="outline-btn" onClick={() => navigate("/planner")}>
           플래너로
         </button>
+        <button onClick={changePassword}>비밀번호 변경</button>
         <button onClick={logout}>로그아웃</button>
       </div>
                     
