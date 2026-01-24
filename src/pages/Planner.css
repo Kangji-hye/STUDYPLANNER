@@ -92,9 +92,198 @@
   font-weight: 500;
 }
 
-.verse-ref{
+/* =========================
+   ✅ 셀렉트 공통: 핑크 테두리 + 글씨 1rem + 화살표 위치 안정화
+   MyPage.css 맨 아래에 붙여넣기
+========================= */
+
+/* 효과음/학년 셀렉트가 들어있는 줄: flex에서 폭이 줄어들어도 튀어나가지 않게 */
+.sound-control-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ✅ select-wrap을 flex 아이템으로: 남은 공간을 먹고, 줄어들 땐 안 깨지게 */
+.sound-control-row .select-wrap {
+  flex: 1;
+  min-width: 0; /* 이거 없으면 overflow/튀어나감 자주 생김 */
+}
+
+/* 학년 줄도 value 안에서 폭이 깔끔하게 */
+.mypage .row .value .select-wrap {
+  width: 100%;
+  max-width: 100%; /* max-width: 420px 때문에 화살표가 튀는 경우가 있어 제거/무력화 */
+}
+
+/* ✅ 공통 랩(화살표 그리는 부모) */
+.select-wrap {
+  position: relative;
+  display: block;     /* inline-block 말고 block이 폭 계산 안정적 */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ✅ 실제 select: 핑크 테두리 + 글씨 1rem + 화살표 자리 확보 */
+.select-wrap .sound-select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  font-size: 1rem;          /* 글씨 크게 */
+  border-radius: 14px;
+
+  /* ✅ 핑크 테두리로 예쁘게 */
+  border: 2px solid #ff7aa2;
+  background: #fff;
+  line-height: 1.2;
+
+  /* 기본 화살표 제거(우리가 직접 그림) */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  min-height: 52px;              /* 기존보다 확실히 큼 */
+  padding: 10px 48px 10px 16px;  /* 위아래 여유 + 화살표 자리 */
+}
+
+/* 포커스 때 더 예쁘게(선명하게) */
+.select-wrap .sound-select:focus {
+  outline: none;
+  border-color: #ff4f8b;
+  box-shadow: 0 0 0 4px rgba(255, 122, 162, 0.18);
+}
+
+/* IE/옛 Edge 화살표 숨김 */
+.select-wrap .sound-select::-ms-expand {
+  display: none;
+}
+
+/* ✅ 우리가 그리는 아래 방향 화살표(안으로 들어오게 고정) */
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 16px;          /* 너무 크면 밖으로 나가니 적당히 */
+  top: 50%;
+  width: 10px;
+  height: 10px;
+
+  border-right: 2px solid rgba(0, 0, 0, 0.55);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.55);
+
+  transform: translateY(-55%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* =========================
+   ✅ 학년 / 효과음 셀렉트 폰트 반응형 통일
+   - 태블릿 이상: 예쁜 글씨
+   - 모바일: 시스템 기본 폰트
+========================= */
+
+/* 공통 기본값 (모바일 우선) */
+.select-wrap .sound-select,
+.select-wrap .sound-select option {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* =========================
+   태블릿 이상 (아이패드 포함)
+   ========================= */
+@media (min-width: 768px) {
+  .select-wrap .sound-select,
+  .select-wrap .sound-select option {
+    font-family: "Poor Story", "Gamja Flower", "Noto Sans KR", sans-serif;
+    font-size: 1.05rem; /* 태블릿에서는 살짝 더 예쁘게 */
+    letter-spacing: 0.02em;
+  }
+}
+/* =========================
+   ✅ 셀렉트 전용 폰트 통일
+   - 모바일: 시스템 기본
+   - 태블릿 이상: Gamja Flower
+========================= */
+
+/* 📱 모바일 기본 (가독성 우선) */
+.select-wrap .sound-select,
+.select-wrap .sound-select option {
+  font-family: -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* 📲 태블릿 이상 (아이패드 포함) */
+@media (min-width: 768px) {
+  .select-wrap .sound-select,
+  .select-wrap .sound-select option {
+    font-family: "Gamja Flower", cursive;
+    font-size: 1.1rem;        /* 태블릿에서는 살짝 크게 */
+    letter-spacing: 0.03em;   /* 손글씨 폰트 가독성 보정 */
+  }
+}
+/* =========================
+   오늘의 말씀 - 제목 + 말씀 제목 나란히
+========================= */
+
+.verse-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 8px;
-  font-weight: 800;
-  color: var(--muted);
+  flex-wrap: wrap; /* 모바일에서 줄바꿈 허용 */
+}
+
+.verse-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #111;
+  white-space: nowrap;
+}
+
+.verse-subtitle {
   font-size: 0.95rem;
+  color: #555;
+  background: #fff5f8;      /* 연한 핑크 배경 */
+  border: 1px solid #ffb3c7;
+  border-radius: 999px;
+  padding: 4px 10px;
+  line-height: 1.2;
+}
+
+/* 태블릿 이상에서는 살짝 더 예쁘게 */
+@media (min-width: 768px) {
+  .verse-title {
+    font-size: 1.1rem;
+  }
+
+  .verse-subtitle {
+    font-size: 1rem;
+  }
+}
+.verse-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;              /* 제목 ↔ 범위 간격 */
+  margin-bottom: 6px;
+}
+
+.verse-title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.verse-header {
+  flex-wrap: wrap;
+}
+
+.verse
+
+.verse-ref {
+  font-size: 1rem;          /* 오늘의 말씀과 동일 */
+  font-weight: 700;         /* 제목급 */
+  color: #374151;           /* 너무 연하지 않게 */
 }

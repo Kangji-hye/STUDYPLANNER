@@ -622,3 +622,81 @@ label.gender {
   line-height: 1.3;
 }
 
+/* src/pages/MyPage.css */
+
+/* ✅ 효과음 셀렉트 스타일 (이미 있으면 이 값만 참고해서 크기 키우기) */
+.sound-select {
+  width: 100%;
+  max-width: 420px;
+  font-size: 16px;      /* ← 글씨 크게 */
+  padding: 10px 12px;   /* ← 터치하기 편하게 */
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  line-height: 1.2;
+}
+
+/* ✅ 학년 셀렉트도 같은 스타일을 그대로 쓰게 했지만,
+   혹시 더 크게 하고 싶으면 여기서만 살짝 업! */
+.grade-select {
+  font-size: 16px;
+}
+
+/* 힌트 글씨도 너무 작으면 같이 키우기 */
+.grade-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: 0.85;
+  line-height: 1.35;
+}
+
+/* ✅ 셀렉트 공통 랩: 학년/효과음 셀렉트 모양 100% 통일 + 화살표 직접 그리기 */
+.select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 420px; /* 효과음 셀렉트 폭 기준으로 통일 */
+}
+
+/* ✅ 실제 select */
+.select-wrap .sound-select {
+  width: 100%;
+  font-size: 16px;       /* 글씨 크기 통일 */
+  padding: 10px 44px 10px 12px; /* 오른쪽에 화살표 자리 확보 */
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  line-height: 1.2;
+
+  /* ✅ 기본 화살표 숨기기(브라우저마다 다름) */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* ✅ IE/Edge 옛버전 화살표 숨김 */
+.select-wrap .sound-select::-ms-expand {
+  display: none;
+}
+
+/* ✅ 우리가 그리는 아래 방향 화살표 */
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+
+  /* ▾ 모양을 선 2개로 그림 */
+  border-right: 2px solid rgba(0, 0, 0, 0.55);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.55);
+
+  transform: translateY(-60%) rotate(45deg);
+  pointer-events: none; /* 화살표 눌러도 select 클릭되게 */
+}
+
+/* ✅ 혹시 row 안에서 value가 좁게 잡혀도 select는 꽉 차게 */
+.mypage .row .value .select-wrap {
+  width: 100%;
+}

@@ -288,26 +288,3 @@
   box-shadow: 0 0 0 6px rgba(255, 122, 162, 0.14);
 }
 
-/* 목록 카드 아래 수정/삭제 버튼 */
-.admin-verse-actions{
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-  flex-wrap: wrap;
-}
-
-.admin-mini-btn{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: #fff;
-  font-weight: 800;
-  box-shadow: none;
-  cursor: pointer;
-}
-
-.admin-mini-btn.danger{
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.08);
-}

@@ -64,7 +64,6 @@ function getKoreanWeekday(dateObj) {
 }
 
 function parseDayKeyToDate(dayKey) {
-  // dayKey: "YYYY-MM-DD"
   const [y, m, d] = String(dayKey).split("-").map((x) => Number(x));
   return new Date(y, (m || 1) - 1, d || 1);
 }
@@ -104,7 +103,7 @@ export default function Admin() {
   // 인라인 달력: 현재 보여줄 달
   const [calMonth, setCalMonth] = useState(() => {
     const d = parseDayKeyToDate(toDayKey(new Date()));
-    return { y: d.getFullYear(), m: d.getMonth() }; // m: 0~11
+    return { y: d.getFullYear(), m: d.getMonth() };
   });
 
   // 저장된 말씀 목록
@@ -119,7 +118,6 @@ export default function Admin() {
     const { data, error } = await supabase
       .from("daily_verses")
       .select("day_key, grade_code, ref_text, content, updated_at")
-      // DB에서는 대충만 정렬(가져온 뒤 프론트에서 다시 정렬)
       .order("day_key", { ascending: false })
       .order("grade_code", { ascending: true });
 
@@ -130,7 +128,6 @@ export default function Admin() {
     }
 
     const rows = data ?? [];
-
     const todayKey = toDayKey(new Date());
     const todayNum = keyToNum(todayKey);
 
@@ -240,55 +237,56 @@ export default function Admin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  // ✅ 날짜/학년 바꾸면 편집칸 자동 갱신
+  // 날짜/학년 바꾸면 편집칸 자동 갱신
   useEffect(() => {
     if (!isAdmin) return;
     loadVerse();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, dayKey, gradeCode]);
 
-  // ✅ dayKey가 바뀌면 달력도 해당 달로 자동 이동
+  //  dayKey가 바뀌면 달력도 해당 달로 자동 이동
   useEffect(() => {
     const d = parseDayKeyToDate(dayKey);
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
   }, [dayKey]);
 
-  // ✅ 말씀 저장 (수정도 이 버튼으로 동일하게 처리됨: upsert)
-  const saveVerse = async () => {
+  // 말씀 저장 (전 학년 복사 옵션 포함)
+    const saveVerse = async () => {
     const text = String(verseText ?? "").trim();
     const refText = String(verseRef ?? "").trim();
 
     if (!text) {
-      alert("말씀 내용을 입력해 주세요.");
-      return;
+        alert("말씀 내용을 입력해 주세요.");
+        return;
     }
 
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
 
     const { error } = await supabase
-      .from("daily_verses")
-      .upsert(
+        .from("daily_verses")
+        .upsert(
         {
-          day_key: dayKey,
-          grade_code: Number(gradeCode),
-          ref_text: refText || null,
-          content: text,
-          created_by: user?.id ?? null,
-          updated_at: new Date().toISOString(),
+            day_key: dayKey,
+            grade_code: Number(gradeCode),
+            ref_text: refText || null,
+            content: text,
+            created_by: user?.id ?? null,
+            updated_at: new Date().toISOString(),
         },
         { onConflict: "day_key,grade_code" }
-      );
+        );
 
     if (error) {
-      console.error("saveVerse error:", error);
-      alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
-      return;
+        console.error("saveVerse error:", error);
+        alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+        return;
     }
 
     alert(`저장되었습니다! (${dayKey} / ${gradeLabel})`);
     await loadVerseList();
-  };
+    };
+
 
   // ✅ 목록에서 수정: 위 입력칸으로 올려서 편집
   const editFromList = (row) => {
@@ -464,7 +462,9 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          말씀은 줄바꿈(엔터)로 구분해 입력하세요. 화면에는 문장처럼 이어져 보이지만, 줄마다 색이 달라집니다.
+          매일 모든 학년을 다 채울 필요는 없어요. 한 학년만 저장해도,
+          사용자는 그 날짜에 “저장된 학년 중 하나”를 볼 수 있게 만들 수 있습니다.
+          (완전히 비어있는 날짜는 샘플 말씀이 랜덤으로 나오게도 가능해요.)
         </div>
 
         <div className="admin-row">

@@ -146,6 +146,36 @@ function pickStableColor(seedText) {
   return VERSE_COLORS[sum % VERSE_COLORS.length];
 }
 
+// ✅ 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
+const SAMPLE_VERSES = [
+  {
+    ref: "시편 23편 1절",
+    lines: ["여호와는 나의 목자시니", "내게 부족함이 없으리로다"],
+  },
+  {
+    ref: "빌립보서 4장 13절",
+    lines: ["내게 능력 주시는 자 안에서", "내가 모든 것을 할 수 있느니라"],
+  },
+  {
+    ref: "잠언 3장 5절",
+    lines: ["너는 마음을 다하여 여호와를 신뢰하고", "네 명철을 의지하지 말라"],
+  },
+  {
+    ref: "이사야 41장 10절",
+    lines: ["두려워하지 말라 내가 너와 함께 함이라", "놀라지 말라 나는 네 하나님이 됨이라"],
+  },
+];
+
+// 날짜 기반 "고정 랜덤" (같은 날짜면 항상 같은 결과)
+function pickIndexBySeed(seedText, mod) {
+  const s = String(seedText ?? "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return mod <= 0 ? 0 : h % mod;
+}
+
   
 //도움말
 const [showHelpModal, setShowHelpModal] = useState(false);
@@ -1457,43 +1487,80 @@ const deleteSelectedTodos = async () => {
 
 
  //관리자
-  useEffect(() => {
+ useEffect(() => {
   if (!me?.id) return;
-  const grade = Number(profile?.grade_code);
 
-  // 학년이 아직 없으면 말씀 표시를 안 함
-  if (!Number.isFinite(grade)) {
-    setVerseLines([]);
-    return;
-  }
+  const myGrade = Number(profile?.grade_code);
 
+  // 학년이 없더라도 "샘플"은 보여줄 수 있으니,
+  // 여기서는 학년이 없으면 myGrade를 NaN으로 두고 fallback 로직으로 간다.
   const run = async () => {
     try {
+      // ✅ 1) 그 날짜의 모든 학년 말씀을 한 번에 가져오기
       const { data, error } = await supabase
         .from("daily_verses")
-        .select("ref_text, content")
-        .eq("day_key", selectedDayKey)
-        .eq("grade_code", grade)
-        .maybeSingle();
+        .select("grade_code, ref_text, content")
+        .eq("day_key", selectedDayKey);
 
       if (error) throw error;
 
-      setVerseRef(String(data?.ref_text ?? "").trim()); 
-      const lines = String(data?.content ?? "")
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const rows = data ?? [];
 
-      setVerseLines(lines);
+      // ✅ 2) DB에 그 날짜 말씀이 하나라도 있으면:
+      //    (a) 내 학년이 있으면 그걸
+      //    (b) 없으면 있는 것 중 하나를 "날짜 고정 랜덤"으로 선택
+      if (rows.length > 0) {
+        // content가 빈 것도 있을 수 있으니 걸러주기
+        const valid = rows
+          .map((r) => ({
+            grade_code: Number(r.grade_code),
+            ref_text: String(r.ref_text ?? "").trim(),
+            content: String(r.content ?? "").trim(),
+          }))
+          .filter((r) => r.content.length > 0);
+
+        if (valid.length === 0) {
+          // 데이터는 있는데 전부 비어있으면 샘플로
+          const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+          setVerseRef(SAMPLE_VERSES[idx].ref);
+          setVerseLines(SAMPLE_VERSES[idx].lines);
+          return;
+        }
+
+        // 내 학년 우선
+        const mine =
+          Number.isFinite(myGrade) ? valid.find((r) => r.grade_code === myGrade) : null;
+
+        const chosen = mine
+          ? mine
+          : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
+
+        setVerseRef(chosen.ref_text || "");
+        const lines = chosen.content
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        setVerseLines(lines);
+        return;
+      }
+
+      // ✅ 3) 그 날짜에 말씀이 하나도 없으면 샘플에서 날짜 고정 랜덤
+      const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+      setVerseRef(SAMPLE_VERSES[idx].ref);
+      setVerseLines(SAMPLE_VERSES[idx].lines);
     } catch (err) {
-      console.error("load daily_verses error:", err);
-      setVerseLines([]);
+      console.error("load daily_verses fallback error:", err);
+
+      // 에러가 나도 화면이 비면 썰렁하니까 샘플 하나라도
+      const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+      setVerseRef(SAMPLE_VERSES[idx].ref);
+      setVerseLines(SAMPLE_VERSES[idx].lines);
     }
   };
 
   run();
 }, [me?.id, selectedDayKey, profile?.grade_code]);
-
 
 
 
@@ -2015,18 +2082,22 @@ const deleteSelectedTodos = async () => {
 
       {verseLines.length > 0 && (
         <div className="verse-box" aria-label="오늘의 말씀">
-          <div className="verse-title">오늘의 말씀</div>
+         <div className="verse-header">
+            <span className="verse-title">오늘의 말씀</span>
 
-          {verseRef ? <div className="verse-ref">{verseRef}</div> : null}
+            {verseRef && (
+              <span className="verse-ref">
+                {verseRef}
+              </span>
+            )}
+          </div>
 
           <div className="verse-text">
             {verseLines.map((line, idx) => (
               <span
                 key={`${selectedDayKey}-${idx}`}
                 className="verse-chunk"
-                style={{
-                  color: pickStableColor(`${selectedDayKey}:${idx}`),
-                }}
+                style={{ color: pickStableColor(`${selectedDayKey}:${idx}`) }}
               >
                 {line}{idx < verseLines.length - 1 ? " " : ""}
               </span>
@@ -2034,6 +2105,9 @@ const deleteSelectedTodos = async () => {
           </div>
         </div>
       )}
+
+
+
 
 
       <LoadScheduleModal
