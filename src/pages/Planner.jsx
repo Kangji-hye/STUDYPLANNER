@@ -1238,7 +1238,32 @@ const clearAllForDelete = () => {
   setSelectedDeleteIds(new Set());
 };
 
-// ✅ 선택 삭제(다중 삭제)
+//  "모두 선택" 버튼을 토글로 만드는 함수
+// - 이미 전부 선택된 상태면: 전부 해제
+// - 아직 덜 선택된 상태면: 전부 선택
+const toggleSelectAllForDelete = () => {
+  const list = filteredTodos ?? [];
+
+  // 삭제 모드인데도 목록이 0개면 할 게 없으니 안내
+  if (list.length === 0) {
+    alert("선택할 것이 없어요 🙂");
+    return;
+  }
+
+  // 지금 전부 선택된 상태인지 확인
+  const isAllSelected = selectedDeleteIds.size === list.length;
+
+  if (isAllSelected) {
+    //  전부 선택되어 있으면 -> 전부 해제
+    clearAllForDelete();
+  } else {
+    //  전부 선택 안 되어 있으면 -> 전부 선택
+    selectAllForDelete();
+  }
+};
+
+
+//  선택 삭제(다중 삭제)
 const deleteSelectedTodos = async () => {
   if (!me?.id) return;
 
@@ -1998,7 +2023,7 @@ const deleteSelectedTodos = async () => {
                 <button
                   type="button"
                   className="filter-btn reorder-btn"
-                  onClick={selectAllForDelete}
+                  onClick={toggleSelectAllForDelete} 
                 >
                   <input
                     type="checkbox"
@@ -2010,13 +2035,10 @@ const deleteSelectedTodos = async () => {
                     onClick={(e) => e.stopPropagation()}
                     className="select-all-checkbox"
                   />
-                  모두 선택
-                </button>
-
-
-
-                <button type="button" className="filter-btn" onClick={clearAllForDelete}>
-                  선택 해제
+                  {/* 전부 선택되면 "모두 해제"로 글자 바꾸기 */}
+                  {filteredTodos?.length > 0 && selectedDeleteIds.size === filteredTodos.length
+                    ? "모두 해제"
+                    : "모두 선택"}
                 </button>
 
                 <button
