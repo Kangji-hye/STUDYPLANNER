@@ -442,96 +442,96 @@ const closeHelp = () => setShowHelpModal(false);
     return { id: data?.id ?? null };
   };
 
-  // 자동 초기화(새 날짜 비었을 때)
+  // // 자동 초기화(새 날짜 비었을 때)
   
-  const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
+  // const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
 
-  const seedDefault3Todos = async (userId, dayKey) => {
-    const defaults = ["📌 오늘 할 일 1개 정하기", "📖 책 10분 읽기", "📐 수학 1장 풀기"];
+  // const seedDefault3Todos = async (userId, dayKey) => {
+  //   const defaults = ["📌 오늘 할 일 1개 정하기", "📖 책 10분 읽기", "📐 수학 1장 풀기"];
 
-    const rows = defaults.map((title, idx) => ({
-      user_id: userId,
-      day_key: dayKey,
-      title,
-      completed: false,
-      template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
-    }));
+  //   const rows = defaults.map((title, idx) => ({
+  //     user_id: userId,
+  //     day_key: dayKey,
+  //     title,
+  //     completed: false,
+  //     template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
+  //   }));
 
-    const { error } = await supabase.from("todos").upsert(rows, {
-      onConflict: "user_id,day_key,template_item_key",
-      ignoreDuplicates: true,
-    });
+  //   const { error } = await supabase.from("todos").upsert(rows, {
+  //     onConflict: "user_id,day_key,template_item_key",
+  //     ignoreDuplicates: true,
+  //   });
 
-    if (error) throw error;
-  };
+  //   if (error) throw error;
+  // };
 
-  const importMySingleListSilently = async (userId, dayKey) => {
-    const { data: setRow, error: setErr } = await supabase
-      .from("todo_sets")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("kind", "single")
-      .maybeSingle();
+  // const importMySingleListSilently = async (userId, dayKey) => {
+  //   const { data: setRow, error: setErr } = await supabase
+  //     .from("todo_sets")
+  //     .select("id")
+  //     .eq("user_id", userId)
+  //     .eq("kind", "single")
+  //     .maybeSingle();
 
-    if (setErr) throw setErr;
-    if (!setRow?.id) return false;
+  //   if (setErr) throw setErr;
+  //   if (!setRow?.id) return false;
 
-    const { data: items, error: itemsErr } = await supabase
-      .from("todo_set_items")
-      .select("item_key, title, sort_order")
-      .eq("set_id", setRow.id)
-      .order("sort_order", { ascending: true });
+  //   const { data: items, error: itemsErr } = await supabase
+  //     .from("todo_set_items")
+  //     .select("item_key, title, sort_order")
+  //     .eq("set_id", setRow.id)
+  //     .order("sort_order", { ascending: true });
 
-    if (itemsErr) throw itemsErr;
+  //   if (itemsErr) throw itemsErr;
 
-    const rows = (items ?? [])
-      .map((x) => ({
-        user_id: userId,
-        day_key: dayKey,
-        title: String(x.title ?? "").trim(),
-        completed: false,
-        source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
-      }))
-      .filter((x) => x.title.length > 0 && x.source_set_item_key);
+  //   const rows = (items ?? [])
+  //     .map((x) => ({
+  //       user_id: userId,
+  //       day_key: dayKey,
+  //       title: String(x.title ?? "").trim(),
+  //       completed: false,
+  //       source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
+  //     }))
+  //     .filter((x) => x.title.length > 0 && x.source_set_item_key);
 
-    if (rows.length === 0) return false;
+  //   if (rows.length === 0) return false;
 
-    const { error: upErr } = await supabase.from("todos").upsert(rows, {
-      onConflict: "user_id,source_set_item_key",
-      ignoreDuplicates: true,
-    });
+  //   const { error: upErr } = await supabase.from("todos").upsert(rows, {
+  //     onConflict: "user_id,source_set_item_key",
+  //     ignoreDuplicates: true,
+  //   });
 
-    if (upErr) throw upErr;
-    return true;
-  };
+  //   if (upErr) throw upErr;
+  //   return true;
+  // };
 
-  const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
-    if ((currentRows ?? []).length > 0) return;
+  // const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
+  //   if ((currentRows ?? []).length > 0) return;
 
-    const seedKey = getAutoSeedKey(userId, dayKey);
-    try {
-      if (localStorage.getItem(seedKey) === "1") return;
-    // eslint-disable-next-line no-empty
-    } catch {}
+  //   const seedKey = getAutoSeedKey(userId, dayKey);
+  //   try {
+  //     if (localStorage.getItem(seedKey) === "1") return;
+  //   // eslint-disable-next-line no-empty
+  //   } catch {}
 
-    try {
-      if (hasMyList) {
-        const ok = await importMySingleListSilently(userId, dayKey);
-        if (!ok) await seedDefault3Todos(userId, dayKey);
-      } else {
-        await seedDefault3Todos(userId, dayKey);
-      }
+  //   try {
+  //     if (hasMyList) {
+  //       const ok = await importMySingleListSilently(userId, dayKey);
+  //       if (!ok) await seedDefault3Todos(userId, dayKey);
+  //     } else {
+  //       await seedDefault3Todos(userId, dayKey);
+  //     }
 
-      try {
-        localStorage.setItem(seedKey, "1");
-      // eslint-disable-next-line no-empty
-      } catch {}
+  //     try {
+  //       localStorage.setItem(seedKey, "1");
+  //     // eslint-disable-next-line no-empty
+  //     } catch {}
 
-      await fetchTodos(userId, dayKey);
-    } catch (err) {
-      console.error("autoPopulateIfEmpty error:", err);
-    }
-  };
+  //     await fetchTodos(userId, dayKey);
+  //   } catch (err) {
+  //     console.error("autoPopulateIfEmpty error:", err);
+  //   }
+  // };
 
   // =======================
   // 초기 로딩
@@ -1757,6 +1757,7 @@ const closeHelp = () => setShowHelpModal(false);
         busyMyList={busyMyList}
         importMySingleList={importMySingleList}
         importSampleTodos={importSampleTodos}
+        userId={me?.id}
       />
 
       <MyListSaveModal

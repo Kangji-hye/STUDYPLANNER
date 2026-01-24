@@ -1,17 +1,13 @@
 // src/components/planner/HelpModal.jsx
+// 도움말 모달
 import React from "react";
 
-/**
- * ✅ 도움말 모달
- * open이 false면 아예 그리지 않아서(=return null)
- * 화면/성능/버그가 안정적입니다.
- */
 export default function HelpModal({ open, onClose }) {
   if (!open) return null;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card help-bottom-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div className="modal-title">도움말</div>
 
@@ -23,8 +19,7 @@ export default function HelpModal({ open, onClose }) {
 
         <div className="modal-body">
           <div className="modal-help">
-            처음 오신 걸 환영해요 🙂<br />
-            이 플래너는 “오늘 할 일”을 적고, 끝나면 “완료”를 눌러 성취감을 느끼는 앱이에요.
+            🙂이 플래너는 “오늘 할 일”을 적고, 끝나면 “완료”를 눌러 성취감을 느끼는 앱이에요.
           </div>
 
           <div className="modal-help">
