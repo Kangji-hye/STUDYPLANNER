@@ -47,6 +47,22 @@ const cutName6 = (name) => {
   return chars.slice(0, 6).join(""); // 6글자까지만 (…는 원하면 붙일 수 있음)
 };
 
+function calcGradeCodeFromBirthdate(birthdateStr) {
+  const s = String(birthdateStr ?? "").trim();
+  if (!s) return null;
+
+  const y = Number(s.slice(0, 4));
+  if (!Number.isFinite(y)) return null;
+
+  const currentYear = new Date().getFullYear();
+  const code = currentYear - y - 6;
+
+  if (code < -1) return -1;
+  if (code > 6) return 6;
+  return code;
+}
+
+
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
@@ -146,7 +162,7 @@ function pickStableColor(seedText) {
   return VERSE_COLORS[sum % VERSE_COLORS.length];
 }
 
-// ✅ 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
+// 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
 const SAMPLE_VERSES = [
   {
     ref: "시편 23편 1절",
@@ -655,6 +671,34 @@ const playFinishSound = (overrideSrc) => {
               finish_sound: user.user_metadata?.finish_sound ?? DEFAULT_FINISH_SOUND,
             }
           : profileData;
+      
+          // 생년월일이 있는데 grade_code가 비어있고(수동 설정도 안 했으면) 자동으로 채우기
+          try {
+            const hasBirth = String(nextProfile?.birthdate ?? "").trim().length > 0;
+            const gradeManual = Boolean(nextProfile?.grade_manual);
+            const hasGrade = Number.isFinite(Number(nextProfile?.grade_code));
+
+            if (hasBirth && !gradeManual && !hasGrade) {
+              const autoCode = calcGradeCodeFromBirthdate(nextProfile.birthdate);
+
+              if (Number.isFinite(autoCode)) {
+                // nextProfile에 먼저 반영(화면에서 바로 적용)
+                nextProfile.grade_code = autoCode;
+                nextProfile.grade_manual = false;
+
+                // DB에도 저장(이미 생년월일 넣은 기존 사용자도 자동 반영되게)
+                const { error: gErr } = await supabase
+                  .from("profiles")
+                  .update({ grade_code: autoCode, grade_manual: false })
+                  .eq("id", user.id);
+
+                if (gErr) console.warn("auto grade update failed:", gErr);
+              }
+            }
+          } catch (e) {
+            console.warn("auto grade calc failed:", e);
+          }
+
           
 
       if (mounted) setProfile(nextProfile);
@@ -673,9 +717,13 @@ const playFinishSound = (overrideSrc) => {
               nickname: nextProfile.nickname,
               birthdate: nextProfile.birthdate,
               is_male: nextProfile.is_male,
-              finish_sound:
-            (profileData.finish_sound && String(profileData.finish_sound).trim()) ||
-            DEFAULT_FINISH_SOUND,
+            //   finish_sound:
+            // (profileData.finish_sound && String(profileData.finish_sound).trim()) ||
+            // DEFAULT_FINISH_SOUND,
+            finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
+
+            grade_code: Number.isFinite(autoCode) ? autoCode : null,
+            grade_manual: false,
             },
             { onConflict: "id" }
           );
