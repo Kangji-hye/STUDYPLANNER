@@ -29,7 +29,7 @@ function getSoundLabelByValue(value) {
   return found?.label ?? "요란한 축하";
 }
 
-// ✅ 생년월일로 학년 코드 자동 계산
+// 생년월일로 학년 코드 자동 계산
 // -1: 6세, 0: 7세, 1~6: 1~6학년
 function calcGradeCodeFromBirthdate(birthdateStr) {
   const s = String(birthdateStr ?? "").trim();
@@ -46,7 +46,7 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   return code;
 }
 
-// ✅ 학년 코드 → 표시 라벨
+// 학년 코드 → 표시 라벨
 function gradeLabel(code) {
   if (code === -1) return "6세";
   if (code === 0) return "7세";
@@ -101,7 +101,7 @@ const MyPage = () => {
       .eq("id", user.id)
       .single();
 
-    // ✅ 프로필이 없거나 오류면 기본값
+    // 프로필이 없거나 오류면 기본값
     const baseProfile = profileError
       ? {
           id: user.id,
@@ -118,7 +118,7 @@ const MyPage = () => {
           grade_manual: Boolean(profileData?.grade_manual),
         };
 
-    // ✅ 자동 학년 계산(단, 수동이면 존중)
+    // 자동 학년 계산(단, 수동이면 존중)
     const autoCode = calcGradeCodeFromBirthdate(baseProfile.birthdate);
     const finalGradeCode = baseProfile.grade_manual ? baseProfile.grade_code : autoCode;
 
@@ -150,7 +150,7 @@ const MyPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ 생년월일이 바뀌면 자동 학년 업데이트 (수동 모드면 건드리지 않음)
+  // 생년월일이 바뀌면 자동 학년 업데이트 (수동 모드면 건드리지 않음)
   useEffect(() => {
     if (loading) return;
 
@@ -291,7 +291,7 @@ const MyPage = () => {
     alert("비밀번호가 변경되었습니다. 다음 로그인부터 적용됩니다.");
   };
 
-  // ✅ 여기서는 훅을 더 쓰지 말고, 그냥 계산만!
+  // 여기서는 훅을 더 쓰지 말고, 그냥 계산만!
   const currentSoundLabel = getSoundLabelByValue(form.finish_sound);
   const gradeText = gradeLabel(form.grade_code);
 
@@ -360,7 +360,7 @@ const MyPage = () => {
                 setForm((p) => ({
                   ...p,
                   birthdate: e.target.value,
-                  // ✅ 생년월일 바꾸면 자동 모드로 돌아오게
+                  // 생년월일 바꾸면 자동 모드로 돌아오게
                   grade_manual: false,
                 }))
               }
@@ -372,7 +372,7 @@ const MyPage = () => {
       <div className="row">
         <span className="label">학년</span>
         <span className="value">
-          {/* ✅ 랩으로 감싸서 효과음 셀렉트와 완전히 같은 구조로 통일 */}
+          {/* 랩으로 감싸서 효과음 셀렉트와 완전히 같은 구조로 통일 */}
           <div className="select-wrap">
             <select
               className="sound-select"
@@ -412,7 +412,6 @@ const MyPage = () => {
 
         </span>
       </div>
-
 
         {/* 성별 */}
         <div className="row gender">
@@ -455,7 +454,7 @@ const MyPage = () => {
 
               <div className="sound-card-body">
                 <div className="sound-control-row">
-                  {/* ✅ 여기도 똑같이 select-wrap으로 감싸기 */}
+                  {/* 여기도 똑같이 select-wrap으로 감싸기 */}
                   <div className="select-wrap">
                     <select
                       className="sound-select"
@@ -482,7 +481,6 @@ const MyPage = () => {
                     ▶ 미리듣기
                   </button>
                 </div>
-
 
                 <span className="sound-card-current">
                   현재: <b>{currentSoundLabel}</b>

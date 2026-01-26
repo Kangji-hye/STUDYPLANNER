@@ -1,28 +1,25 @@
 // src/pages/Planner.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import confetti from "canvas-confetti";
-import TodoItem from "../components/TodoItem";
-import supabase from "../supabaseClient";
 import "./Planner.css";
-import { useWeatherYongin } from "../hooks/useWeatherYongin";
+import { useNavigate } from "react-router-dom";
+import supabase from "../supabaseClient";
+import TodoItem from "../components/TodoItem";
 import WeatherIcon from "../components/WeatherIcon";
-import { useSoundSettings } from "../context/SoundSettingsContext";
-
 import LoadScheduleModal from "../components/planner/LoadScheduleModal";
 import MyListSaveModal from "../components/planner/MyListSaveModal";
 import CalendarModal from "../components/planner/CalendarModal";
 import HelpModal from "../components/planner/HelpModal";
 import OnboardingTour from "../components/planner/OnboardingTour";
-
 import HallOfFameCard from "../components/planner/HallOfFameCard";
 import StudyTools from "../components/planner/StudyTools";
-
-import { toKstDayKey } from "../utils/dateKst";
+import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import { useBootSplash } from "../hooks/useBootSplash";
 import { useRestoreToToday } from "../hooks/useRestoreToToday";
 import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
+import confetti from "canvas-confetti";
+import { useSoundSettings } from "../context/SoundSettingsContext";
+import { toKstDayKey } from "../utils/dateKst";
 
 // =======================
 // 이모지 풀
@@ -36,8 +33,7 @@ const EMOJI_POOL = [
   "🚗", "🚌", "🚓", "🚒", "🚜", "🚀", "✈️", "🚁", "🚲", "⚽", "🏀", "🏈", "🎯",
 ];
 
-// 명예의 전당 닉네임 표시(6글자 제한을 예전에 하려고 했던 흔적 같지만 지금은 그대로 반환)
-// 명예의 전당: 이름은 "6글자"까지만 보여주기(유니코드 안전)
+// 명예의 전당 
 const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
@@ -61,8 +57,6 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   if (code > 6) return 6;
   return code;
 }
-
-
 
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
@@ -110,7 +104,6 @@ function Planner() {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
   const [verseLines, setVerseLines] = useState([]); 
   const [verseRef, setVerseRef] = useState("");
-
   
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
@@ -192,7 +185,6 @@ function pickIndexBySeed(seedText, mod) {
   return mod <= 0 ? 0 : h % mod;
 }
 
-  
 //도움말
 const [showHelpModal, setShowHelpModal] = useState(false);
 
@@ -228,9 +220,7 @@ const closeHelp = () => setShowHelpModal(false);
     todosRef.current = todos;
   }, [todos]);
 
-  
-
-  // =======================
+    // =======================
   // 목록 불러오기 모달
   // =======================
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -382,9 +372,7 @@ const closeHelp = () => setShowHelpModal(false);
     });
   };
 
-  // ✅ 모두 완료 효과음 (안전형)
-// - profile.finish_sound(마이페이지에서 고른 값) 우선
-// - 이상하면 DEFAULT_FINISH_SOUND로 자동 fallback
+  //  모두 완료 효과음
 const playFinishSound = (overrideSrc) => {
   try {
     // 소리 설정 OFF면 재생하지 않음
@@ -417,7 +405,9 @@ const playFinishSound = (overrideSrc) => {
 
     // 5) 볼륨/되감기
     a.volume = 0.9;
-    try { a.pause(); } catch {}
+    try { a.pause(); } catch {
+      //
+    }
     a.currentTime = 0;
 
     // 6) 재생 (실패하면 기본값으로 1번 더 시도)
@@ -444,7 +434,6 @@ const playFinishSound = (overrideSrc) => {
     console.warn("finish sound error:", e);
   }
 };
-
 
   // =======================
   // 날짜별 todos 조회(레이스 방지)
@@ -535,97 +524,6 @@ const playFinishSound = (overrideSrc) => {
     return { id: data?.id ?? null };
   };
 
-  // // 자동 초기화(새 날짜 비었을 때)
-  
-  // const getAutoSeedKey = (userId, dayKey) => `auto_seeded_v1:${userId}:${dayKey}`;
-
-  // const seedDefault3Todos = async (userId, dayKey) => {
-  //   const defaults = ["📌 오늘 할 일 1개 정하기", "📖 책 10분 읽기", "📐 수학 1장 풀기"];
-
-  //   const rows = defaults.map((title, idx) => ({
-  //     user_id: userId,
-  //     day_key: dayKey,
-  //     title,
-  //     completed: false,
-  //     template_item_key: `default:${String(idx + 1).padStart(3, "0")}`,
-  //   }));
-
-  //   const { error } = await supabase.from("todos").upsert(rows, {
-  //     onConflict: "user_id,day_key,template_item_key",
-  //     ignoreDuplicates: true,
-  //   });
-
-  //   if (error) throw error;
-  // };
-
-  // const importMySingleListSilently = async (userId, dayKey) => {
-  //   const { data: setRow, error: setErr } = await supabase
-  //     .from("todo_sets")
-  //     .select("id")
-  //     .eq("user_id", userId)
-  //     .eq("kind", "single")
-  //     .maybeSingle();
-
-  //   if (setErr) throw setErr;
-  //   if (!setRow?.id) return false;
-
-  //   const { data: items, error: itemsErr } = await supabase
-  //     .from("todo_set_items")
-  //     .select("item_key, title, sort_order")
-  //     .eq("set_id", setRow.id)
-  //     .order("sort_order", { ascending: true });
-
-  //   if (itemsErr) throw itemsErr;
-
-  //   const rows = (items ?? [])
-  //     .map((x) => ({
-  //       user_id: userId,
-  //       day_key: dayKey,
-  //       title: String(x.title ?? "").trim(),
-  //       completed: false,
-  //       source_set_item_key: `${dayKey}:single:${String(x.item_key ?? "").trim()}`,
-  //     }))
-  //     .filter((x) => x.title.length > 0 && x.source_set_item_key);
-
-  //   if (rows.length === 0) return false;
-
-  //   const { error: upErr } = await supabase.from("todos").upsert(rows, {
-  //     onConflict: "user_id,source_set_item_key",
-  //     ignoreDuplicates: true,
-  //   });
-
-  //   if (upErr) throw upErr;
-  //   return true;
-  // };
-
-  // const autoPopulateIfEmpty = async (userId, dayKey, currentRows) => {
-  //   if ((currentRows ?? []).length > 0) return;
-
-  //   const seedKey = getAutoSeedKey(userId, dayKey);
-  //   try {
-  //     if (localStorage.getItem(seedKey) === "1") return;
-  //   // eslint-disable-next-line no-empty
-  //   } catch {}
-
-  //   try {
-  //     if (hasMyList) {
-  //       const ok = await importMySingleListSilently(userId, dayKey);
-  //       if (!ok) await seedDefault3Todos(userId, dayKey);
-  //     } else {
-  //       await seedDefault3Todos(userId, dayKey);
-  //     }
-
-  //     try {
-  //       localStorage.setItem(seedKey, "1");
-  //     // eslint-disable-next-line no-empty
-  //     } catch {}
-
-  //     await fetchTodos(userId, dayKey);
-  //   } catch (err) {
-  //     console.error("autoPopulateIfEmpty error:", err);
-  //   }
-  // };
-
   // =======================
   // 초기 로딩
   // =======================
@@ -698,9 +596,7 @@ const playFinishSound = (overrideSrc) => {
           } catch (e) {
             console.warn("auto grade calc failed:", e);
           }
-
-          
-
+       
       if (mounted) setProfile(nextProfile);
 
       try {
@@ -717,10 +613,7 @@ const playFinishSound = (overrideSrc) => {
               nickname: nextProfile.nickname,
               birthdate: nextProfile.birthdate,
               is_male: nextProfile.is_male,
-            //   finish_sound:
-            // (profileData.finish_sound && String(profileData.finish_sound).trim()) ||
-            // DEFAULT_FINISH_SOUND,
-            finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
+              finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
 
             grade_code: Number.isFinite(autoCode) ? autoCode : null,
             grade_manual: false,
@@ -895,7 +788,6 @@ const playFinishSound = (overrideSrc) => {
       setImportingSample(false);
     }
   };
-
 
   // 내 목록 저장 모달
   const openMyListSaveModal = () => {
@@ -1215,10 +1107,11 @@ const playFinishSound = (overrideSrc) => {
     }
   };
 
-  
+  const doneCount = todos.filter((t) => t.completed).length;
+
+  const notDoneCount = todos.filter((t) => !t.completed).length;
 
 //삭제 관련
-// 체크박스 1개 선택/해제
 const toggleSelectForDelete = (todoId) => {
   setSelectedDeleteIds((prev) => {
     const next = new Set(prev);
@@ -1239,8 +1132,6 @@ const clearAllForDelete = () => {
 };
 
 //  "모두 선택" 버튼을 토글로 만드는 함수
-// - 이미 전부 선택된 상태면: 전부 해제
-// - 아직 덜 선택된 상태면: 전부 선택
 const toggleSelectAllForDelete = () => {
   const list = filteredTodos ?? [];
 
@@ -1262,7 +1153,6 @@ const toggleSelectAllForDelete = () => {
   }
 };
 
-
 //  선택 삭제(다중 삭제)
 const deleteSelectedTodos = async () => {
   if (!me?.id) return;
@@ -1277,7 +1167,7 @@ const deleteSelectedTodos = async () => {
   if (!ok) return;
 
   try {
-    // ✅ 한 번에 삭제
+    // 한 번에 삭제
     const { error } = await supabase
       .from("todos")
       .delete()
@@ -1285,15 +1175,15 @@ const deleteSelectedTodos = async () => {
 
     if (error) throw error;
 
-    // ✅ 화면에서도 즉시 반영
+    // 화면에서도 즉시 반영
     const next = (todosRef.current ?? []).filter((t) => !selectedDeleteIds.has(t.id));
     setTodos(next);
 
-    // ✅ 완료 기록(명예의 전당)도 상태에 맞게 정리
+    //완료 기록(명예의 전당)도 상태에 맞게 정리
     const isAllCompleted = next.length > 0 && next.every((t) => t.completed);
     if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
 
-    // ✅ 선택/모드 정리
+    // 선택/모드 정리
     clearAllForDelete();
     setDeleteMode(false);
   } catch (err) {
@@ -1301,10 +1191,6 @@ const deleteSelectedTodos = async () => {
     alert(err?.message ?? "삭제 중 오류가 발생했습니다.");
   }
 };
-
-
-
-
 
   // =======================
   // 스탑워치/타이머/하가다/
@@ -1317,8 +1203,6 @@ const deleteSelectedTodos = async () => {
 
     // =======================
   //  첫 방문 말풍선 단계 안내(온보딩 투어)
-  // - 도움말 "창" 대신, 화면 위에 말풍선을 단계별로 띄워서 안내합니다.
-  // - 처음 1번만 자동으로 뜨고, 이후엔 푸터의 "도움말"로 다시 볼 수 있게 합니다.
   // =======================
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
@@ -1338,7 +1222,7 @@ const deleteSelectedTodos = async () => {
   const closeTour = () => {
     setTourOpen(false);
 
-    // ✅ "봤다" 표시 저장 (다음부터 자동 오픈 안 하게)
+    // "봤다" 표시 저장 (다음부터 자동 오픈 안 하게)
     try {
       const uid = me?.id ?? "anon";
       localStorage.setItem(`planner_tour_seen_v1:${uid}`, "1");
@@ -1404,7 +1288,7 @@ const deleteSelectedTodos = async () => {
     []
   );
 
-  // ✅ 첫 방문이면 자동으로 투어 시작
+  // 첫 방문이면 자동으로 투어 시작
   useEffect(() => {
     if (loading) return;
 
@@ -1423,8 +1307,7 @@ const deleteSelectedTodos = async () => {
   }, [loading, me?.id]);
 
 
-
-
+  
   useEffect(() => () => clearInterval(timerRef.current), []);
 
   const formatTime = (ms) => {
@@ -1559,82 +1442,158 @@ const deleteSelectedTodos = async () => {
   const resetHagada = () => setHagadaCount(0);
 
 
- //관리자
- useEffect(() => {
-  if (!me?.id) return;
+ //관리자 : 오늘의 말씀 2학년만 보이게
+  useEffect(() => {
+    //로그인 안 됐으면 아무 것도 하지 않기
+    if (!me?.id) return;
 
-  const myGrade = Number(profile?.grade_code);
+    //학년이 아니면: 말씀을 '비워서' 화면에 안 보이게 만들기
+    const myGrade = Number(profile?.grade_code);
+     const isAdmin = (me?.email === "kara@kara.com" || profile?.is_admin === true);
+    const isSecondGrade = (myGrade === 2);
 
-  // 학년이 없더라도 "샘플"은 보여줄 수 있으니,
-  // 여기서는 학년이 없으면 myGrade를 NaN으로 두고 fallback 로직으로 간다.
-  const run = async () => {
-    try {
-      // ✅ 1) 그 날짜의 모든 학년 말씀을 한 번에 가져오기
-      const { data, error } = await supabase
-        .from("daily_verses")
-        .select("grade_code, ref_text, content")
-        .eq("day_key", selectedDayKey);
+    if (!isSecondGrade) {
+      setVerseLines([]); 
+      setVerseRef("");  
+      return;         
+    }
 
-      if (error) throw error;
+    // ------------------------------
+    //여기부터는 "2학년일 때만" 실행됩니다.
+    // ------------------------------
 
-      const rows = data ?? [];
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("daily_verses")
+          .select("grade_code, ref_text, content")
+          .eq("day_key", selectedDayKey);
 
-      // ✅ 2) DB에 그 날짜 말씀이 하나라도 있으면:
-      //    (a) 내 학년이 있으면 그걸
-      //    (b) 없으면 있는 것 중 하나를 "날짜 고정 랜덤"으로 선택
-      if (rows.length > 0) {
-        // content가 빈 것도 있을 수 있으니 걸러주기
-        const valid = rows
-          .map((r) => ({
-            grade_code: Number(r.grade_code),
-            ref_text: String(r.ref_text ?? "").trim(),
-            content: String(r.content ?? "").trim(),
-          }))
-          .filter((r) => r.content.length > 0);
+        if (error) throw error;
 
-        if (valid.length === 0) {
-          // 데이터는 있는데 전부 비어있으면 샘플로
-          const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-          setVerseRef(SAMPLE_VERSES[idx].ref);
-          setVerseLines(SAMPLE_VERSES[idx].lines);
-          return;
+        const rows = data ?? [];
+
+        if (rows.length > 0) {
+          const valid = rows
+            .map((r) => ({
+              grade_code: Number(r.grade_code),
+              ref_text: String(r.ref_text ?? "").trim(),
+              content: String(r.content ?? "").trim(),
+            }))
+            .filter((r) => r.content.length > 0);
+
+          if (valid.length === 0) {
+            const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+            setVerseRef(SAMPLE_VERSES[idx].ref);
+            setVerseLines(SAMPLE_VERSES[idx].lines);
+            return;
+          }
+
+          // 2학년이므로 "grade_code === 2"인 말씀을 우선 선택
+          const mine = valid.find((r) => r.grade_code === 2);
+
+          const chosen = mine
+            ? mine
+            : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
+
+          if (!mine) {
+            setVerseLines([]);  // ✅ 2학년 말씀이 없으면 숨김
+            setVerseRef("");
+            return;
+          }
+
+          setVerseRef(mine.ref_text || "");
+          const lines = mine.content.split("\n").map(s => s.trim()).filter(Boolean);
+          setVerseLines(lines);
         }
 
-        // 내 학년 우선
-        const mine =
-          Number.isFinite(myGrade) ? valid.find((r) => r.grade_code === myGrade) : null;
-
-        const chosen = mine
-          ? mine
-          : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
-
-        setVerseRef(chosen.ref_text || "");
-        const lines = chosen.content
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean);
-
-        setVerseLines(lines);
-        return;
+        const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+        setVerseRef(SAMPLE_VERSES[idx].ref);
+        setVerseLines(SAMPLE_VERSES[idx].lines);
+      } catch (err) {
+        console.error("load daily_verses error:", err);
+        const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+        setVerseRef(SAMPLE_VERSES[idx].ref);
+        setVerseLines(SAMPLE_VERSES[idx].lines);
       }
+    };
 
-      // ✅ 3) 그 날짜에 말씀이 하나도 없으면 샘플에서 날짜 고정 랜덤
-      const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-      setVerseRef(SAMPLE_VERSES[idx].ref);
-      setVerseLines(SAMPLE_VERSES[idx].lines);
-    } catch (err) {
-      console.error("load daily_verses fallback error:", err);
+    run();
+  }, [me?.id, selectedDayKey, profile?.grade_code]);
 
-      // 에러가 나도 화면이 비면 썰렁하니까 샘플 하나라도
-      const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-      setVerseRef(SAMPLE_VERSES[idx].ref);
-      setVerseLines(SAMPLE_VERSES[idx].lines);
-    }
-  };
+//기존소스 : 원래대로 복원할때
+//  useEffect(() => {
+//   if (!me?.id) return;
 
-  run();
-}, [me?.id, selectedDayKey, profile?.grade_code]);
+//   const myGrade = Number(profile?.grade_code);
 
+//   // 학년이 없더라도 "샘플"은 보여줄 수 있으니,
+//   // 여기서는 학년이 없으면 myGrade를 NaN으로 두고 fallback 로직으로 
+//   const run = async () => {
+//     try {
+//       //  1) 그 날짜의 모든 학년 말씀을 한 번에 가져오기
+//       const { data, error } = await supabase
+//         .from("daily_verses")
+//         .select("grade_code, ref_text, content")
+//         .eq("day_key", selectedDayKey);
+
+//       if (error) throw error;
+
+//       const rows = data ?? [];
+
+//       //  2) DB에 그 날짜 말씀이 하나라도 있으면:
+//       if (rows.length > 0) {
+//         // content가 빈 것도 있을 수 있으니 걸러주기
+//         const valid = rows
+//           .map((r) => ({
+//             grade_code: Number(r.grade_code),
+//             ref_text: String(r.ref_text ?? "").trim(),
+//             content: String(r.content ?? "").trim(),
+//           }))
+//           .filter((r) => r.content.length > 0);
+
+//         if (valid.length === 0) {
+//           // 데이터는 있는데 전부 비어있으면 샘플로
+//           const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+//           setVerseRef(SAMPLE_VERSES[idx].ref);
+//           setVerseLines(SAMPLE_VERSES[idx].lines);
+//           return;
+//         }
+
+//         // 내 학년 우선
+//         const mine =
+//           Number.isFinite(myGrade) ? valid.find((r) => r.grade_code === myGrade) : null;
+
+//         const chosen = mine
+//           ? mine
+//           : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
+
+//         setVerseRef(chosen.ref_text || "");
+//         const lines = chosen.content
+//           .split("\n")
+//           .map((s) => s.trim())
+//           .filter(Boolean);
+
+//         setVerseLines(lines);
+//         return;
+//       }
+
+//       //  3) 그 날짜에 말씀이 하나도 없으면 샘플에서 날짜 고정 랜덤
+//       const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+//       setVerseRef(SAMPLE_VERSES[idx].ref);
+//       setVerseLines(SAMPLE_VERSES[idx].lines);
+//     } catch (err) {
+//       console.error("load daily_verses fallback error:", err);
+
+//       // 에러가 나도 화면이 비면 썰렁하니까 샘플 하나라도
+//       const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
+//       setVerseRef(SAMPLE_VERSES[idx].ref);
+//       setVerseLines(SAMPLE_VERSES[idx].lines);
+//     }
+//   };
+
+//   run();
+// }, [me?.id, selectedDayKey, profile?.grade_code]);
 
 
   // =======================
@@ -1662,50 +1621,6 @@ const deleteSelectedTodos = async () => {
       </div>
     );
   }
-
-  // =======================
-  // 선택 날짜 전체 삭제
-  // =======================
-  // const deleteAllTodos = async () => {
-  //   if (!me?.id) return;
-
-  //   const ok = window.confirm(
-  //     "선택한 날짜의 할 일을 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다."
-  //   );
-  //   if (!ok) return;
-
-  //   try {
-  //     const { data: deletedRows, error } = await supabase
-  //       .from("todos")
-  //       .delete()
-  //       .eq("user_id", me.id)
-  //       .eq("day_key", selectedDayKey)
-  //       .select("id");
-
-  //     if (error) throw error;
-
-  //     // 완료 기록도 정리
-  //     await removeCompletionForDay(selectedDayKey);
-
-  //     // 서버에 진짜 남아있는지 재확인
-  //     const left = await fetchTodos(me.id, selectedDayKey);
-
-  //     if ((left ?? []).length > 0) {
-  //       alert("삭제가 완전히 적용되지 않았어요. 네트워크/권한/날짜 선택을 확인해주세요.");
-  //       console.warn("deleteAllTodos: rows still left", {
-  //         deletedCount: deletedRows?.length ?? 0,
-  //         left,
-  //       });
-  //       return;
-  //     }
-
-  //     // fetchTodos가 setTodos까지 해주지만, 확실히 비우기
-  //     setTodos([]);
-  //   } catch (err) {
-  //     console.error("deleteAllTodos error:", err);
-  //     alert(err?.message ?? "전체 삭제 중 오류가 발생했습니다.");
-  //   }
-  // };
 
   // =======================
   // 로그아웃
@@ -1916,13 +1831,11 @@ const deleteSelectedTodos = async () => {
           ) : (
             <>
               <button
+                type="button"
                 className={`filter-btn ${filter === "all" ? "active" : ""}`}
-                onClick={() => {
-                  setFilter("all");
-                  setReorderMode(false);
-                }}
+                onClick={() => setFilter("all")}
               >
-                전체
+                전체 ({todos.length})
               </button>
 
               <button
@@ -1932,7 +1845,7 @@ const deleteSelectedTodos = async () => {
                   setReorderMode(false);
                 }}
               >
-                했음
+                했음({doneCount})
               </button>
 
               <button
@@ -1942,7 +1855,7 @@ const deleteSelectedTodos = async () => {
                   setReorderMode(false);
                 }}
               >
-                안했음
+                안했음({notDoneCount})
               </button>
             </>
           )}
@@ -2082,7 +1995,7 @@ const deleteSelectedTodos = async () => {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "수학 10문제 45초 만에 성공!!"}
+              {afterStudyText.trim() ? afterStudyText : "수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 종이접기~"}
             </div>
           ) : (
             <input
@@ -2090,7 +2003,7 @@ const deleteSelectedTodos = async () => {
               type="text"
               autoFocus
               value={afterStudyText}
-              placeholder="수학 10문제 45초 만에 성공!!"
+              placeholder="수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 종이접기~"
               onChange={(e) => {
                 const v = e.target.value;
                 setAfterStudyText(v);
@@ -2150,7 +2063,7 @@ const deleteSelectedTodos = async () => {
         resetHagada={resetHagada}
       />
 
-      {verseLines.length > 0 && (
+      {Number(profile?.grade_code) === 2 && verseLines.length > 0 && (
         <div className="verse-box" aria-label="오늘의 말씀">
          <div className="verse-header">
             <span className="verse-title">오늘의 말씀</span>
