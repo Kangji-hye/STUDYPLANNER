@@ -1343,7 +1343,7 @@ const deleteSelectedTodos = async () => {
         body: (
           <>
             여기에 오늘 할 일을 적어요.<br />
-            예) \"수학 1장\", \"영어 10분\" 같은 식으로요.
+            예)  "수학 1장", "영어 10분" 같은 식으로요.
           </>
         ),
         targetRef: refInput,
@@ -1352,7 +1352,7 @@ const deleteSelectedTodos = async () => {
         title: "➕ 입력 버튼",
         body: (
           <>
-            다 적었으면 \"입력\"을 눌러서 목록에 추가해요.<br />
+            다 적었으면 "입력"을 눌러서 목록에 추가해요.<br />
             키보드 Enter로도 추가할 수 있어요.
           </>
         ),
