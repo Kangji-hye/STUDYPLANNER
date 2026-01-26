@@ -10,6 +10,7 @@ import Find from "./pages/Find";
 import ResetPassword from "./pages/ResetPassword";
 
 import MyPage from "./pages/MyPage";
+import Ranking from "./pages/Ranking";
 import Planner from "./pages/Planner";
 import AuthCallback from "./pages/AuthCallback";
 
@@ -47,6 +48,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <MyPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/ranking"
+              element={
+                <ProtectedRoute>
+                  <Ranking />
                 </ProtectedRoute>
               }
             />

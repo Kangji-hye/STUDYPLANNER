@@ -166,7 +166,7 @@ label.gender {
   border: none;
   border-radius: 16px;
   padding: 13px 18px;
-  font-weight: 800;
+  font-weight: 400;
   box-shadow: 0 14px 30px rgba(255, 122, 162, 0.35);
   cursor: pointer;
   transition: transform 0.08s ease, box-shadow 0.2s ease, opacity 0.2s ease;
@@ -212,8 +212,9 @@ label.gender {
   background: linear-gradient(135deg, var(--primary), #ff5f8f);
   color: #fff;
   border: none;
-  font-weight: 600;
+  font-weight: 400;
   box-shadow: 0 10px 24px rgba(255, 122, 162, 0.4);
+  padding:7px 14px;
 }
 
 .primary-btn:hover {
@@ -699,4 +700,154 @@ label.gender {
 /* ✅ 혹시 row 안에서 value가 좁게 잡혀도 select는 꽉 차게 */
 .mypage .row .value .select-wrap {
   width: 100%;
+}
+
+/* ✅ 레벨 패널 */
+.level-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.level-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.level-title {
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+.level-number {
+  font-weight: 900;
+  opacity: 0.9;
+}
+
+/* ✅ 알록달록 상태 막대 */
+.level-bar-wrap {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.level-bar {
+  width: 100%;
+  height: 100%;
+  /* 알록달록 패턴: 줄무늬 반복 */
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 122, 162, 0.95) 0px,
+    rgba(255, 122, 162, 0.95) 14px,
+    rgba(255, 184, 107, 0.95) 14px,
+    rgba(255, 184, 107, 0.95) 28px,
+    rgba(255, 209, 102, 0.95) 28px,
+    rgba(255, 209, 102, 0.95) 42px,
+    rgba(160, 231, 229, 0.95) 42px,
+    rgba(160, 231, 229, 0.95) 56px
+  );
+  filter: saturate(1.05);
+}
+
+/* ✅ 내 위치 마커 */
+.level-marker {
+  position: absolute;
+  top: -26px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.level-marker-arrow {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid rgba(255,255,255,0.95);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+}
+
+.level-marker-text {
+  margin-top: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  background: rgba(255,255,255,0.92);
+  color: #111;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+.level-sub {
+  margin-top: 10px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.level-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-title {
+  font-size: 1rem;
+  font-weight: 400; /* 요청하신 대로 */
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-badge-pink {
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #ff6b9c; /* 스터디플래너 핑크 톤 */
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.level-max {
+  font-size: 0.8rem;
+  color: #999;
+  font-weight: 400;
+}
+
+/* 랭킹 보기 버튼 (보조지만 눌러보고 싶게) */
+.ranking-btn {
+  margin-top: 12px;
+  padding: 8px 16px;           /* ← 살짝 키움 */
+
+  background: #ffffff;
+  color: #444;
+
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+
+  font-size: 0.9rem;           /* ← 글씨 조금 키움 */
+  font-weight: 400;
+
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ranking-btn:hover {
+  background: #f9f9f9;
+  border-color: #ff9bbb;       /* 연핑크 포인트 */
+}
+
+.ranking-btn:active {
+  transform: scale(0.97);
 }

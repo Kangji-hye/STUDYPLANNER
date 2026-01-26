@@ -1,25 +1,29 @@
 // src/pages/Planner.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import "./Planner.css";
 import { useNavigate } from "react-router-dom";
-import supabase from "../supabaseClient";
+import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
+import supabase from "../supabaseClient";
+import "./Planner.css";
+import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
+import { useSoundSettings } from "../context/SoundSettingsContext";
+
 import LoadScheduleModal from "../components/planner/LoadScheduleModal";
 import MyListSaveModal from "../components/planner/MyListSaveModal";
 import CalendarModal from "../components/planner/CalendarModal";
 import HelpModal from "../components/planner/HelpModal";
 import OnboardingTour from "../components/planner/OnboardingTour";
+
 import HallOfFameCard from "../components/planner/HallOfFameCard";
 import StudyTools from "../components/planner/StudyTools";
-import { useWeatherYongin } from "../hooks/useWeatherYongin";
+
+import { toKstDayKey } from "../utils/dateKst";
 import { useBootSplash } from "../hooks/useBootSplash";
 import { useRestoreToToday } from "../hooks/useRestoreToToday";
 import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
-import confetti from "canvas-confetti";
-import { useSoundSettings } from "../context/SoundSettingsContext";
-import { toKstDayKey } from "../utils/dateKst";
+import { calcLevelFromStamps } from "../utils/leveling";
 
 // =======================
 // 이모지 풀
@@ -220,6 +224,9 @@ const closeHelp = () => setShowHelpModal(false);
     todosRef.current = todos;
   }, [todos]);
 
+
+
+
     // =======================
   // 목록 불러오기 모달
   // =======================
@@ -267,11 +274,26 @@ const closeHelp = () => setShowHelpModal(false);
     setShowLoadModal(false);
   };
 
+  
+  // ✅ 레벨업(트로피) 모달
+const [levelUpOpen, setLevelUpOpen] = useState(false);
+const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
+const closeLevelUp = () => setLevelUpOpen(false);
+
+  // ✅ 내 도장(참 잘했어요) 총 개수
+const [stampCount, setStampCount] = useState(0);
+
+// ✅ 닉네임 옆에 보여줄 내 레벨 정보
+const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
+
+
+
   // =======================
   // 명예의 전당
   // =======================
   const [hof, setHof] = useState([]);
   const [hofLoading, setHofLoading] = useState(false);
+  
 
   const shuffleArray = (arr) => {
     const a = [...arr];
@@ -318,6 +340,19 @@ const closeHelp = () => setShowHelpModal(false);
       console.error("recordCompletionForDay error:", err);
     }
   };
+
+
+// ✅ 내 도장(=hall_of_fame 기록) 개수만 숫자로 가져오기
+const fetchMyStampCountNumber = async (userId) => {
+  const { count, error } = await supabase
+    .from("hall_of_fame")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return count ?? 0;
+};
+
 
   const removeCompletionForDay = async (dayKey) => {
     if (!me?.id) return;
@@ -677,6 +712,29 @@ const playFinishSound = (overrideSrc) => {
 
     return () => clearInterval(intervalId);
   }, [me?.id, selectedDayKey]);
+
+  // 내 도장 개수 불러오기 (hall_of_fame에서 내 기록 개수 세기)
+useEffect(() => {
+  if (!me?.id) return;
+
+  const fetchMyStampCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("hall_of_fame")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", me.id);
+
+      if (error) throw error;
+      setStampCount(count ?? 0);
+    } catch (e) {
+      console.warn("fetchMyStampCount error:", e);
+      setStampCount(0);
+    }
+  };
+
+  fetchMyStampCount();
+}, [me?.id]);
+
 
   // 메모 불러오기
   useEffect(() => {
@@ -1075,37 +1133,73 @@ const playFinishSound = (overrideSrc) => {
   };
 
   const onToggle = async (item) => {
-    const current = todosRef.current ?? [];
-    const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
+  const current = todosRef.current ?? [];
+  const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
 
-    const nextTodos = current.map((t) =>
-      t.id === item.id ? { ...t, completed: !t.completed } : t
-    );
+  const nextTodos = current.map((t) =>
+    t.id === item.id ? { ...t, completed: !t.completed } : t
+  );
 
-    const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
+  const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
+
+  // ✅ (A) UI 즉시 반응
+  if (!wasAllCompleted && willAllCompleted) {
+    fireConfetti();
+    playFinishSound();
+  }
+
+  setTodos(nextTodos);
+
+  try {
+    const { error } = await supabase
+      .from("todos")
+      .update({ completed: !item.completed })
+      .eq("id", item.id);
+
+    if (error) throw error;
+
     if (!wasAllCompleted && willAllCompleted) {
-      fireConfetti();
-      playFinishSound();
+      // ✅ (B) 완료 기록(도장 1개) 먼저 저장
+      await recordCompletionForDay(selectedDayKey);
+
+      // ✅ (C) 저장 "전 레벨"과 "저장 후 레벨" 비교해서 레벨업이면 모달 띄우기
+      //     - recordCompletionForDay로 도장이 1 늘어났으니, 최신 count를 다시 세면 정확해요.
+      try {
+        const beforeStamp = await fetchMyStampCountNumber(me.id); 
+        // ⚠️ 여기서 beforeStamp는 "이미 저장된 후"가 될 가능성이 있으니,
+        //     안전하게 '모달 띄울지'는 아래처럼 "이전 레벨"을 상태로 관리하는 게 가장 깔끔합니다.
+      } catch {
+        // 여기서는 무시
+      }
+
+      // ✅ 가장 안전한 방식: "저장 직후 count"를 가져오고,
+      //    "저장 직전 레벨"은 '현재까지 도장'을 기준으로 계산해서 비교
+      const beforeCount = await fetchMyStampCountNumber(me.id); 
+      // 위 줄은 이미 저장 후 count이므로, 아래처럼 "저장 직전"을 역으로 추정합니다.
+      // recordCompletionForDay는 하루 1개만 추가되니, 저장 직전은 (저장 후 - 1)로 보면 돼요.
+      const afterCount = beforeCount;
+      const estimatedBefore = Math.max(0, afterCount - 1);
+
+      const beforeLv = calcLevelFromStamps(estimatedBefore).level;
+      const afterLv = calcLevelFromStamps(afterCount).level;
+
+      if (afterLv > beforeLv) {
+        // ✅ 트로피 모달 오픈
+        setLevelUpNewLevel(afterLv);
+        setLevelUpOpen(true);
+      }
     }
 
-    setTodos(nextTodos);
-
-    try {
-      const { error } = await supabase
-        .from("todos")
-        .update({ completed: !item.completed })
-        .eq("id", item.id);
-
-      if (error) throw error;
-
-      if (!wasAllCompleted && willAllCompleted) await recordCompletionForDay(selectedDayKey);
-      if (wasAllCompleted && !willAllCompleted) await removeCompletionForDay(selectedDayKey);
-    } catch (err) {
-      console.error("toggleTodo error:", err);
-      setTodos(current);
-      alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
+    if (wasAllCompleted && !willAllCompleted) {
+      await removeCompletionForDay(selectedDayKey);
     }
-  };
+  } catch (err) {
+    console.error("toggleTodo error:", err);
+    setTodos(current);
+    alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
+  }
+};
+
 
   const doneCount = todos.filter((t) => t.completed).length;
 
@@ -1505,6 +1599,7 @@ const deleteSelectedTodos = async () => {
           setVerseRef(mine.ref_text || "");
           const lines = mine.content.split("\n").map(s => s.trim()).filter(Boolean);
           setVerseLines(lines);
+          return;
         }
 
         const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
@@ -1736,6 +1831,14 @@ const deleteSelectedTodos = async () => {
         </div>
 
         <div className="sub-row">
+          {/* <div
+            className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"} clickable`}
+            onClick={() => navigate("/mypage")}
+            title="마이페이지로 이동"
+          >
+            <img src={kidIconSrc} alt={kidAlt} />
+            {kidName}
+          </div> */}
           <div
             className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"} clickable`}
             onClick={() => navigate("/mypage")}
@@ -1743,7 +1846,13 @@ const deleteSelectedTodos = async () => {
           >
             <img src={kidIconSrc} alt={kidAlt} />
             {kidName}
+
+            {/* 닉네임 옆 레벨 표시 */}
+            <span className="level-badge" title="내 레벨">
+              Lev.{myLevelInfo.level}
+            </span>
           </div>
+
 
           <div className="date-stack">
             <div className="today-row" title="선택한 날짜">
@@ -2137,6 +2246,29 @@ const deleteSelectedTodos = async () => {
         onClose={closeTour}
         onChangeStep={setTourStep}
       />
+
+      {/* ✅ 레벨업 트로피 모달 */}
+      {levelUpOpen && (
+        <div className="levelup-overlay" role="dialog" aria-modal="true" aria-label="레벨 업">
+          <div className="levelup-card">
+            <img
+              src="/trophy.png"
+              alt="트로피"
+              className="levelup-trophy"
+              draggable={false}
+            />
+
+            <div className="levelup-title">레벨이 올랐습니다!</div>
+            <div className="levelup-sub">축하해요 🎉 지금은</div>
+            <div className="levelup-level">Lev.{levelUpNewLevel}</div>
+
+            <button type="button" className="levelup-btn" onClick={closeLevelUp}>
+              확인
+            </button>
+          </div>
+        </div>
+      )}
+
 
       <footer className="planner-footer-simple">
         <div className="footer-links">

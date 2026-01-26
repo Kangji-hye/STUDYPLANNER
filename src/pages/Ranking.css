@@ -1,0 +1,245 @@
+/* src/pages/Ranking.css */
+/* ✅ Planner / MyPage와 동일한 톤으로 맞춘 Ranking 페이지
+   - 배경/카드/라인/그림자: 플래너 변수 사용
+   - 버튼: 핑크 포인트 (플래너 primary 느낌)
+   - 레벨 배지: 블루 포인트만
+   - font-weight: 400 통일
+*/
+
+.ranking-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+
+  background: var(--bg);
+  color: var(--text);
+
+  font-weight: 400;
+}
+
+/* 상단 헤더(플래너 카드 느낌) */
+.ranking-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 12px 12px;
+  margin-bottom: 14px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+/* 제목(과하지 않게, 플래너 톤) */
+.ranking-title {
+  font-family: "Poor Story", system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--text);
+  letter-spacing: -0.1px;
+  text-align: center;
+  flex: 1;
+}
+
+/* 상단 버튼(플래너 버튼 느낌) */
+.ranking-back {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 400;
+  white-space: nowrap;
+
+  transition: transform 0.06s ease, opacity 0.18s ease;
+}
+
+.ranking-back:hover {
+  transform: translateY(-1px);
+}
+
+.ranking-back:active {
+  transform: translateY(0px);
+  opacity: 0.95;
+}
+
+/* ✅ 플래너로 돌아가기 버튼만 핑크 포인트 주고 싶으면
+   - Ranking.jsx에서 오른쪽 버튼에 className="ranking-back ranking-back-primary"로 바꿔주세요.
+   - 지금은 둘 다 동일하게 유지해도 충분히 플래너 톤입니다.
+*/
+.ranking-back-primary {
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  box-shadow: 0 6px 14px rgba(255, 122, 162, 0.22);
+}
+
+/* 로딩/빈 상태 */
+.ranking-loading,
+.ranking-empty {
+  padding: 18px 10px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* 리스트 */
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 랭킹 카드(플래너 카드 톤) */
+.ranking-item {
+  display: grid;
+  grid-template-columns: 86px 1fr auto;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+/* 순위 */
+.ranking-rank {
+  font-family: "Poor Story", system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* 순위 뱃지(이모지 + 텍스트) */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 400;
+}
+
+/* 닉네임 */
+.ranking-name {
+  font-family: "Poor Story", system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text);
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ✅ 블루 포인트는 레벨에만 */
+.ranking-level {
+  justify-self: end;
+  font-size: 0.92rem;
+  font-weight: 400;
+
+  padding: 6px 14px;
+  border-radius: 999px;
+
+  background: rgba(37, 99, 235, 0.10);
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  color: rgba(37, 99, 235, 0.95);
+}
+
+/* 1~3등은 플래너 톤을 해치지 않게 “테두리만” 아주 살짝 */
+.ranking-item.top1 {
+  border-color: rgba(255, 122, 162, 0.40); /* 핑크 힌트 */
+}
+
+.ranking-item.top2 {
+  border-color: rgba(0, 0, 0, 0.10);
+}
+
+.ranking-item.top3 {
+  border-color: rgba(255, 193, 7, 0.35); /* 골드 힌트 */
+}
+
+/* 안내 문구 */
+.ranking-tip {
+  margin-top: 10px;
+  padding: 12px 12px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* 모바일에서 버튼/텍스트가 답답하면 살짝 줄이기 */
+@media (max-width: 420px) {
+  .ranking-page {
+    padding: 12px;
+  }
+
+  .ranking-back {
+    padding: 9px 10px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+  }
+
+  .ranking-item {
+    grid-template-columns: 52px 1fr auto;
+    padding: 11px 11px;
+    border-radius: 14px;
+  }
+
+  .ranking-level {
+    padding: 5px 9px;
+    font-size: 0.88rem;
+  }
+}
+
+/* 1) 아주 좁아지기 전(태블릿/작은 모바일) */
+@media (max-width: 520px) {
+  .ranking-head {
+    flex-wrap: wrap;         
+    justify-content: center;  
+  }
+
+  .ranking-title {
+    order: 1;               
+    flex: 0 0 100%;      
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .ranking-back {
+    order: 2;                
+    flex: 1 1 auto;        
+    min-width: 0;            
+    padding: 10px 10px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 2) 더 좁은 화면(작은 모바일) */
+@media (max-width: 380px) {
+  .ranking-title {
+    font-size: 0.95rem;
+  }
+
+  .ranking-back {
+    padding: 9px 9px;
+    font-size: 0.85rem;
+  }
+}

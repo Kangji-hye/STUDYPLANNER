@@ -1,8 +1,9 @@
 // src/pages/MyPage.jsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
+import { calcLevelFromStamps, levelToRatio, MAX_LEVEL } from "../utils/leveling";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
@@ -64,13 +65,19 @@ const MyPage = () => {
 
   const previewAudioRef = useRef(null);
 
+  // ✅ 내 도장(참 잘했어요) 총 개수 (훅은 컴포넌트 안!)
+  const [stampCount, setStampCount] = useState(0);
+
+  // ✅ 레벨 계산도 컴포넌트 안에서 useMemo로!
+  const levelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
+  const levelRatio = useMemo(() => levelToRatio(levelInfo.level), [levelInfo.level]);
+
   // 실제로 저장/적용되는 값
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
     is_male: true,
     finish_sound: DEFAULT_FINISH_SOUND,
-
     grade_code: null,
     grade_manual: false, // false면 자동, true면 사용자가 직접 선택
   });
@@ -93,6 +100,20 @@ const MyPage = () => {
     }
 
     const user = userData.user;
+
+    // ✅ 내 도장 개수 불러오기 (여기서는 setState만 하고, 훅(useMemo)은 절대 쓰지 않기)
+    try {
+      const { count, error } = await supabase
+        .from("hall_of_fame")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if (!error) setStampCount(count ?? 0);
+    } catch (e) {
+      console.warn("mypage stamp count load fail:", e);
+      setStampCount(0);
+    }
+
     setUserEmail(user.email ?? "");
 
     const { data: profileData, error: profileError } = await supabase
@@ -332,6 +353,50 @@ const MyPage = () => {
         </div>
       </div>
 
+      {/* 레벨 진행 막대(알록달록) */}
+      <div className="level-panel">
+        <div className="level-head">
+          <span className="level-title">
+            내 레벨
+            <span className="level-badge-pink">
+              Lev.{levelInfo.level}
+            </span>
+          </span>
+
+          <span className="level-max">
+            / {MAX_LEVEL}
+          </span>
+        </div>
+
+        <div className="level-bar-wrap" aria-label="레벨 진행 막대">
+          <div className="level-bar" />
+
+          {/* 내 위치 표시(화살표) */}
+          <div
+            className="level-marker"
+            style={{ left: `calc(${(levelRatio * 100).toFixed(2)}% )` }}
+            title={`내 위치: Lev.${levelInfo.level}`}
+          >
+            <div className="level-marker-arrow" />
+            <div className="level-marker-text">Lev.{levelInfo.level}</div>
+          </div>
+        </div>
+
+        <div className="level-sub">
+          도장 {stampCount}개 · 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
+        </div>
+
+        {/* 랭킹 페이지로 이동 */}
+        <button
+          type="button"
+          className="ranking-btn"
+          onClick={() => navigate("/ranking")}
+        >
+          🏆 랭킹 보기
+        </button>
+
+      </div>
+
       <div className="mypage-card">
         <div className="row">
           <span className="label">이메일</span>
@@ -369,49 +434,47 @@ const MyPage = () => {
         </div>
 
         {/* 학년 */}
-      <div className="row">
-        <span className="label">학년</span>
-        <span className="value">
-          {/* 랩으로 감싸서 효과음 셀렉트와 완전히 같은 구조로 통일 */}
-          <div className="select-wrap">
-            <select
-              className="sound-select"
-              value={form.grade_code ?? ""}
-              onChange={(e) => {
-                const raw = e.target.value;
+        <div className="row">
+          <span className="label">학년</span>
+          <span className="value">
+            <div className="select-wrap">
+              <select
+                className="sound-select"
+                value={form.grade_code ?? ""}
+                onChange={(e) => {
+                  const raw = e.target.value;
 
-                if (raw === "") {
-                  const auto = calcGradeCodeFromBirthdate(form.birthdate);
+                  if (raw === "") {
+                    const auto = calcGradeCodeFromBirthdate(form.birthdate);
+                    setForm((p) => ({
+                      ...p,
+                      grade_code: auto,
+                      grade_manual: false,
+                    }));
+                    return;
+                  }
+
+                  const v = Number(raw);
                   setForm((p) => ({
                     ...p,
-                    grade_code: auto,
-                    grade_manual: false,
+                    grade_code: Number.isFinite(v) ? v : null,
+                    grade_manual: true,
                   }));
-                  return;
-                }
-
-                const v = Number(raw);
-                setForm((p) => ({
-                  ...p,
-                  grade_code: Number.isFinite(v) ? v : null,
-                  grade_manual: true,
-                }));
-              }}
-            >
-              <option value="">자동(생년월일 기준)</option>
-              <option value={-1}>6세</option>
-              <option value={0}>7세</option>
-              <option value={1}>1학년</option>
-              <option value={2}>2학년</option>
-              <option value={3}>3학년</option>
-              <option value={4}>4학년</option>
-              <option value={5}>5학년</option>
-              <option value={6}>6학년</option>
-            </select>
-          </div>
-
-        </span>
-      </div>
+                }}
+              >
+                <option value="">자동(생년월일 기준)</option>
+                <option value={-1}>6세</option>
+                <option value={0}>7세</option>
+                <option value={1}>1학년</option>
+                <option value={2}>2학년</option>
+                <option value={3}>3학년</option>
+                <option value={4}>4학년</option>
+                <option value={5}>5학년</option>
+                <option value={6}>6학년</option>
+              </select>
+            </div>
+          </span>
+        </div>
 
         {/* 성별 */}
         <div className="row gender">
@@ -449,12 +512,13 @@ const MyPage = () => {
             <div className="sound-card">
               <div className="sound-card-head">
                 <span className="sound-card-title">🎵 효과음 선택</span>
-                <span className="sound-hint">마지막 “완료”를 눌렀을 때 이 소리가 나와요 🙂</span>
+                <span className="sound-hint">
+                  마지막 “완료”를 눌렀을 때 이 소리가 나와요 🙂
+                </span>
               </div>
 
               <div className="sound-card-body">
                 <div className="sound-control-row">
-                  {/* 여기도 똑같이 select-wrap으로 감싸기 */}
                   <div className="select-wrap">
                     <select
                       className="sound-select"
