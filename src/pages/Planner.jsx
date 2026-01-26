@@ -122,6 +122,15 @@ function Planner() {
 
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
+  // "오늘/과거/미래" 판별 (KST day_key는 YYYY-MM-DD라 문자열 비교가 안전해요)
+  const todayDayKey = toKstDayKey(new Date());     // 오늘(한국시간) 키
+  const isPastSelected = selectedDayKey < todayDayKey;   // 과거(지난 날짜)
+  const isFutureSelected = selectedDayKey > todayDayKey; // 미래(내일 이후)
+  const canEditSelectedDate = !isPastSelected;           // 오늘+미래는 수정 가능
+
+  //  기존 함수는 "오늘만"이 아니라 "과거만 막기"에 쓰면 돼요
+  const isEditableDate = () => canEditSelectedDate;
+
   // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
   useEffect(() => {
@@ -764,10 +773,12 @@ useEffect(() => {
     if (!me?.id) return;
     if (importingSample) return;
 
-    if (!isTodaySelected()) {
-      alert("지난 날짜에는 샘플 숙제 불러오기 기능을 사용할 수 없습니다.");
+    // 과거(지난 날짜)만 금지, 오늘+미래(내일)는 미리 셋팅 허용
+    if (isPastSelected) {
+      alert("지난 날짜에는 샘플 숙제 불러오기를 사용할 수 없습니다.\n(내일 날짜는 미리 셋팅할 수 있어요!)");
       return;
     }
+
 
     const useKey = sampleKeyOverride || selectedSampleKey;
     const tableName = SAMPLE_TABLE_BY_KEY[useKey];
@@ -917,8 +928,8 @@ useEffect(() => {
   const importMySingleList = async () => {
     if (!me?.id) return;
 
-    if (!isTodaySelected()) {
-      alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.");
+    if (isPastSelected) {
+      alert("지난 날짜에는 불러오기 기능을 사용할 수 없습니다.\n(내일 날짜는 미리 셋팅할 수 있어요!)");
       return;
     }
 
@@ -1082,6 +1093,11 @@ useEffect(() => {
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
+    
+    if (isPastSelected) {
+      alert("지난 날짜에는 할 일을 추가할 수 없습니다.");
+      return;
+    }
     const raw = todo.trim();
     if (!raw) return;
     if (!me?.id) return;
@@ -1118,6 +1134,11 @@ useEffect(() => {
   };
 
   const onDelete = async (id) => {
+    if (isPastSelected) {
+      alert("지난 날짜에는 삭제할 수 없습니다.");
+      return;
+    }
+
     const { error } = await supabase.from("todos").delete().eq("id", id);
     if (error) {
       console.error("deleteTodo error:", error);
@@ -1133,12 +1154,18 @@ useEffect(() => {
   };
 
   const onToggle = async (item) => {
-  const current = todosRef.current ?? [];
-  const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
+    //  지난 날짜는 완료/취소 금지
+    if (isPastSelected) {
+      alert("지난 날짜에는 완료 체크를 바꿀 수 없습니다.");
+      return;
+    }
 
-  const nextTodos = current.map((t) =>
-    t.id === item.id ? { ...t, completed: !t.completed } : t
-  );
+    const current = todosRef.current ?? [];
+    const wasAllCompleted = current.length > 0 && current.every((t) => t.completed);
+
+    const nextTodos = current.map((t) =>
+      t.id === item.id ? { ...t, completed: !t.completed } : t
+    );
 
   const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
@@ -1890,7 +1917,7 @@ const deleteSelectedTodos = async () => {
             className="preset-btn preset-btn-primary"
             ref={refLoadBtn}
             onClick={openLoadModal}
-            disabled={importingSample || busyMyList}
+            disabled={importingSample || busyMyList || isPastSelected} 
           >
             {importingSample || busyMyList ? "불러오는 중..." : "📂 목록 불러오기"}
           </button>
@@ -1898,14 +1925,6 @@ const deleteSelectedTodos = async () => {
           <button className="preset-btn preset-btn-ghost" onClick={openMyListSaveModal}>
             💾 내 목록 저장
           </button>
-
-          {/* <button
-            className="preset-btn mini-danger-btn"
-            title="선택한 날짜 목록 전체 삭제"
-            onClick={deleteAllTodos}
-          >
-            ❌ 오늘 목록 모두 삭제
-          </button> */}
         </div>
 
         <div className="todo-bar-inputs">
@@ -1915,6 +1934,7 @@ const deleteSelectedTodos = async () => {
             placeholder="새로운 내용을 입력하세요"
             ref={refInput}
             className="todo-input"
+            disabled={isPastSelected}
             onKeyDown={(e) => {
               if (e.key === "Enter" && todo.trim()) addTodo();
             }}
@@ -1974,6 +1994,7 @@ const deleteSelectedTodos = async () => {
           <button
             type="button"
             className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
+            disabled={isPastSelected}
             onClick={async () => {
               const next = !reorderMode;
               if (next) setFilter("all");
@@ -2008,6 +2029,7 @@ const deleteSelectedTodos = async () => {
                 onMoveDown={moveTodoDown}
                 isFirst={idx === 0}
                 isLast={idx === filteredTodos.length - 1}
+                readOnly={isPastSelected} 
 
                 /* 삭제 모드용 */
                 deleteMode={deleteMode}

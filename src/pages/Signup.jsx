@@ -1,5 +1,5 @@
 // src/pages/Signup.jsx
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Signup.css";
@@ -32,6 +32,22 @@ const Signup = () => {
     return `${birthY}-${birthM}-${birthD}`;
   };
 
+  useEffect(() => {
+    setBirthD("");
+  }, [birthM, birthY]);
+
+  const monthOptions = Array.from({ length: 12 }, (_, i) =>
+    String(i + 1).padStart(2, "0")
+  );
+
+  const getDayOptions = (year, month) => {
+    if (!year || !month) return [];
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    return Array.from({ length: lastDay }, (_, i) =>
+      String(i + 1).padStart(2, "0")
+    );
+  };
+
   const isPasswordMatch = useMemo(() => {
     if (!password || !passwordConfirm) return true;
     return password === passwordConfirm;
@@ -53,6 +69,22 @@ const Signup = () => {
     const safeEmail = email.trim();
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
+
+    // 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
+    if (!safeBirthdate) {
+      alert("생년월일을 YYYY / MM / DD 형식으로 모두 입력해 주세요.");
+      setLoading(false);
+      return;
+    }
+
+    // 간단 날짜 유효성 검사(월/일 범위)
+    const mm = Number(safeBirthdate.slice(5, 7));
+    const dd = Number(safeBirthdate.slice(8, 10));
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
+      alert("생년월일의 월/일을 올바르게 입력해 주세요.");
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -106,21 +138,6 @@ const Signup = () => {
     }
   };
 
-  // ✅ 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
-  if (!safeBirthdate) {
-    alert("생년월일을 YYYY / MM / DD 형식으로 모두 입력해 주세요.");
-    return;
-  }
-
-  // ✅ 간단 날짜 유효성 검사(월/일 범위)
-  const mm = Number(safeBirthdate.slice(5, 7));
-  const dd = Number(safeBirthdate.slice(8, 10));
-  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
-    alert("생년월일의 월/일을 올바르게 입력해 주세요.");
-    return;
-  }
-
-
   return (
     <div className="signup auth-page">
       <h2 className="auth-title">회원가입</h2>
@@ -163,14 +180,14 @@ const Signup = () => {
 
         <input
           type="text"
-          placeholder="닉네임 (플래너 표시)"
+          placeholder="이름(닉네임)"
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
           maxLength={6}
         />
 
-        {/* 생년월일: YYYY / MM / DD (자동 이동 + 숫자만) */}
+        {/* 생년월일: YYYY / MM / DD (년도는 입력, 월/일은 셀렉트) */}
         <div className="birth-split">
           <input
             ref={refBirthY}
@@ -181,50 +198,49 @@ const Signup = () => {
             onChange={(e) => {
               const v = onlyDigitsMax(e.target.value, 4);
               setBirthY(v);
-              if (v.length === 4) refBirthM.current?.focus();
+              if (v.length === 4) refBirthM.current?.focus(); // 4자리면 월로
             }}
             maxLength={4}
             required
           />
+
           <span className="birth-sep">-</span>
-          <input
+
+          <select
             ref={refBirthM}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="MM"
             value={birthM}
             onChange={(e) => {
-              const v = onlyDigitsMax(e.target.value, 2);
-              setBirthM(v);
-              if (v.length === 2) refBirthD.current?.focus(); 
+              setBirthM(e.target.value);
+              refBirthD.current?.focus(); // 월 고르면 일로
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Backspace" && birthM.length === 0) refBirthY.current?.focus();
-            }}
-            maxLength={2}
             required
-          />
+          >
+            <option value="">MM</option>
+            {monthOptions.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+
+          </select>
+
           <span className="birth-sep">-</span>
-          <input
+
+          <select
             ref={refBirthD}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="DD"
             value={birthD}
-            onChange={(e) => {
-              const v = onlyDigitsMax(e.target.value, 2);
-              setBirthD(v);
-            }}
-            onKeyDown={(e) => {
-              // ✅ 일칸이 비어있고 Backspace 누르면 월로
-              if (e.key === "Backspace" && birthD.length === 0) refBirthM.current?.focus();
-            }}
-            maxLength={2}
+            onChange={(e) => setBirthD(e.target.value)}
             required
-          />
+            disabled={birthY.length !== 4 || birthM.length !== 2}  // 년/월 없으면 비활성
+          >
+            <option value="">DD</option>
+            {getDayOptions(birthY, birthM).map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
         </div>
-
-
 
         <div className="gender-wrap">
           <label>

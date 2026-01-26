@@ -851,3 +851,9 @@ label.gender {
 .ranking-btn:active {
   transform: scale(0.97);
 }
+/* 학년 한 줄 안내(셀렉트 아래) */
+.grade-hint{
+  margin-top: 6px;
+  font-size: 0.95rem;
+  opacity: 0.85;
+}

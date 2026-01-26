@@ -312,9 +312,8 @@ const MyPage = () => {
     alert("비밀번호가 변경되었습니다. 다음 로그인부터 적용됩니다.");
   };
 
-  // 여기서는 훅을 더 쓰지 말고, 그냥 계산만!
-  const currentSoundLabel = getSoundLabelByValue(form.finish_sound);
-  const gradeText = gradeLabel(form.grade_code);
+  const savedSoundLabel = getSoundLabelByValue(profile?.finish_sound || DEFAULT_FINISH_SOUND);
+  const savedGradeText = gradeLabel(profile?.grade_code);
 
   if (loading) {
     return (
@@ -473,6 +472,7 @@ const MyPage = () => {
                 <option value={6}>6학년</option>
               </select>
             </div>
+            <div className="grade-hint">설정되어 있는 학년: {savedGradeText}</div>
           </span>
         </div>
 
@@ -547,7 +547,7 @@ const MyPage = () => {
                 </div>
 
                 <span className="sound-card-current">
-                  현재: <b>{currentSoundLabel}</b>
+                  설정되어 있는 효과음: <b>{savedSoundLabel}</b>
                 </span>
               </div>
             </div>
