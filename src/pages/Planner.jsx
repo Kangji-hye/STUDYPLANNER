@@ -1848,7 +1848,7 @@ const deleteSelectedTodos = async () => {
             {kidName}
 
             {/* 닉네임 옆 레벨 표시 */}
-            <span className="level-badge" title="내 레벨">
+            <span className="level-badge" title="내 레벨(도장 기반)">
               Lev.{myLevelInfo.level}
             </span>
           </div>
@@ -2104,7 +2104,7 @@ const deleteSelectedTodos = async () => {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 종이접기~"}
+              {afterStudyText.trim() ? afterStudyText : "수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 놀기~"}
             </div>
           ) : (
             <input
@@ -2112,7 +2112,7 @@ const deleteSelectedTodos = async () => {
               type="text"
               autoFocus
               value={afterStudyText}
-              placeholder="수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 종이접기~"
+              placeholder="수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 놀기~"
               onChange={(e) => {
                 const v = e.target.value;
                 setAfterStudyText(v);
