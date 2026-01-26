@@ -101,10 +101,9 @@
 /* 랭킹 카드(플래너 카드 톤) */
 .ranking-item {
   display: grid;
-  grid-template-columns: 86px 1fr auto;
+  grid-template-columns: 72px 1fr auto;
   align-items: center;
   gap: 10px;
-
   padding: 12px 12px;
   background: var(--card);
   border: 1px solid var(--line);
@@ -125,7 +124,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 /* 닉네임 */
@@ -140,18 +139,12 @@
   white-space: nowrap;
 }
 
-/* ✅ 블루 포인트는 레벨에만 */
-.ranking-level {
-  justify-self: end;
-  font-size: 0.92rem;
-  font-weight: 400;
 
-  padding: 6px 14px;
-  border-radius: 999px;
-
-  background: rgba(37, 99, 235, 0.10);
-  border: 1px solid rgba(37, 99, 235, 0.18);
-  color: rgba(37, 99, 235, 0.95);
+@media (max-width: 420px) {
+  .ranking-level {
+    font-size: 0.75rem;
+    padding: 2px 7px;
+  }
 }
 
 /* 1~3등은 플래너 톤을 해치지 않게 “테두리만” 아주 살짝 */
@@ -242,4 +235,50 @@
     padding: 9px 9px;
     font-size: 0.85rem;
   }
+}
+
+.ranking-nav-btn{
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: none;
+  font-size: 0.9rem;
+  font-weight: 400;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ranking-nav-btn:active{
+  transform: translateY(1px);
+}
+
+/* 모바일(아이폰 12 pro 포함) */
+@media (max-width: 420px){
+  .ranking-nav-btn{
+    padding: 9px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+  }
+
+  .ranking-nav-link{
+    font-size: 1rem;
+  }
+}
+
+.ranking-level {
+  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+
+  background: #ffe08a;
+  border: 1px solid #e2b24d;
+  color: #6a4300;
+
+  font-weight: 500;
+}
+
+.weather{
+  padding: 0;
 }

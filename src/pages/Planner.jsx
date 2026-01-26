@@ -1728,25 +1728,6 @@ const deleteSelectedTodos = async () => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // // ✅ 풀스크린 로딩 스플래시 (이중 스플래시 방지)
-  // // - index.html의 boot-splash가 있으면 여기서는 또 띄우지 않음
-  // if (loading) {
-  //   const hasBootSplash =
-  //     typeof document !== "undefined" && document.getElementById("boot-splash");
-
-  //   if (hasBootSplash) return null;
-
-  //   return (
-  //     <div className="app-splash" role="status" aria-live="polite">
-  //       <div className="app-splash-inner">
-  //         <img className="app-splash-logo" src="/logo-192.png" alt="초등 스터디 플래너" />
-  //         <div className="app-splash-text">초등 스터디 플래너</div>
-  //         <div className="app-splash-sub">불러오는 중...</div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   // =======================
   // 로그아웃
   // =======================
@@ -2303,6 +2284,15 @@ const deleteSelectedTodos = async () => {
         <div className="footer-links">
           <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
             😊마이페이지
+          </a>
+          <span>|</span>
+          <a
+            className="footer-link-secondary"
+            onClick={() => navigate("/ranking")}
+            role="button"
+            title="레벨 랭킹 보기"
+          >
+            🏆 랭킹
           </a>
           <span>|</span>
           <a

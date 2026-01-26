@@ -18,6 +18,23 @@ import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
 
+function BootSplashKiller() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const splash = document.getElementById("boot-splash");
+    if (!splash) return;
+
+    // 너무 빨리 지우면 깜빡일 수 있어서 한 프레임 뒤에 제거
+    requestAnimationFrame(() => {
+      try { splash.remove(); } catch {}
+    });
+  }, [location.pathname]);
+
+  return null;
+}
+
+
 // 라우트가 바뀔 때마다 화면 맨 위로 올려주는 컴포넌트
 function ScrollToTopOnRouteChange() {
   const location = useLocation();
@@ -42,6 +59,7 @@ const App = () => {
   return (
     <SoundSettingsProvider>
       <BrowserRouter>
+       <BootSplashKiller />
        <ScrollToTopOnRouteChange /> 
         <Routes>
           <Route element={<AuthLayout />}>

@@ -383,7 +383,7 @@ const MyPage = () => {
 
 
         <div className="level-sub">
-          달력에 "참 잘했어요!" 도장이 현재 {stampCount}개 · 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
+          달력에 "참 잘했어요!" 도장이 현재 {stampCount}개, 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
         </div>
 
         {/* 랭킹 페이지로 이동 */}

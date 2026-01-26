@@ -1,5 +1,5 @@
 // src/pages/Ranking.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
@@ -15,7 +15,6 @@ export default function Ranking() {
     const run = async () => {
       setLoading(true);
       try {
-        // ✅ Supabase RPC 호출: 도장 많은 순 TOP 10
         const { data, error } = await supabase.rpc("get_stamp_ranking", { limit_n: 11 });
         if (error) throw error;
 
@@ -30,8 +29,6 @@ export default function Ranking() {
           };
         });
 
-        // ✅ 표시는 "레벨 높은 순"이 자연스럽고,
-        //    레벨이 같으면 도장 많은 순으로 정렬
         list.sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
           return b.stamp_count - a.stamp_count;
@@ -49,19 +46,40 @@ export default function Ranking() {
     run();
   }, []);
 
-  const titleText = useMemo(() => (loading ? "불러오는 중..." : "레벨 랭킹 TOP 10"), [loading]);
-
   return (
     <div className="ranking-page">
-      <div className="ranking-head">
-         <button className="ranking-back ranking-back-primary" onClick={() => navigate("/mypage")}>
-        ⬅️ 마이페이지로
-        </button>
-        <div className="ranking-title">{titleText}</div>
-        <button className="ranking-back ranking-back-primary" onClick={() => navigate("/planner")}>
-        플래너로 ✅
-        </button>
-      </div>
+      <header className="top-header">
+        <div className="top-row">
+          <h1
+            className="app-title app-title-link"
+            onClick={() => navigate("/planner")}
+            title="플래너로 이동"
+          >
+            레벨 랭킹 TOP 10
+          </h1>
+
+          <div className="sub-row">
+            <button
+              type="button"
+              className="ranking-nav-btn"
+              onClick={() => navigate("/mypage")}
+              title="마이페이지로 이동"
+            >
+              마이페이지로
+            </button>
+
+            <div className="weather" title="플래너로 이동">
+              <button
+                type="button"
+                className="ranking-nav-btn"
+                onClick={() => navigate("/planner")}
+              >
+                플래너로
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
 
       {loading ? (
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
@@ -76,10 +94,8 @@ export default function Ranking() {
             >
               <div className="ranking-rank">
                 <span className="rank-badge">
-                    {/* 아이콘은 그대로, 글자는 MVP/1등/2등… */}
                     {idx === 0 ? "🏆" : idx === 1 ? "🥇" : idx === 2 ? "🥈" : idx === 3 ? "🥉" : "⭐"}
 
-                    {/* #1 대신: MVP, 1등, 2등 ... 10등 (총 11명) */}
                     {idx === 0 ? "MVP" : `${idx}등`}
                 </span>
 
