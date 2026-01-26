@@ -59,6 +59,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/admin"
               element={
