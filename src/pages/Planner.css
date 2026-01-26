@@ -401,3 +401,54 @@
     transform: scale(1);
   }
 }
+
+
+/* 리스트 아래 순서 변경 버튼 영역 */
+.todo-list-footer {
+  display: flex;
+  justify-content: flex-end; /* 오른쪽 끝 정렬 */
+  margin-top: 6px;
+}
+
+/* 순서 변경 버튼 스타일 */
+.reorder-toggle-btn {
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fff0f2;
+  border: 2px solid rgba(225, 29, 72, 0.15);
+  color: #e11d48;
+  box-shadow: none;
+}
+
+.reorder-toggle-btn:hover {
+  background: rgba(225, 29, 72, 0.08);
+}
+
+/* ✅ 리스트 아래 한 줄(좌/우) */
+.todo-bottom-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* 왼쪽/오른쪽 영역이 너무 커지지 않게 */
+.todo-bottom-left,
+.todo-bottom-right{
+  display: flex;
+  align-items: center;
+}
+
+/* 삭제 모드 버튼이 여러 개라 줄바꿈 될 수 있게 */
+.todo-bottom-left .filter-group-left{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-bar.filter-bar-split{
+  margin: 0 0 10px 0
+}
+

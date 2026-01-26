@@ -556,19 +556,13 @@ const MyPage = () => {
       </div>
 
       <div className="mypage-actions">
-        <button type="button" className="primary-btn" onClick={onSave} disabled={saving}>
+        <button className="primary-btn" onClick={onSave} disabled={saving}>
           {saving ? "저장 중..." : "저장"}
         </button>
-        <button
-          type="button"             
-          className="outline-btn"
-          onClick={(e) => {
-            e.preventDefault();        
-            navigate("/planner");
-          }}
-        >
+        <button className="outline-btn" onClick={() => navigate("/planner")}>
           플래너로
         </button>
+
         <button onClick={changePassword}>비밀번호 변경</button>
         <button onClick={logout}>로그아웃</button>
       </div>

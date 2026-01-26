@@ -1728,24 +1728,24 @@ const deleteSelectedTodos = async () => {
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // ✅ 풀스크린 로딩 스플래시 (이중 스플래시 방지)
-  // - index.html의 boot-splash가 있으면 여기서는 또 띄우지 않음
-  if (loading) {
-    const hasBootSplash =
-      typeof document !== "undefined" && document.getElementById("boot-splash");
+  // // ✅ 풀스크린 로딩 스플래시 (이중 스플래시 방지)
+  // // - index.html의 boot-splash가 있으면 여기서는 또 띄우지 않음
+  // if (loading) {
+  //   const hasBootSplash =
+  //     typeof document !== "undefined" && document.getElementById("boot-splash");
 
-    if (hasBootSplash) return null;
+  //   if (hasBootSplash) return null;
 
-    return (
-      <div className="app-splash" role="status" aria-live="polite">
-        <div className="app-splash-inner">
-          <img className="app-splash-logo" src="/logo-192.png" alt="초등 스터디 플래너" />
-          <div className="app-splash-text">초등 스터디 플래너</div>
-          <div className="app-splash-sub">불러오는 중...</div>
-        </div>
-      </div>
-    );
-  }
+  //   return (
+  //     <div className="app-splash" role="status" aria-live="polite">
+  //       <div className="app-splash-inner">
+  //         <img className="app-splash-logo" src="/logo-192.png" alt="초등 스터디 플래너" />
+  //         <div className="app-splash-text">초등 스터디 플래너</div>
+  //         <div className="app-splash-sub">불러오는 중...</div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // =======================
   // 로그아웃
@@ -1993,126 +1993,123 @@ const deleteSelectedTodos = async () => {
           )}
         </div>
 
-        {filter === "all" && (
-          <button
-            type="button"
-            className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
-            disabled={isPastSelected}
-            onClick={async () => {
-              const next = !reorderMode;
-              if (next) setFilter("all");
-              setReorderMode(next);
-              if (next) {
-                await ensureSortOrderForDay();
-              }
-            }}
-            title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
-          >
-            {reorderMode ? "순서변경완료" : "순서변경하기"}
-          </button>
-        )}
+        
       </div>
 
-      <ul ref={refTodoList} className="todo-list" >
-        {/* 할 일 목록 영역 */}
-        {(filteredTodos ?? []).length === 0 ? (
-          <div className="empty-todo">
-            오늘 일정이 없습니다.
-          </div>
-        ) : (
-          <ul>
-            {filteredTodos.map((t, idx) => (
-              <TodoItem
-                key={t.id}
-                t={t}
-                onToggle={onToggle}
-                onDelete={onDelete}
-                reorderMode={reorderMode}
-                onMoveUp={moveTodoUp}
-                onMoveDown={moveTodoDown}
-                isFirst={idx === 0}
-                isLast={idx === filteredTodos.length - 1}
-                readOnly={isPastSelected} 
+      {/* ✅ 리스트 영역: ul은 하나만 쓰기 */}
+<div ref={refTodoList}>
+  {(filteredTodos ?? []).length === 0 ? (
+    <div className="empty-todo">오늘 일정이 없습니다.</div>
+  ) : (
+    <ul className="todo-list">
+      {filteredTodos.map((t, idx) => (
+        <TodoItem
+          key={t.id}
+          t={t}
+          onToggle={onToggle}
+          onDelete={onDelete}
+          reorderMode={reorderMode}
+          onMoveUp={moveTodoUp}
+          onMoveDown={moveTodoDown}
+          isFirst={idx === 0}
+          isLast={idx === filteredTodos.length - 1}
+          readOnly={isPastSelected}
+          deleteMode={deleteMode}
+          deleteChecked={selectedDeleteIds.has(t.id)}
+          onToggleDeleteCheck={() => toggleSelectForDelete(t.id)}
+        />
+      ))}
+    </ul>
+  )}
 
-                /* 삭제 모드용 */
-                deleteMode={deleteMode}
-                deleteChecked={selectedDeleteIds.has(t.id)}
-                onToggleDeleteCheck={() => toggleSelectForDelete(t.id)}
-              />
-            ))}
-          </ul>
-        )}
-
-      </ul>
-
-      {/* 삭제 툴바 */}
-        <div className="delete-toolbar">
-          {!deleteMode ? (
+  {/* ✅ 아래 한 줄: 왼쪽 삭제 / 오른쪽 순서변경 */}
+  <div className="todo-bottom-row">
+    {/* ===== 왼쪽: 삭제 영역 ===== */}
+    <div className="todo-bottom-left">
+      {!deleteMode ? (
+        <button
+          type="button"
+          className={`filter-btn reorder-btn ${deleteMode ? "active" : ""}`}
+          onClick={() => {
+            if ((filteredTodos ?? []).length === 0) {
+              alert("삭제할 것이 없어요 🙂");
+              return;
+            }
+            setDeleteMode(true);
+            clearAllForDelete();
+          }}
+        >
+          삭제
+        </button>
+      ) : (
+        <div className="delete-mode-row">
+          <div className="filter-group-left" style={{ flexWrap: "wrap" }}>
             <button
               type="button"
-              className={`filter-btn reorder-btn ${deleteMode ? "active" : ""}`}
-              onClick={() => {
-                if ((filteredTodos ?? []).length === 0) {
-                  alert("삭제할 것이 없어요 🙂");
-                  return;
+              className="filter-btn reorder-btn"
+              onClick={toggleSelectAllForDelete}
+            >
+              <input
+                type="checkbox"
+                checked={
+                  filteredTodos?.length > 0 &&
+                  selectedDeleteIds.size === filteredTodos.length
                 }
+                readOnly
+                onClick={(e) => e.stopPropagation()}
+                className="select-all-checkbox"
+              />
+              {filteredTodos?.length > 0 && selectedDeleteIds.size === filteredTodos.length
+                ? "모두 해제"
+                : "모두 선택"}
+            </button>
 
-                setDeleteMode(true);
+            <button
+              type="button"
+              className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
+              onClick={deleteSelectedTodos}
+              disabled={selectedDeleteIds.size === 0}
+              title={selectedDeleteIds.size === 0 ? "삭제할 항목을 먼저 체크해 주세요" : "선택 항목 삭제"}
+            >
+              선택 삭제 ({selectedDeleteIds.size})
+            </button>
+
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={() => {
+                setDeleteMode(false);
                 clearAllForDelete();
               }}
             >
-              삭제
+              닫기
             </button>
-
-          ) : (
-            <div className="delete-mode-row">
-              <div className="filter-group-left" style={{ flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  className="filter-btn reorder-btn"
-                  onClick={toggleSelectAllForDelete} 
-                >
-                  <input
-                    type="checkbox"
-                    checked={
-                      filteredTodos?.length > 0 &&
-                      selectedDeleteIds.size === filteredTodos.length
-                    }
-                    readOnly
-                    onClick={(e) => e.stopPropagation()}
-                    className="select-all-checkbox"
-                  />
-                  {/* 전부 선택되면 "모두 해제"로 글자 바꾸기 */}
-                  {filteredTodos?.length > 0 && selectedDeleteIds.size === filteredTodos.length
-                    ? "모두 해제"
-                    : "모두 선택"}
-                </button>
-
-                <button
-                  type="button"
-                  className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
-                  onClick={deleteSelectedTodos}
-                  disabled={selectedDeleteIds.size === 0}
-                  title={selectedDeleteIds.size === 0 ? "삭제할 항목을 먼저 체크해 주세요" : "선택 항목 삭제"}
-                >
-                  선택 삭제 ({selectedDeleteIds.size})
-                </button>
-
-                <button
-                  type="button"
-                  className="filter-btn"
-                  onClick={() => {
-                    setDeleteMode(false);
-                    clearAllForDelete();
-                  }}
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
+      )}
+    </div>
 
+    {/* ===== 오른쪽: 순서 변경하기 ===== */}
+    <div className="todo-bottom-right">
+      {filter === "all" && !deleteMode && (
+        <button
+          type="button"
+          className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
+          disabled={isPastSelected}
+          onClick={async () => {
+            const next = !reorderMode;
+            if (next) setFilter("all");
+            setReorderMode(next);
+            if (next) await ensureSortOrderForDay();
+          }}
+          title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
+        >
+          {reorderMode ? "순서변경완료" : "순서변경하기"}
+        </button>
+      )}
+    </div>
+  </div>
+</div>
 
       <div className="finish">
         <span className="title">메모</span>

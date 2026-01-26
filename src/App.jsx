@@ -1,5 +1,6 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation  } from "react-router-dom";
+import { useEffect } from "react";
 import AuthLayout from "./layouts/AuthLayout";
 import AppLayout from "./layouts/AppLayout";
 
@@ -17,11 +18,31 @@ import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
 
+// 라우트가 바뀔 때마다 화면 맨 위로 올려주는 컴포넌트
+function ScrollToTopOnRouteChange() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // 1) 일반 브라우저용
+    window.scrollTo(0, 0);
+
+    // 2) iOS/PWA에서 가끔 window만으로 안 먹을 때 대비
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    // 3) 혹시 #root가 스크롤 컨테이너처럼 동작하는 경우까지 대비
+    const root = document.getElementById("root");
+    if (root) root.scrollTop = 0;
+  }, [location.pathname]);
+
+  return null;
+}
 
 const App = () => {
   return (
     <SoundSettingsProvider>
       <BrowserRouter>
+       <ScrollToTopOnRouteChange /> 
         <Routes>
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
