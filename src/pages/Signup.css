@@ -51,3 +51,29 @@
   font-size: 0.92rem;
   line-height: 1.35;
 }
+
+/* 생년월일 3칸 입력 */
+.birth-split {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.birth-split input {
+  width: 100%;
+  text-align: center;
+}
+
+.birth-split input:first-child {
+  flex: 1.2; /* YYYY는 조금 넓게 */
+}
+
+.birth-split input:nth-child(3),
+.birth-split input:nth-child(5) {
+  flex: 0.8; /* MM/DD는 조금 좁게 */
+}
+
+.birth-sep {
+  opacity: 0.6;
+  user-select: none;
+}

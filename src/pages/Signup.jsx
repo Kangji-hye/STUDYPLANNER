@@ -1,5 +1,5 @@
 // src/pages/Signup.jsx
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Signup.css";
@@ -8,12 +8,29 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [birthY, setBirthY] = useState(""); // 4자리
+  const [birthM, setBirthM] = useState(""); // 2자리
+  const [birthD, setBirthD] = useState(""); // 2자리
   const [nickname, setNickname] = useState("");
-  const [birthdate, setBirthdate] = useState(""); 
   const [isMale, setIsMale] = useState(true);
+  
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // 생년월일 입력칸 ref (자동 포커스 이동용)
+  const refBirthY = useRef(null);
+  const refBirthM = useRef(null);
+  const refBirthD = useRef(null);
+
+  // 숫자만 남기고, 최대 길이까지 자르기
+  const onlyDigitsMax = (v, maxLen) => String(v ?? "").replace(/\D/g, "").slice(0, maxLen);
+
+  // YYYY-MM-DD 조립 (검증은 submit에서)
+  const buildBirthdate = () => {
+    if (birthY.length !== 4 || birthM.length !== 2 || birthD.length !== 2) return "";
+    return `${birthY}-${birthM}-${birthD}`;
+  };
 
   const isPasswordMatch = useMemo(() => {
     if (!password || !passwordConfirm) return true;
@@ -35,7 +52,7 @@ const Signup = () => {
 
     const safeEmail = email.trim();
     const safeNickname = nickname.trim();
-    const safeBirthdate = birthdate.trim(); 
+    const safeBirthdate = buildBirthdate();
 
     try {
       setLoading(true);
@@ -89,6 +106,21 @@ const Signup = () => {
     }
   };
 
+  // ✅ 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
+  if (!safeBirthdate) {
+    alert("생년월일을 YYYY / MM / DD 형식으로 모두 입력해 주세요.");
+    return;
+  }
+
+  // ✅ 간단 날짜 유효성 검사(월/일 범위)
+  const mm = Number(safeBirthdate.slice(5, 7));
+  const dd = Number(safeBirthdate.slice(8, 10));
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
+    alert("생년월일의 월/일을 올바르게 입력해 주세요.");
+    return;
+  }
+
+
   return (
     <div className="signup auth-page">
       <h2 className="auth-title">회원가입</h2>
@@ -138,12 +170,61 @@ const Signup = () => {
           maxLength={6}
         />
 
-        <input
-          type="date"
-          value={birthdate}
-          onChange={(e) => setBirthdate(e.target.value)}
-          required
-        />
+        {/* 생년월일: YYYY / MM / DD (자동 이동 + 숫자만) */}
+        <div className="birth-split">
+          <input
+            ref={refBirthY}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="YYYY"
+            value={birthY}
+            onChange={(e) => {
+              const v = onlyDigitsMax(e.target.value, 4);
+              setBirthY(v);
+              if (v.length === 4) refBirthM.current?.focus();
+            }}
+            maxLength={4}
+            required
+          />
+          <span className="birth-sep">-</span>
+          <input
+            ref={refBirthM}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="MM"
+            value={birthM}
+            onChange={(e) => {
+              const v = onlyDigitsMax(e.target.value, 2);
+              setBirthM(v);
+              if (v.length === 2) refBirthD.current?.focus(); 
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Backspace" && birthM.length === 0) refBirthY.current?.focus();
+            }}
+            maxLength={2}
+            required
+          />
+          <span className="birth-sep">-</span>
+          <input
+            ref={refBirthD}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="DD"
+            value={birthD}
+            onChange={(e) => {
+              const v = onlyDigitsMax(e.target.value, 2);
+              setBirthD(v);
+            }}
+            onKeyDown={(e) => {
+              // ✅ 일칸이 비어있고 Backspace 누르면 월로
+              if (e.key === "Backspace" && birthD.length === 0) refBirthM.current?.focus();
+            }}
+            maxLength={2}
+            required
+          />
+        </div>
+
+
 
         <div className="gender-wrap">
           <label>
