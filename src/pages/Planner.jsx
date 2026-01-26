@@ -108,6 +108,7 @@ function Planner() {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
   const [verseLines, setVerseLines] = useState([]); 
   const [verseRef, setVerseRef] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
@@ -1284,8 +1285,9 @@ const deleteSelectedTodos = async () => {
     return;
   }
 
-  const ok = window.confirm(`선택한 ${ids.length}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`);
-  if (!ok) return;
+  // const ok = window.confirm(`선택한 ${ids.length}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`);
+  // if (!ok) return;
+  setDeleteTargetId(t.id);
 
   try {
     // 한 번에 삭제
@@ -2268,6 +2270,18 @@ const deleteSelectedTodos = async () => {
         onClose={closeTour}
         onChangeStep={setTourStep}
       />
+
+      <ConfirmModal
+        open={deleteTargetId !== null}
+        title="삭제 확인"
+        message="정말 삭제하시겠습니까?"
+        onCancel={() => setDeleteTargetId(null)}
+        onConfirm={() => {
+          onDelete(deleteTargetId);
+          setDeleteTargetId(null);
+        }}
+      />
+
 
       {/* ✅ 레벨업 트로피 모달 */}
       {levelUpOpen && (
