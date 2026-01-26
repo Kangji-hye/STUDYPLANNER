@@ -352,7 +352,6 @@ const MyPage = () => {
         </div>
       </div>
 
-      {/* 레벨 진행 막대(알록달록) */}
       <div className="level-panel">
         <div className="level-head">
           <span className="level-title">
@@ -366,23 +365,25 @@ const MyPage = () => {
             / {MAX_LEVEL}
           </span>
         </div>
+    
 
-        <div className="level-bar-wrap" aria-label="레벨 진행 막대">
-          <div className="level-bar" />
-
-          {/* 내 위치 표시(화살표) */}
-          <div
-            className="level-marker"
-            style={{ left: `calc(${(levelRatio * 100).toFixed(2)}% )` }}
-            title={`내 위치: Lev.${levelInfo.level}`}
-          >
-            <div className="level-marker-arrow" />
-            <div className="level-marker-text">Lev.{levelInfo.level}</div>
-          </div>
+        <div className="level-body">
+          <div className="level-bar-wrap" aria-label="레벨 진행 막대">
+            <div className="level-bar" />
+              <div
+                className="level-marker"
+                style={{ left: `calc(${(levelRatio * 100).toFixed(2)}% )` }}
+                title={`내 위치: Lev.${levelInfo.level}`}
+              >
+              <div className="level-marker-arrow" />
+              <div className="level-marker-text">Lev.{levelInfo.level}</div>
+            </div>
+          </div> 
         </div>
 
+
         <div className="level-sub">
-          도장 {stampCount}개 · 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
+          달력에 "참 잘했어요!" 도장이 현재 {stampCount}개 · 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
         </div>
 
         {/* 랭킹 페이지로 이동 */}
@@ -391,7 +392,7 @@ const MyPage = () => {
           className="ranking-btn"
           onClick={() => navigate("/ranking")}
         >
-          🏆 랭킹 보기
+          🏆 랭킹 목록 보기
         </button>
 
       </div>
@@ -562,7 +563,6 @@ const MyPage = () => {
         <button className="outline-btn" onClick={() => navigate("/planner")}>
           플래너로
         </button>
-
         <button onClick={changePassword}>비밀번호 변경</button>
         <button onClick={logout}>로그아웃</button>
       </div>
