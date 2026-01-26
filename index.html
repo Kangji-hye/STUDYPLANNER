@@ -52,7 +52,7 @@
   <meta name="apple-mobile-web-app-title" content="초등플래너" />
 
   <!-- Android / PWA -->
-  <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- <link rel="manifest" href="/manifest.webmanifest" /> -->
   <!-- <meta name="theme-color" content="#2f7df6" /> -->
 
   <meta name="mobile-web-app-capable" content="yes">
@@ -67,10 +67,9 @@
     <div id="boot-fallback" style="display:none; font-weight:800; font-size:18px;">
       초등 스터디 플래너
     </div>
-    <div class="boot-sub">불러오는 중...</div>
+    <!-- <div class="boot-sub">불러오는 중...</div> -->
   </div>
   <script>
-    //  혹시 앱에서 제거가 늦어져도, 최대 1초만 보여주고 사라지게(보험)
     setTimeout(() => {
       const s = document.getElementById("boot-splash");
       if (s) s.remove();
@@ -80,14 +79,11 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 
-  <!-- <script>
-    setTimeout(() => {
-      const s = document.getElementById("boot-splash");
-      if (s) s.remove();
-    }, 10000);
-  </script> -->
-
   <style>
+    #root {
+      min-height: 100vh;
+    }
+
     html,
     body {
       height: 100%;

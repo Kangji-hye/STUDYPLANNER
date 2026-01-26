@@ -365,7 +365,6 @@
   color: #fff;
 }
 
-/* ✅ 알록달록 -> 부드러운 그라데이션으로 변경 */
 .level-bar {
   width: 100%;
   height: 100%;
@@ -376,4 +375,29 @@
     rgba(236, 72, 153, 0.95) 70%,
     rgba(251, 146, 60, 0.95) 100%
   );
+}
+
+/* 레벨업 트로피 이모지 */
+.levelup-trophy-emoji {
+  font-size: 5rem;          
+  line-height: 1;
+  margin-bottom: 12px;
+  text-align: center;
+
+  /* 살짝 통통 튀는 느낌 */
+  animation: trophy-pop 0.5s ease-out;
+}
+
+@keyframes trophy-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
 }

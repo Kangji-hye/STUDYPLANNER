@@ -24,6 +24,7 @@ import { useRestoreToToday } from "../hooks/useRestoreToToday";
 import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
 import { calcLevelFromStamps } from "../utils/leveling";
+import ConfirmModal from "../components/common/ConfirmModal";
 
 // =======================
 // 이모지 풀
@@ -2283,16 +2284,11 @@ const deleteSelectedTodos = async () => {
       />
 
 
-      {/* ✅ 레벨업 트로피 모달 */}
+      {/* 레벨업 트로피 모달 */}
       {levelUpOpen && (
         <div className="levelup-overlay" role="dialog" aria-modal="true" aria-label="레벨 업">
           <div className="levelup-card">
-            <img
-              src="/trophy.png"
-              alt="트로피"
-              className="levelup-trophy"
-              draggable={false}
-            />
+            <div className="levelup-trophy-emoji" aria-hidden="true">🏆</div>
 
             <div className="levelup-title">레벨이 올랐습니다!</div>
             <div className="levelup-sub">축하해요 🎉 지금은</div>
