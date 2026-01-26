@@ -1,0 +1,142 @@
+// src/components/common/HamburgerMenu.jsx
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import supabase from "../../supabaseClient";
+import "./HamburgerMenu.css";
+
+// ✅ 여기 캐시 키는 기존 코드와 같은 이름으로 맞춤 (Planner/MyPage에서 쓰는 값)
+const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
+
+/**
+ * ✅ 공통 햄버거 메뉴
+ * - 어디서든 헤더 오른쪽에 <HamburgerMenu />만 붙이면 동일한 메뉴가 나옵니다.
+ * - 내부 이동(플래너/마이페이지/랭킹)
+ * - 외부 열기(리딩레이스/그레이프시드)
+ * - 로그아웃
+ */
+export default function HamburgerMenu() {
+  const [open, setOpen] = useState(false);
+  const panelRef = useRef(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // ✅ 다른 페이지로 이동하면 메뉴는 자동으로 닫기(일관성 ↑)
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  // ✅ 바깥 클릭하면 닫히게(모달처럼)
+  useEffect(() => {
+    if (!open) return;
+
+    const onDown = (e) => {
+      if (!panelRef.current) return;
+      if (panelRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("touchstart", onDown);
+
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("touchstart", onDown);
+    };
+  }, [open]);
+
+  const go = async (key) => {
+    if (key === "planner") return navigate("/planner");
+    if (key === "mypage") return navigate("/mypage");
+    if (key === "ranking") return navigate("/ranking");
+
+    if (key === "share") return navigate("/share");
+
+    if (key === "readingrace") {
+        window.open(
+            "https://www.readingrace.com",
+            "_blank",
+            "noopener,noreferrer"
+        );
+        return;
+        }
+    if (key === "grapeseed") {
+        window.open(
+            "https://students.grapeseed.com",
+            "_blank",
+            "noopener,noreferrer"
+        );
+        return;
+        }
+
+    // 3) 로그아웃
+    if (key === "logout") {
+      const ok = window.confirm("로그아웃 하시겠습니까?");
+      if (!ok) return;
+
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+      if (error) {
+        alert("로그아웃 중 오류가 발생했습니다.");
+        return;
+      }
+
+      try {
+        localStorage.removeItem(PROFILE_CACHE_KEY);
+      } catch {
+        //
+      }
+
+      navigate("/login");
+    }
+  };
+
+  return (
+    <div className="hamburger">
+      <button
+        type="button"
+        className="hamburger-btn"
+        aria-label="메뉴 열기"
+        title="메뉴"
+        onClick={() => setOpen((v) => !v)}
+      >
+        ☰
+      </button>
+
+      {open && (
+        <div className="hamburger-panel" ref={panelRef} role="menu" aria-label="메뉴">
+          <button className="hamburger-item" onClick={() => go("planner")} role="menuitem">
+            🗓️ 플래너
+          </button>
+
+          <button className="hamburger-item" onClick={() => go("mypage")} role="menuitem">
+            😊 마이페이지
+          </button>
+
+          <button className="hamburger-item" onClick={() => go("ranking")} role="menuitem">
+            🏆 랭킹보기
+          </button>
+
+          <button className="hamburger-item" onClick={() => go("share")} role="menuitem">
+            🔗 공유하기
+          </button>
+
+          <div className="hamburger-divider" />
+
+          <button className="hamburger-item" onClick={() => go("readingrace")} role="menuitem">
+            📚 리딩레이스
+          </button>
+
+          <button className="hamburger-item" onClick={() => go("grapeseed")} role="menuitem">
+            🍇 그레이프시드
+          </button>
+
+          <div className="hamburger-divider" />
+
+          <button className="hamburger-item danger" onClick={() => go("logout")} role="menuitem">
+            🚪 로그아웃
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

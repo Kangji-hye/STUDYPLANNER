@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
 import { calcLevelFromStamps, levelToRatio, MAX_LEVEL } from "../utils/leveling";
+import HamburgerMenu from "../components/common/HamburgerMenu";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
@@ -346,9 +347,13 @@ const MyPage = () => {
           </div>
         </div>
 
-        <div className="mypage-qr-box">
-          <img src="/qr.png" alt="플래너 QR 코드" className="mypage-qr" />
-          <span className="mypage-qr-caption">Study Planner</span>
+        <div className="mypage-right">
+          <div className="mypage-qr-box">
+            <img src="/qr.png" alt="플래너 QR 코드" className="mypage-qr" />
+            <span className="mypage-qr-caption">Study Planner</span>
+          </div>
+
+          <HamburgerMenu />
         </div>
       </div>
 

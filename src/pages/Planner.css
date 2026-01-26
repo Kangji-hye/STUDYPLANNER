@@ -452,3 +452,9 @@
   margin: 0 0 10px 0
 }
 
+/* ✅ 플래너 헤더 오른쪽(날씨 + 메뉴) 묶음 */
+.header-right{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

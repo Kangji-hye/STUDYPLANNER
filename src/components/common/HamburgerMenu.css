@@ -1,0 +1,83 @@
+/* src/components/common/HamburgerMenu.css */
+
+/* ✅ 버튼 + 메뉴판을 한 덩어리로 */
+.hamburger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ✅ 줄3개 버튼 */
+.hamburger-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* 살짝 눌리는 느낌 */
+.hamburger-btn:active {
+  transform: translateY(1px);
+}
+
+/* ✅ 메뉴판(오른쪽 위에 뜨게) */
+.hamburger-panel {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 200px;
+
+  background: #fff;
+  border: 1px solid rgba(241, 215, 230, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+  padding: 8px;
+
+  z-index: 9999;
+}
+
+/* ✅ 메뉴 항목 */
+.hamburger-item {
+  width: 100%;
+  text-align: left;
+
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* hover */
+.hamburger-item:hover {
+  background: rgba(255, 122, 162, 0.08);
+}
+
+/* 구분선 */
+.hamburger-divider {
+  height: 1px;
+  background: rgba(241, 215, 230, 0.9);
+  margin: 6px 0;
+}
+
+/* 로그아웃 느낌 */
+.hamburger-item.danger {
+  color: #b91c1c;
+}
+
+.hamburger-item.danger:hover {
+  background: rgba(225, 29, 72, 0.08);
+}

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
-
+import HamburgerMenu from "../components/common/HamburgerMenu";
 import { calcLevelFromStamps } from "../utils/leveling";
 
 export default function Ranking() {
@@ -58,25 +58,8 @@ export default function Ranking() {
             레벨 랭킹 TOP 10
           </h1>
 
-          <div className="sub-row">
-            <button
-              type="button"
-              className="ranking-nav-btn"
-              onClick={() => navigate("/mypage")}
-              title="마이페이지로 이동"
-            >
-              마이페이지로
-            </button>
-
-            <div className="weather" title="플래너로 이동">
-              <button
-                type="button"
-                className="ranking-nav-btn"
-                onClick={() => navigate("/planner")}
-              >
-                플래너로
-              </button>
-            </div>
+          <div className="header-right">
+            <HamburgerMenu />
           </div>
         </div>
       </header>

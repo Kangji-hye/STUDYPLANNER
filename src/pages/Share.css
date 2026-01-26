@@ -1,0 +1,107 @@
+/* src/pages/Share.css */
+
+.share-page {
+  padding: 0 14px 24px;
+}
+
+.share-card {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid rgba(241, 215, 230, 0.95);
+  border-radius: 18px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.08);
+  padding: 14px;
+}
+
+.share-logo {
+  width: 180px;
+  height: 180px;
+  border-radius: 18px;
+  display: block;
+  margin: 4px auto 10px;
+}
+
+.share-link-box {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 122, 162, 0.06);
+}
+
+.share-link-title {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.share-link {
+  word-break: break-all;
+  font-size: 0.95rem;
+  opacity: 0.9;
+  margin-bottom: 10px;
+}
+
+/* ✅ 버튼 글씨를 정확히 가운데로 정렬 */
+.share-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+
+  /* ✅ 핵심: 중앙 정렬 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* ✅ 글씨가 아래로 쏠리는 느낌 방지 */
+  padding: 0;          /* 버튼 기본 padding 제거 */
+  line-height: 1;      /* 글줄 높이 과하게 커지는 것 방지 */
+}
+
+
+.share-btn:active {
+  transform: translateY(1px);
+}
+
+.share-msg {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.share-qr-box {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.share-qr {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.share-qr-help {
+  text-align: center;
+  font-size: 0.95rem;
+  opacity: 0.75;
+}
+
+.share-actions {
+  margin-top: 12px;
+}
+
+.share-btn.kakao {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.share-tip {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  opacity: 0.75;
+  line-height: 1.3;
+}

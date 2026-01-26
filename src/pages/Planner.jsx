@@ -25,6 +25,7 @@ import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
 import { calcLevelFromStamps } from "../utils/leveling";
 import ConfirmModal from "../components/common/ConfirmModal";
+import HamburgerMenu from "../components/common/HamburgerMenu";
 
 // =======================
 // 이모지 풀
@@ -1828,6 +1829,7 @@ const deleteSelectedTodos = async () => {
             <div className="weather" title="오늘의 날씨">
               <WeatherIcon code={weatherCode} size={52} />
             </div>
+            <HamburgerMenu />
           </div>
 
 

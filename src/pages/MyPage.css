@@ -715,3 +715,10 @@ label.gender {
   border-radius: 999px;
   overflow: visible; 
 }
+
+/* ✅ 마이페이지 헤더 오른쪽(QR + 메뉴) */
+.mypage-right{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

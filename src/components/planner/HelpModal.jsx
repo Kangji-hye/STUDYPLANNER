@@ -19,7 +19,8 @@ export default function HelpModal({ open, onClose }) {
 
         <div className="modal-body">
           <div className="modal-help">
-            🙂이 플래너는 “오늘 할 일”을 적고, 끝나면 “완료”를 눌러 성취감을 느끼는 앱이에요.
+            🙂초등학생을 위한 스터디 플래너 입니다. <br />
+            이 플래너는 “오늘 할 일”을 적고, 끝나면 “완료”를 눌러 성취감을 느끼는 앱이에요.
           </div>
 
           <div className="modal-help">

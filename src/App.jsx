@@ -18,6 +18,8 @@ import AuthCallback from "./pages/AuthCallback";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
 
+import Share from "./pages/Share";
+
 function BootSplashKiller() {
   const location = useLocation();
 
@@ -27,7 +29,9 @@ function BootSplashKiller() {
 
     // 너무 빨리 지우면 깜빡일 수 있어서 한 프레임 뒤에 제거
     requestAnimationFrame(() => {
-      try { splash.remove(); } catch {}
+      try { splash.remove(); } catch {
+        //
+      }
     });
   }, [location.pathname]);
 
@@ -79,6 +83,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <Planner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/share"
+              element={
+                <ProtectedRoute>
+                  <Share />
                 </ProtectedRoute>
               }
             />

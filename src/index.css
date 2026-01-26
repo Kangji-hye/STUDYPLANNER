@@ -452,3 +452,69 @@ li button:hover {
     --fs-small: 0.8rem; */
   }
 }
+
+
+/* 상단 헤더 */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.app-header-title {
+  font-size: var(--fs-app-title);
+  margin: 0;
+}
+
+/* 오른쪽 영역 (날씨 + 메뉴) */
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 줄 3개 메뉴 버튼 */
+.menu-button {
+  font-size: 1.6rem;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 2px solid var(--line);
+}
+
+/* 메뉴 배경 */
+.side-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 999;
+}
+
+/* 실제 메뉴 */
+.side-menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 220px;
+  height: 100%;
+  background: #fff;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-menu button {
+  text-align: left;
+  padding: 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: #fff;
+}
+
+.side-menu button.logout {
+  margin-top: auto;
+  color: #e11d48;
+  border-color: rgba(225,29,72,0.3);
+}
