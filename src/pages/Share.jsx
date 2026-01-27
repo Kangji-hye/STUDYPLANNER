@@ -59,47 +59,47 @@ export default function Share() {
     }
   };
 
-  // ✅ 카카오 공유
-  const shareKakao = () => {
-    const Kakao = getKakao();
-    const jsKey = import.meta.env.VITE_KAKAO_JS_KEY;
+  // 카카오 공유
+  // const shareKakao = () => {
+  //   const Kakao = getKakao();
+  //   const jsKey = import.meta.env.VITE_KAKAO_JS_KEY;
 
-    if (!jsKey) {
-      alert("카카오 공유를 쓰려면 VITE_KAKAO_JS_KEY 설정이 필요해요.");
-      return;
-    }
-    if (!Kakao) {
-      alert("카카오 SDK가 아직 준비되지 않았어요. (index.html 스크립트 확인)");
-      return;
-    }
-    if (!Kakao.isInitialized()) {
-      alert("카카오 SDK 초기화가 안 됐어요. 키/도메인 설정을 확인해 주세요.");
-      return;
-    }
+  //   if (!jsKey) {
+  //     alert("카카오 공유를 쓰려면 VITE_KAKAO_JS_KEY 설정이 필요해요.");
+  //     return;
+  //   }
+  //   if (!Kakao) {
+  //     alert("카카오 SDK가 아직 준비되지 않았어요. (index.html 스크립트 확인)");
+  //     return;
+  //   }
+  //   if (!Kakao.isInitialized()) {
+  //     alert("카카오 SDK 초기화가 안 됐어요. 키/도메인 설정을 확인해 주세요.");
+  //     return;
+  //   }
 
-    // ✅ 가장 무난한 피드 템플릿(공식 문서 흐름)
-    Kakao.Share.sendDefault({
-      objectType: "feed",
-      content: {
-        title: "초등 스터디 플래너",
-        description: "오늘 할 일 체크하고, 도장 모으고, 레벨 올려요!",
-        imageUrl: `${shareUrl}${logoSrc}`, // 이미지가 실제로 열리는 URL이어야 해요
-        link: {
-          mobileWebUrl: shareUrl,
-          webUrl: shareUrl,
-        },
-      },
-      buttons: [
-        {
-          title: "플래너 열기",
-          link: {
-            mobileWebUrl: shareUrl,
-            webUrl: shareUrl,
-          },
-        },
-      ],
-    });
-  };
+  //   // 가장 무난한 피드 템플릿(공식 문서 흐름)
+  //   Kakao.Share.sendDefault({
+  //     objectType: "feed",
+  //     content: {
+  //       title: "초등 스터디 플래너",
+  //       description: "오늘 할 일 체크하고, 도장 모으고, 레벨 올려요!",
+  //       imageUrl: `${shareUrl}${logoSrc}`, // 이미지가 실제로 열리는 URL이어야 해요
+  //       link: {
+  //         mobileWebUrl: shareUrl,
+  //         webUrl: shareUrl,
+  //       },
+  //     },
+  //     buttons: [
+  //       {
+  //         title: "플래너 열기",
+  //         link: {
+  //           mobileWebUrl: shareUrl,
+  //           webUrl: shareUrl,
+  //         },
+  //       },
+  //     ],
+  //   });
+  // };
 
   return (
     <div className="share-page">

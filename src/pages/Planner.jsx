@@ -1497,7 +1497,7 @@ const deleteSelectedTodos = async () => {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
           setTimerRunning(false);
-          playFinishSound();
+          // playFinishSound();
           return 0;
         }
         return next;

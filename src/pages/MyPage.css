@@ -298,7 +298,7 @@ label.gender {
 .level-panel .level-badge-pink {
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(255, 122, 162, 0.95);
+  background: #a178e4f2;
   color: #fff;
   font-size: 0.9rem;
   font-weight: 900;
@@ -733,4 +733,32 @@ label.gender {
 .header-right {
   display: inline-flex;
   align-items: center;
+}
+.mypage-card .row{
+  position: relative;       /* ::before 점선을 row 위에 올리기 위해 필요 */
+  padding: 12px 0;          /* 위아래 숨 쉴 공간(점선이 답답하지 않게) */
+}
+
+/* 첫 번째 row는 위에 선이 필요 없으니 제외 */
+.mypage-card .row:not(:first-child)::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+
+  border-top: 1px dashed rgba(241, 215, 230, 0.95); /* var(--line) 톤과 비슷 */
+}
+
+/* 모바일에서 row가 세로로 바뀌면, 점선이 너무 꽉 붙어 보일 수 있어서 살짝 조절 */
+@media (max-width: 660px){
+  .mypage-card .row{
+    padding: 10px 0;
+  }
+
+  /* 모바일은 좌우 패딩이 있으니 점선을 살짝 안쪽으로 넣어도 더 예쁨(선택) */
+  .mypage-card .row:not(:first-child)::before{
+    left: 0;
+    right: 0;
+  }
 }

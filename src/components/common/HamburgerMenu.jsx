@@ -14,8 +14,19 @@ export default function HamburgerMenu() {
   const location = useLocation();
 
   useEffect(() => {
-    setOpen(false);
+    let alive = true;
+
+    Promise.resolve().then(() => {
+      if (!alive) return;
+      setOpen(false);
+    });
+
+    // 컴포넌트가 사라지거나 effect가 다시 실행되면 실행 막기(안전장치)
+    return () => {
+      alive = false;
+    };
   }, [location.pathname]);
+
 
   useEffect(() => {
     if (!open) return;
