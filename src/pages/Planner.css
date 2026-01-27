@@ -1,6 +1,4 @@
-/* src/pages/Planner.css
- Planner.jsx의 import "./Planner.css"는 그대로 유지
-*/
+/* src/pages/Planner.css */
 
 @import "./planner/planner.header.css";
 @import "./planner/planner.todobar.css";
@@ -12,8 +10,7 @@
 @import "./planner/planner.responsive.css";
 @import "./planner/planner.footer.css";
 
-
-/* 첫 방문 말풍선 단계 안내(온보딩 투어) */
+/* 온보딩 투어 */
 .tour-layer { position: fixed; inset: 0; z-index: 9999; }
 .tour-dim { position: fixed; inset: 0; background: rgba(0,0,0,0.45); }
 
@@ -46,7 +43,6 @@
 .tour-btn{ border:0; cursor:pointer; padding:8px 10px; border-radius:12px; font-weight:700; }
 .tour-btn-ghost{ background: rgba(0,0,0,0.06); }
 .tour-btn-primary{ background: var(--primary); color:#fff; }
-
 
 /* 헤더 오른쪽: 관리자 버튼 + 날씨 묶음 */
 .top-right{
@@ -93,8 +89,7 @@
 }
 
 /* =========================
-   ✅ 셀렉트 공통: 핑크 테두리 + 글씨 1rem + 화살표 위치 안정화
-   MyPage.css 맨 아래에 붙여넣기
+   셀렉트 공통
 ========================= */
 
 /* 효과음/학년 셀렉트가 들어있는 줄: flex에서 폭이 줄어들어도 튀어나가지 않게 */
@@ -104,19 +99,16 @@
   gap: 10px;
 }
 
-/* ✅ select-wrap을 flex 아이템으로: 남은 공간을 먹고, 줄어들 땐 안 깨지게 */
 .sound-control-row .select-wrap {
   flex: 1;
   min-width: 0; /* 이거 없으면 overflow/튀어나감 자주 생김 */
 }
 
-/* 학년 줄도 value 안에서 폭이 깔끔하게 */
 .mypage .row .value .select-wrap {
   width: 100%;
   max-width: 100%; /* max-width: 420px 때문에 화살표가 튀는 경우가 있어 제거/무력화 */
 }
 
-/* ✅ 공통 랩(화살표 그리는 부모) */
 .select-wrap {
   position: relative;
   display: block;     /* inline-block 말고 block이 폭 계산 안정적 */
@@ -124,7 +116,6 @@
   box-sizing: border-box;
 }
 
-/* ✅ 실제 select: 핑크 테두리 + 글씨 1rem + 화살표 자리 확보 */
 .select-wrap .sound-select {
   width: 100%;
   max-width: 100%;
@@ -133,12 +124,10 @@
   font-size: 1rem;          /* 글씨 크게 */
   border-radius: 14px;
 
-  /* ✅ 핑크 테두리로 예쁘게 */
   border: 2px solid #ff7aa2;
   background: #fff;
   line-height: 1.2;
 
-  /* 기본 화살표 제거(우리가 직접 그림) */
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -147,19 +136,16 @@
   padding: 10px 48px 10px 16px;  /* 위아래 여유 + 화살표 자리 */
 }
 
-/* 포커스 때 더 예쁘게(선명하게) */
 .select-wrap .sound-select:focus {
   outline: none;
   border-color: #ff4f8b;
   box-shadow: 0 0 0 4px rgba(255, 122, 162, 0.18);
 }
 
-/* IE/옛 Edge 화살표 숨김 */
 .select-wrap .sound-select::-ms-expand {
   display: none;
 }
 
-/* ✅ 우리가 그리는 아래 방향 화살표(안으로 들어오게 고정) */
 .select-wrap::after {
   content: "";
   position: absolute;
@@ -175,11 +161,6 @@
   pointer-events: none;
 }
 
-/* =========================
-   ✅ 학년 / 효과음 셀렉트 폰트 반응형 통일
-   - 태블릿 이상: 예쁜 글씨
-   - 모바일: 시스템 기본 폰트
-========================= */
 
 /* 공통 기본값 (모바일 우선) */
 .select-wrap .sound-select,
@@ -190,9 +171,6 @@
   font-weight: 500;
 }
 
-/* =========================
-   태블릿 이상 (아이패드 포함)
-   ========================= */
 @media (min-width: 768px) {
   .select-wrap .sound-select,
   .select-wrap .sound-select option {
@@ -201,13 +179,6 @@
     letter-spacing: 0.02em;
   }
 }
-/* =========================
-   ✅ 셀렉트 전용 폰트 통일
-   - 모바일: 시스템 기본
-   - 태블릿 이상: Gamja Flower
-========================= */
-
-/* 📱 모바일 기본 (가독성 우선) */
 .select-wrap .sound-select,
 .select-wrap .sound-select option {
   font-family: -apple-system, BlinkMacSystemFont,
@@ -216,13 +187,12 @@
   font-weight: 500;
 }
 
-/* 📲 태블릿 이상 (아이패드 포함) */
 @media (min-width: 768px) {
   .select-wrap .sound-select,
   .select-wrap .sound-select option {
     font-family: "Gamja Flower", cursive;
-    font-size: 1.1rem;        /* 태블릿에서는 살짝 크게 */
-    letter-spacing: 0.03em;   /* 손글씨 폰트 가독성 보정 */
+    font-size: 1.1rem;        
+    letter-spacing: 0.03em; 
   }
 }
 /* =========================
@@ -283,9 +253,9 @@
 .verse
 
 .verse-ref {
-  font-size: 1rem;          /* 오늘의 말씀과 동일 */
-  font-weight: 700;         /* 제목급 */
-  color: #374151;           /* 너무 연하지 않게 */
+  font-size: 1rem;          
+  font-weight: 700;        
+  color: #374151;         
 }
 
 /* 닉네임 옆 레벨 배지 */
@@ -302,7 +272,7 @@
 }
 
 /* =========================
-   ✅ 레벨업 트로피 모달
+   레벨업 트로피 모달
    ========================= */
 .levelup-overlay {
   position: fixed;
@@ -377,14 +347,11 @@
   );
 }
 
-/* 레벨업 트로피 이모지 */
 .levelup-trophy-emoji {
   font-size: 5rem;          
   line-height: 1;
   margin-bottom: 12px;
   text-align: center;
-
-  /* 살짝 통통 튀는 느낌 */
   animation: trophy-pop 0.5s ease-out;
 }
 
@@ -402,15 +369,12 @@
   }
 }
 
-
-/* 리스트 아래 순서 변경 버튼 영역 */
 .todo-list-footer {
   display: flex;
-  justify-content: flex-end; /* 오른쪽 끝 정렬 */
+  justify-content: flex-end;
   margin-top: 6px;
 }
 
-/* 순서 변경 버튼 스타일 */
 .reorder-toggle-btn {
   font-size: 0.85rem;
   padding: 6px 10px;
@@ -425,7 +389,6 @@
   background: rgba(225, 29, 72, 0.08);
 }
 
-/* ✅ 리스트 아래 한 줄(좌/우) */
 .todo-bottom-row{
   display: flex;
   align-items: center;
@@ -434,14 +397,12 @@
   margin-top: 10px;
 }
 
-/* 왼쪽/오른쪽 영역이 너무 커지지 않게 */
 .todo-bottom-left,
 .todo-bottom-right{
   display: flex;
   align-items: center;
 }
 
-/* 삭제 모드 버튼이 여러 개라 줄바꿈 될 수 있게 */
 .todo-bottom-left .filter-group-left{
   display: flex;
   gap: 8px;
@@ -452,9 +413,62 @@
   margin: 0 0 10px 0
 }
 
-/* ✅ 플래너 헤더 오른쪽(날씨 + 메뉴) 묶음 */
 .header-right{
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* =========================
+   ✅ 관리자 버튼: 모바일에서 찌그러짐 방지
+   - 핵심: flex-shrink: 0 / white-space: nowrap
+   - 버튼 내부 정렬: inline-flex로 가운데 정렬
+========================= */
+
+/* 헤더 오른쪽 묶음: 좁아지면 줄바꿈 허용 */
+.top-right{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  /* ✅ 화면이 좁아지면 "아래줄"로 내려가게 해서 찌그러짐 방지 */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 관리자 버튼 자체는 절대 찌그러지지 않게 */
+.admin-link-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* ✅ 찌그러짐 방지 핵심 */
+  flex: 0 0 auto;      /* grow 0 / shrink 0 / auto */
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  /* 버튼 텍스트/높이 안정 */
+  line-height: 1;
+  min-height: 40px;
+
+  /* 혹시 상위에서 width가 잡히는 경우 방지 */
+  width: auto;
+}
+
+@media (max-width: 480px){
+  .top-right{
+    gap: 8px;
+  }
+
+  .admin-link-btn{
+    min-height: 34px;     /* 모바일에서 조금 낮게 */
+    padding: 0 10px;
+    border-radius: 12px;
+    font-size: 0.95rem;   /* 글씨가 눌려 보이면 여기만 살짝 낮추는 게 가장 안전 */
+  }
+
+  /* 날씨 박스가 너무 커서 버튼을 밀면, padding만 줄여 공간 확보 */
+  .weather{
+    padding: 6px 8px;
+  }
 }
