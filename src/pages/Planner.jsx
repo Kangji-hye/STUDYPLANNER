@@ -24,7 +24,7 @@ import { useRestoreToToday } from "../hooks/useRestoreToToday";
 import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
 import { calcLevelFromStamps } from "../utils/leveling";
-import ConfirmModal from "../components/common/ConfirmModal";
+// import ConfirmModal from "../components/common/ConfirmModal";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 
 // =======================
@@ -44,9 +44,9 @@ const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
 
-  const chars = Array.from(s); // 이모지/한글 안전하게 자르기
+  const chars = Array.from(s); 
   if (chars.length <= 6) return s;
-  return chars.slice(0, 6).join(""); // 6글자까지만 (…는 원하면 붙일 수 있음)
+  return chars.slice(0, 6).join(""); 
 };
 
 function calcGradeCodeFromBirthdate(birthdateStr) {
@@ -110,7 +110,9 @@ function Planner() {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
   const [verseLines, setVerseLines] = useState([]); 
   const [verseRef, setVerseRef] = useState("");
-  const [deleteTargetId, setDeleteTargetId] = useState(null);
+  // const [deleteTargetId, setDeleteTargetId] = useState(null);
+  // const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
+
   
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
@@ -128,11 +130,11 @@ function Planner() {
   // "오늘/과거/미래" 판별 (KST day_key는 YYYY-MM-DD라 문자열 비교가 안전해요)
   const todayDayKey = toKstDayKey(new Date());     // 오늘(한국시간) 키
   const isPastSelected = selectedDayKey < todayDayKey;   // 과거(지난 날짜)
-  const isFutureSelected = selectedDayKey > todayDayKey; // 미래(내일 이후)
-  const canEditSelectedDate = !isPastSelected;           // 오늘+미래는 수정 가능
+  // const isFutureSelected = selectedDayKey > todayDayKey; // 미래(내일 이후)
+  // const canEditSelectedDate = () => !isPastSelected;;           // 오늘+미래는 수정 가능
 
   //  기존 함수는 "오늘만"이 아니라 "과거만 막기"에 쓰면 돼요
-  const isEditableDate = () => canEditSelectedDate;
+  // const isEditableDate = () => canEditSelectedDate;
 
   // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
@@ -142,7 +144,7 @@ function Planner() {
 
   const fetchTodosSeqRef = useRef(0);
 
-  const isTodaySelected = () => selectedDayKey === toKstDayKey(new Date());
+  // const isTodaySelected = () => selectedDayKey === toKstDayKey(new Date());
 
   // =======================
   // 달력 모달
@@ -661,9 +663,8 @@ const playFinishSound = (overrideSrc) => {
               birthdate: nextProfile.birthdate,
               is_male: nextProfile.is_male,
               finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
-
-            grade_code: Number.isFinite(autoCode) ? autoCode : null,
-            grade_manual: false,
+              grade_code: nextProfile.grade_code ?? null,
+              grade_manual: Boolean(nextProfile.grade_manual ?? false),
             },
             { onConflict: "id" }
           );
@@ -704,7 +705,7 @@ const playFinishSound = (overrideSrc) => {
     if (!me?.id) return;
 
     const run = async () => {
-      const rows = await fetchTodos(me.id, selectedDayKey);
+      // const rows = await fetchTodos(me.id, selectedDayKey);
       await fetchHallOfFame(selectedDayKey);
       // await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
     };
@@ -1189,24 +1190,8 @@ useEffect(() => {
     if (error) throw error;
 
     if (!wasAllCompleted && willAllCompleted) {
-      // ✅ (B) 완료 기록(도장 1개) 먼저 저장
       await recordCompletionForDay(selectedDayKey);
-
-      // ✅ (C) 저장 "전 레벨"과 "저장 후 레벨" 비교해서 레벨업이면 모달 띄우기
-      //     - recordCompletionForDay로 도장이 1 늘어났으니, 최신 count를 다시 세면 정확해요.
-      try {
-        const beforeStamp = await fetchMyStampCountNumber(me.id); 
-        // ⚠️ 여기서 beforeStamp는 "이미 저장된 후"가 될 가능성이 있으니,
-        //     안전하게 '모달 띄울지'는 아래처럼 "이전 레벨"을 상태로 관리하는 게 가장 깔끔합니다.
-      } catch {
-        // 여기서는 무시
-      }
-
-      // ✅ 가장 안전한 방식: "저장 직후 count"를 가져오고,
-      //    "저장 직전 레벨"은 '현재까지 도장'을 기준으로 계산해서 비교
       const beforeCount = await fetchMyStampCountNumber(me.id); 
-      // 위 줄은 이미 저장 후 count이므로, 아래처럼 "저장 직전"을 역으로 추정합니다.
-      // recordCompletionForDay는 하루 1개만 추가되니, 저장 직전은 (저장 후 - 1)로 보면 돼요.
       const afterCount = beforeCount;
       const estimatedBefore = Math.max(0, afterCount - 1);
 
@@ -1214,7 +1199,6 @@ useEffect(() => {
       const afterLv = calcLevelFromStamps(afterCount).level;
 
       if (afterLv > beforeLv) {
-        // ✅ 트로피 모달 오픈
         setLevelUpNewLevel(afterLv);
         setLevelUpOpen(true);
       }
@@ -1277,7 +1261,7 @@ const toggleSelectAllForDelete = () => {
   }
 };
 
-//  선택 삭제(다중 삭제)
+// 선택 삭제(다중 삭제) 
 const deleteSelectedTodos = async () => {
   if (!me?.id) return;
 
@@ -1287,28 +1271,21 @@ const deleteSelectedTodos = async () => {
     return;
   }
 
-  // const ok = window.confirm(`선택한 ${ids.length}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`);
-  // if (!ok) return;
-  setDeleteTargetId(t.id);
-
   try {
-    // 한 번에 삭제
     const { error } = await supabase
       .from("todos")
       .delete()
+      .eq("user_id", me.id)
       .in("id", ids);
 
     if (error) throw error;
 
-    // 화면에서도 즉시 반영
-    const next = (todosRef.current ?? []).filter((t) => !selectedDeleteIds.has(t.id));
+    const next = (todosRef.current ?? []).filter((x) => !selectedDeleteIds.has(x.id));
     setTodos(next);
 
-    //완료 기록(명예의 전당)도 상태에 맞게 정리
-    const isAllCompleted = next.length > 0 && next.every((t) => t.completed);
+    const isAllCompleted = next.length > 0 && next.every((x) => x.completed);
     if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
 
-    // 선택/모드 정리
     clearAllForDelete();
     setDeleteMode(false);
   } catch (err) {
@@ -1574,7 +1551,7 @@ const deleteSelectedTodos = async () => {
 
     //학년이 아니면: 말씀을 '비워서' 화면에 안 보이게 만들기
     const myGrade = Number(profile?.grade_code);
-     const isAdmin = (me?.email === "kara@kara.com" || profile?.is_admin === true);
+    //  const isAdmin = (me?.email === "kara@kara.com" || profile?.is_admin === true);
     const isSecondGrade = (myGrade === 2);
 
     if (!isSecondGrade) {
@@ -1614,15 +1591,14 @@ const deleteSelectedTodos = async () => {
             return;
           }
 
-          // 2학년이므로 "grade_code === 2"인 말씀을 우선 선택
+          // 2학년이므로 "grade_code === 2"인 우선 선택
           const mine = valid.find((r) => r.grade_code === 2);
-
-          const chosen = mine
-            ? mine
-            : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
+          // const chosen = mine
+          //   ? mine
+          //   : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
 
           if (!mine) {
-            setVerseLines([]);  // ✅ 2학년 말씀이 없으면 숨김
+            setVerseLines([]);  
             setVerseRef("");
             return;
           }
@@ -2050,12 +2026,24 @@ const deleteSelectedTodos = async () => {
             <button
               type="button"
               className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
-              onClick={deleteSelectedTodos}
-              disabled={selectedDeleteIds.size === 0}
-              title={selectedDeleteIds.size === 0 ? "삭제할 항목을 먼저 체크해 주세요" : "선택 항목 삭제"}
+              onClick={async () => {
+                if (selectedDeleteIds.size === 0) {
+                  alert("삭제할 항목을 먼저 선택해 주세요.");
+                  return;
+                }
+
+                const ok = window.confirm(
+                  `선택한 ${selectedDeleteIds.size}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`
+                );
+
+                if (!ok) return;
+
+                await deleteSelectedTodos();
+              }}
             >
               선택 삭제 ({selectedDeleteIds.size})
             </button>
+
 
             <button
               type="button"
@@ -2203,10 +2191,6 @@ const deleteSelectedTodos = async () => {
         </div>
       )}
 
-
-
-
-
       <LoadScheduleModal
         open={showLoadModal}
         onClose={closeLoadModal}
@@ -2252,7 +2236,7 @@ const deleteSelectedTodos = async () => {
         onChangeStep={setTourStep}
       />
 
-      <ConfirmModal
+      {/* <ConfirmModal
         open={deleteTargetId !== null}
         title="삭제 확인"
         message="정말 삭제하시겠습니까?"
@@ -2262,6 +2246,17 @@ const deleteSelectedTodos = async () => {
           setDeleteTargetId(null);
         }}
       />
+
+      <ConfirmModal
+        open={deleteSelectedConfirmOpen}
+        title="선택 삭제 확인"
+        message={`선택한 ${selectedDeleteIds.size}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`}
+        onCancel={() => setDeleteSelectedConfirmOpen(false)}
+        onConfirm={async () => {
+          setDeleteSelectedConfirmOpen(false);
+          await deleteSelectedTodos();
+        }}
+      /> */}
 
 
       {/* 레벨업 트로피 모달 */}

@@ -432,9 +432,7 @@ label.gender {
   transform: translateY(1px);
 }
 
-* =========================
-   데스크탑(기본)
-========================= */
+
 @media (min-width: 901px){
   .level-panel .level-marker{
     top: -34px;
