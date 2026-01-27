@@ -1315,6 +1315,7 @@ const deleteSelectedTodos = async () => {
   const refAddBtn = useRef(null);
   const refLoadBtn = useRef(null);
   const refTodoList = useRef(null);
+  const refHamburgerMenu = useRef(null); 
 
   const startTour = () => {
     setTourStep(0);
@@ -1385,6 +1386,16 @@ const deleteSelectedTodos = async () => {
           </>
         ),
         targetRef: refCalendarBtn,
+      },
+      {
+        title: "☰ 메뉴 열기",
+        body: (
+          <>
+            여기에서 마이페이지, 랭킹, 로그아웃 같은<br />
+            여러 메뉴를 사용할 수 있어요.
+          </>
+        ),
+        targetRef: refHamburgerMenu,
       },
     ],
     []
@@ -1805,7 +1816,9 @@ const deleteSelectedTodos = async () => {
             <div className="weather" title="오늘의 날씨">
               <WeatherIcon code={weatherCode} size={52} />
             </div>
-            <HamburgerMenu />
+            <div ref={refHamburgerMenu}>
+             <HamburgerMenu />
+            </div>
           </div>
 
 

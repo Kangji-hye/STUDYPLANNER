@@ -4,16 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import supabase from "../../supabaseClient";
 import "./HamburgerMenu.css";
 
-// ✅ 여기 캐시 키는 기존 코드와 같은 이름으로 맞춤 (Planner/MyPage에서 쓰는 값)
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
-/**
- * ✅ 공통 햄버거 메뉴
- * - 어디서든 헤더 오른쪽에 <HamburgerMenu />만 붙이면 동일한 메뉴가 나옵니다.
- * - 내부 이동(플래너/마이페이지/랭킹)
- * - 외부 열기(리딩레이스/그레이프시드)
- * - 로그아웃
- */
 export default function HamburgerMenu() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
@@ -21,12 +13,10 @@ export default function HamburgerMenu() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ 다른 페이지로 이동하면 메뉴는 자동으로 닫기(일관성 ↑)
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
 
-  // ✅ 바깥 클릭하면 닫히게(모달처럼)
   useEffect(() => {
     if (!open) return;
 
@@ -54,7 +44,7 @@ export default function HamburgerMenu() {
 
     if (key === "readingrace") {
         window.open(
-            "https://www.readingrace.com",
+            "https://rd.dreamschool.or.kr/",
             "_blank",
             "noopener,noreferrer"
         );
