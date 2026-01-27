@@ -271,6 +271,7 @@ label.gender {
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.06);
   overflow: hidden;
   padding: 20px;
+  margin-top:-20px;
 }
 
 /* 헤더 */
