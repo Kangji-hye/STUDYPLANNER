@@ -722,3 +722,16 @@ label.gender {
   align-items: center;
   gap: 10px;
 }
+
+/* MyPage 헤더를 다른 페이지처럼 한 줄로 통일 */
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 오른쪽 햄버거 메뉴 자리 */
+.header-right {
+  display: inline-flex;
+  align-items: center;
+}

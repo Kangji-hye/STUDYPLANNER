@@ -337,25 +337,23 @@ const MyPage = () => {
 
   return (
     <div className="mypage">
-      <div className="mypage-header">
-        <div className="mypage-brand">
-          <img src="/logo.png" alt="스터디 플래너 로고" className="mypage-logo" />
+      <header className="top-header">
+        <div className="top-row">
+          {/* 왼쪽: 타이틀(다른 페이지랑 완전 동일한 톤) */}
+          <h1
+            className="app-title app-title-link"
+            onClick={() => navigate("/planner")}
+            title="플래너로 이동"
+          >
+            마이페이지
+          </h1>
 
-          <div className="mypage-title-wrap">
-            <h2 className="mypage-title">마이페이지</h2>
-            <span className="mypage-subtitle">초등학생을 위한 스터디 플래너</span>
+          {/* 오른쪽: 햄버거 메뉴(모든 페이지 공통 위치) */}
+          <div className="header-right">
+            <HamburgerMenu />
           </div>
         </div>
-
-        <div className="mypage-right">
-          <div className="mypage-qr-box">
-            <img src="/qr.png" alt="플래너 QR 코드" className="mypage-qr" />
-            <span className="mypage-qr-caption">Study Planner</span>
-          </div>
-
-          <HamburgerMenu />
-        </div>
-      </div>
+      </header>
 
       <div className="level-panel">
         <div className="level-head">

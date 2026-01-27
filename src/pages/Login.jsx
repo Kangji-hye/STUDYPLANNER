@@ -96,34 +96,22 @@ const Login = () => {
     }
   };
 
-  /**
-   * ✅ 첫 진입 시:
-   * 1) 저장된 이메일이 있으면 이메일 자동 채움 + 체크박스 ON
-   * 2) 저장된 이메일이 없으면 체크박스는 기본값(ON)을 유지
-   */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
 
       if (saved) {
         setEmail(saved);
-        setRememberEmail(true); // ✅ 저장된 값이 있으면 ON으로 확정
+        setRememberEmail(true); 
       } else {
-        // ✅ 저장값이 없으면 기본값(ON) 유지
         setRememberEmail(true);
       }
     } catch (err) {
       console.warn("이메일 로컬스토리지 읽기 실패", err);
-      // 읽기 실패해도 기본값 ON 유지
       setRememberEmail(true);
     }
   }, []);
 
-  /**
-   * ✅ 체크박스를 끄는 순간:
-   * - 저장된 이메일도 즉시 삭제해서
-   *   다음 접속 때도 "꺼짐 + 빈칸" 상태가 확실히 유지되게 함
-   */
   const onToggleRemember = (checked) => {
     setRememberEmail(checked);
 
