@@ -146,12 +146,15 @@ export default function Share() {
           <div className="share-qr-help">카메라로 찍으면 바로 열려요.</div>
         </div>
 
-        <div className="share-actions">
+        {/* <div className="share-actions">
           <button type="button" className="share-btn kakao" onClick={shareKakao}>
             💬 카카오로 공유
           </button>
-        </div>
+        </div> */}
 
+        {/* <div className="share-tip">
+          카카오 공유는 아직 준비 중이에요.. 
+        </div> */}
       </div>
     </div>
   );
