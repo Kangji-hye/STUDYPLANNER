@@ -152,9 +152,6 @@ export default function Share() {
           </button>
         </div>
 
-        <div className="share-tip">
-          카카오 공유가 안 되면, 카카오 개발자 콘솔에서 “플랫폼(웹) 도메인” 등록이 되어있는지 확인해 주세요.
-        </div>
       </div>
     </div>
   );
