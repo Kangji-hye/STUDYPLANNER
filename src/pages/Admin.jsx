@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Admin.css";
 
+
 /**
  * 학년 규칙(숫자 저장):
  * -1 = 6세, 0 = 7세, 1~6 = 1~6학년
@@ -94,11 +95,19 @@ export default function Admin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [myEmail, setMyEmail] = useState("");
 
-  // 말씀 관리(편집 영역)
+  // 숙제
   const [dayKey, setDayKey] = useState(() => toDayKey(new Date()));
-  const [gradeCode, setGradeCode] = useState(2); // ✅ 기본 2학년
-  const [verseRef, setVerseRef] = useState(""); // 말씀 범위
-  const [verseText, setVerseText] = useState(""); // 말씀 내용
+  const [gradeCode, setGradeCode] = useState(2); 
+  const [verseRef, setVerseRef] = useState(""); 
+  const [verseText, setVerseText] = useState(""); 
+  // const [homeworkItems, setHomeworkItems] = useState([]); // [{subject:"수학", content:"30페이지"}...]
+  // =======================
+  // ✅ 오늘 숙제 관리(편집 영역)
+  // =======================
+  const [hwSubject, setHwSubject] = useState("");   // 숙제 항목(예: 수학)
+  const [hwContent, setHwContent] = useState("");   // 숙제 내용(예: 30페이지)
+  const [hwItems, setHwItems] = useState([]);       // [{subject, content}...]
+
 
   // 인라인 달력: 현재 보여줄 달
   const [calMonth, setCalMonth] = useState(() => {
@@ -106,14 +115,19 @@ export default function Admin() {
     return { y: d.getFullYear(), m: d.getMonth() };
   });
 
-  // 저장된 말씀 목록
+  // 숙제목록
   const [verseList, setVerseList] = useState([]);
+  const [hwList, setHwList] = useState([]);
 
   const gradeLabel = useMemo(() => {
     return GRADE_OPTIONS.find((x) => x.value === Number(gradeCode))?.label ?? "-";
   }, [gradeCode]);
 
-  // ✅ 저장된 말씀 전체 목록 불러오기 (오늘 → 미래 → 과거 순)
+  // 목록이 너무 길어지는 문제 해결용: "최근 N개만" 먼저 보여주기
+  const [verseVisibleCount, setVerseVisibleCount] = useState(7);
+  const [hwVisibleCount, setHwVisibleCount] = useState(7);
+
+  // 저장된 말씀 전체 목록 불러오기 (오늘 → 미래 → 과거 순)
   const loadVerseList = async () => {
     const { data, error } = await supabase
       .from("daily_verses")
@@ -163,6 +177,57 @@ export default function Admin() {
     setVerseList([...todayList, ...futureList, ...pastList]);
   };
 
+  // 저장된 숙제 전체 목록 불러오기 (오늘 → 미래 → 과거 순)
+  const loadHomeworkList = async () => {
+    const { data, error } = await supabase
+      .from("daily_homeworks")
+      .select("day_key, grade_code, items, updated_at")
+      .order("day_key", { ascending: false })
+      .order("grade_code", { ascending: true });
+
+    if (error) {
+      console.error("loadHomeworkList error:", error);
+      alert("저장된 숙제 목록을 불러오지 못했습니다.");
+      return;
+    }
+
+    const rows = data ?? [];
+    const todayKey = toDayKey(new Date());
+    const todayNum = keyToNum(todayKey);
+
+    const todayList = [];
+    const futureList = [];
+    const pastList = [];
+
+    for (const r of rows) {
+      const dNum = keyToNum(r.day_key);
+      if (dNum === todayNum) todayList.push(r);
+      else if (dNum > todayNum) futureList.push(r);
+      else pastList.push(r);
+    }
+
+    const byGradeAsc = (a, b) => Number(a.grade_code) - Number(b.grade_code);
+
+    todayList.sort(byGradeAsc);
+
+    futureList.sort((a, b) => {
+      const da = keyToNum(a.day_key);
+      const db = keyToNum(b.day_key);
+      if (da !== db) return da - db;
+      return byGradeAsc(a, b);
+    });
+
+    pastList.sort((a, b) => {
+      const da = keyToNum(a.day_key);
+      const db = keyToNum(b.day_key);
+      if (da !== db) return db - da;
+      return byGradeAsc(a, b);
+    });
+
+    setHwList([...todayList, ...futureList, ...pastList]);
+  };
+
+
   // ✅ 선택된 날짜/학년에 맞는 말씀 불러오기(편집칸 채우기)
   const loadVerse = async () => {
     const { data, error } = await supabase
@@ -181,6 +246,64 @@ export default function Admin() {
     setVerseRef(String(data?.ref_text ?? ""));
     setVerseText(String(data?.content ?? ""));
   };
+
+    // ✅ 선택된 날짜/학년에 맞는 "오늘 숙제" 불러오기
+  const loadHomework = async () => {
+    const { data, error } = await supabase
+      .from("daily_homeworks")
+      .select("items")
+      .eq("day_key", dayKey)
+      .eq("grade_code", Number(gradeCode))
+      .maybeSingle();
+
+    if (error) {
+      console.error("loadHomework error:", error);
+      alert("숙제를 불러오지 못했습니다.");
+      return;
+    }
+
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const normalized = items
+      .map((x) => ({
+        subject: String(x?.subject ?? "").trim(),
+        content: String(x?.content ?? "").trim(),
+      }))
+      .filter((x) => x.subject && x.content);
+
+    setHwItems(normalized);
+  };
+
+  // ✅ 오늘 숙제 저장(업서트)
+  const saveHomework = async () => {
+    // 안전하게 정리
+    const cleaned = (hwItems ?? [])
+      .map((x) => ({
+        subject: String(x?.subject ?? "").trim(),
+        content: String(x?.content ?? "").trim(),
+      }))
+      .filter((x) => x.subject && x.content);
+
+    const { error } = await supabase
+      .from("daily_homeworks")
+      .upsert(
+        {
+          day_key: dayKey,
+          grade_code: Number(gradeCode),
+          items: cleaned,
+        },
+        { onConflict: "day_key,grade_code" }
+      );
+
+    if (error) {
+      console.error("saveHomework error:", error);
+      alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      return;
+    }
+
+    alert(`숙제를 저장했습니다! (${dayKey} / ${gradeLabel})`);
+    await loadHomework();
+  };
+
 
   // ✅ 로그인 유저 확인 + 관리자 판별 (1회)
   useEffect(() => {
@@ -225,6 +348,8 @@ export default function Admin() {
 
       await loadVerseList();
       await loadVerse();
+      await loadHomework();
+      await loadHomeworkList();
 
       if (mounted) setLoading(false);
     };
@@ -241,6 +366,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAdmin) return;
     loadVerse();
+    loadHomework();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, dayKey, gradeCode]);
 
@@ -342,6 +468,63 @@ export default function Admin() {
       </div>
     );
   }
+
+    // ✅ 숙제 목록에서 수정: 위 입력칸으로 올려서 편집
+  const editHomeworkFromList = (row) => {
+    setDayKey(String(row.day_key));
+    setGradeCode(Number(row.grade_code));
+
+    const items = Array.isArray(row.items) ? row.items : [];
+    const normalized = items
+      .map((x) => ({
+        subject: String(x?.subject ?? "").trim(),
+        content: String(x?.content ?? "").trim(),
+      }))
+      .filter((x) => x.subject && x.content);
+
+    setHwItems(normalized);
+
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  // ✅ 숙제 목록에서 삭제: 확인 후 DB 삭제
+  const deleteHomeworkFromList = async (row) => {
+    const gradeName =
+      GRADE_OPTIONS.find((g) => g.value === Number(row.grade_code))?.label ?? "-";
+
+    const ok = window.confirm(
+      `정말 삭제할까요?\n\n날짜: ${row.day_key}\n학년: ${gradeName}\n\n※ 삭제하면 되돌릴 수 없어요.`
+    );
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("daily_homeworks")
+      .delete()
+      .eq("day_key", String(row.day_key))
+      .eq("grade_code", Number(row.grade_code));
+
+    if (error) {
+      console.error("deleteHomeworkFromList error:", error);
+      alert("삭제 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      return;
+    }
+
+    await loadHomeworkList();
+
+    // 지금 위 편집칸이 방금 삭제한 것과 같은 날짜/학년이면 비워주기
+    if (String(dayKey) === String(row.day_key) && Number(gradeCode) === Number(row.grade_code)) {
+      setHwItems([]);
+      setHwSubject("");
+      setHwContent("");
+    }
+
+    alert("삭제했습니다.");
+  };
+
 
   const selectedDateObj = parseDayKeyToDate(dayKey);
 
@@ -494,6 +677,86 @@ export default function Admin() {
         </div>
       </div>
 
+      {/* 오늘 숙제 편집 카드 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          오늘 숙제 입력
+        </div>
+
+        <div className="admin-help">
+          예) 수학: 30페이지 / 영어: 20쪽 쓰기 / 국어: 받아쓰기 3페이지 처럼 입력해요.
+          “추가”를 누르면 아래에 쌓이고, “숙제 저장”을 누르면 DB에 저장됩니다.
+        </div>
+
+        <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            value={hwSubject}
+            onChange={(e) => setHwSubject(e.target.value)}
+            placeholder="숙제 항목 (예: 수학, 영어, 국어)"
+            style={{ flex: 1, minWidth: 180 }}
+          />
+          <input
+            type="text"
+            value={hwContent}
+            onChange={(e) => setHwContent(e.target.value)}
+            placeholder="숙제 내용 (예: 30페이지, 20쪽 쓰기, 받아쓰기 3페이지)"
+            style={{ flex: 2, minWidth: 220 }}
+          />
+          <button
+            className="admin-btn"
+            type="button"
+            onClick={() => {
+              const s = hwSubject.trim();
+              const c = hwContent.trim();
+              if (!s || !c) {
+                alert("숙제 항목과 내용을 둘 다 입력해 주세요.");
+                return;
+              }
+              setHwItems((prev) => [...prev, { subject: s, content: c }]);
+              setHwSubject("");
+              setHwContent("");
+            }}
+          >
+            추가
+          </button>
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          {hwItems.length === 0 ? (
+            <div className="admin-help">아직 입력된 숙제가 없어요.</div>
+          ) : (
+            <div className="admin-help">
+              {hwItems.map((it, i) => (
+                <div key={`hw-${i}`}>
+                  • {it.subject}: {it.content}
+                  <button
+                    type="button"
+                    className="admin-mini-btn danger"
+                    style={{ marginLeft: 8 }}
+                    onClick={() => {
+                      setHwItems((prev) => prev.filter((_, idx) => idx !== i));
+                    }}
+                    title="이 줄 삭제"
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="admin-actions">
+          <button className="admin-btn" onClick={saveHomework}>
+            숙제 저장
+          </button>
+          <button className="admin-btn ghost" onClick={loadHomework} title="현재 날짜/학년 숙제를 다시 불러옵니다">
+            숙제 새로고침
+          </button>
+        </div>
+      </div>
+
       {/* 저장된 말씀 목록 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
@@ -503,7 +766,7 @@ export default function Admin() {
         {verseList.length === 0 ? (
           <div className="admin-help">아직 저장된 말씀이 없어요. 위에서 저장해보세요.</div>
         ) : (
-          verseList.map((v, idx) => {
+          verseList.slice(0, verseVisibleCount).map((v, idx) => {
             const lines = String(v.content ?? "")
               .split("\n")
               .map((s) => s.trim())
@@ -558,6 +821,109 @@ export default function Admin() {
           })
         )}
       </div>
+
+      {verseList.length > verseVisibleCount && (
+        <div className="admin-actions" style={{ marginTop: 7 }}>
+          <button
+            className="admin-btn ghost"
+            type="button"
+            onClick={() => setVerseVisibleCount((prev) => prev + 7)}
+            title="말씀 목록을 더 보여줍니다"
+          >
+            더 보기 (+7)
+          </button>
+        </div>
+      )}
+
+
+      {/* ✅ 저장된 숙제 목록 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          저장된 숙제 목록
+        </div>
+
+        {hwList.length === 0 ? (
+          <div className="admin-help">아직 저장된 숙제가 없어요. 위에서 저장해보세요.</div>
+        ) : (
+          hwList.slice(0, hwVisibleCount).map((h, idx) => {
+            const gradeName =
+              GRADE_OPTIONS.find((g) => g.value === Number(h.grade_code))?.label ?? "-";
+
+            const items = Array.isArray(h.items) ? h.items : [];
+            const normalized = items
+              .map((x) => ({
+                subject: String(x?.subject ?? "").trim(),
+                content: String(x?.content ?? "").trim(),
+              }))
+              .filter((x) => x.subject && x.content);
+
+            return (
+              <div key={`${h.day_key}-${h.grade_code}-${idx}`} className="admin-verse-preview">
+                <div className="admin-verse-meta">
+                  📅 {h.day_key} · {gradeName}
+                </div>
+
+                {normalized.length === 0 ? (
+                  <div className="admin-help">숙제 항목이 비어있어요.</div>
+                ) : (
+                  <div className="admin-verse-text">
+                    {normalized.map((it, i) => (
+                      <span
+                        key={i}
+                        className="admin-verse-line"
+                        style={{ color: pickStableColor(`${h.day_key}:hw:${i}`) }}
+                      >
+                        {it.subject}: {it.content}
+                        {i < normalized.length - 1 ? " " : ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="admin-verse-actions">
+                  <button
+                    type="button"
+                    className="admin-mini-btn"
+                    onClick={() => editHomeworkFromList(h)}
+                    title="위 입력칸으로 불러와서 수정합니다"
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-mini-btn danger"
+                    onClick={() => deleteHomeworkFromList(h)}
+                    title="이 숙제를 삭제합니다"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        <div className="admin-actions" style={{ marginTop: 10 }}>
+          <button className="admin-btn ghost" onClick={loadHomeworkList} title="숙제 목록을 다시 불러옵니다">
+            숙제 목록 새로고침
+          </button>
+        </div>
+      </div>
+
+      {hwList.length > hwVisibleCount && (
+        <div className="admin-actions" style={{ marginTop: 7 }}>
+          <button
+            className="admin-btn ghost"
+            type="button"
+            onClick={() => setHwVisibleCount((prev) => prev + 7)}
+            title="숙제 목록을 더 보여줍니다"
+          >
+            더 보기 (+7)
+          </button>
+        </div>
+      )}
+
+
     </div>
   );
 }

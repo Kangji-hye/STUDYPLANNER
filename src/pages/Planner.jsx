@@ -110,8 +110,7 @@ function Planner() {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
   const [verseLines, setVerseLines] = useState([]); 
   const [verseRef, setVerseRef] = useState("");
-  // const [deleteTargetId, setDeleteTargetId] = useState(null);
-  // const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
+  const [homeworkItems, setHomeworkItems] = useState([]); // [{subject:"수학", content:"30페이지"}...]
 
   
   // 부트 스플래시 제거(한 번만)
@@ -1634,6 +1633,56 @@ const deleteSelectedTodos = async () => {
     run();
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
+    // =======================
+  // ✅ 오늘 숙제 2학년만 보이게 (daily_homeworks)
+  // =======================
+  useEffect(() => {
+    // 1) 로그인 안 됐으면 중지
+    if (!me?.id) return;
+
+    // 2) 내 학년 확인
+    const myGrade = Number(profile?.grade_code);
+    const isSecondGrade = (myGrade === 2);
+
+    // 3) 2학년이 아니면 숙제 숨김
+    if (!isSecondGrade) {
+      setHomeworkItems([]);
+      return;
+    }
+
+    // 4) 2학년일 때만 DB에서 오늘 숙제 불러오기
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("daily_homeworks")
+          .select("items")
+          .eq("day_key", selectedDayKey)
+          .eq("grade_code", 2)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const items = Array.isArray(data?.items) ? data.items : [];
+
+        // 혹시 이상한 값이 섞여도 안전하게 정리
+        const normalized = items
+          .map((x) => ({
+            subject: String(x?.subject ?? "").trim(),
+            content: String(x?.content ?? "").trim(),
+          }))
+          .filter((x) => x.subject.length > 0 && x.content.length > 0);
+
+        setHomeworkItems(normalized);
+      } catch (err) {
+        console.error("load daily_homeworks error:", err);
+        setHomeworkItems([]);
+      }
+    };
+
+    run();
+  }, [me?.id, selectedDayKey, profile?.grade_code]);
+
+
 //기존소스 : 원래대로 복원할때
 //  useEffect(() => {
 //   if (!me?.id) return;
@@ -2177,6 +2226,22 @@ const deleteSelectedTodos = async () => {
         increaseHagada={increaseHagada}
         resetHagada={resetHagada}
       />
+
+      {/* ✅ 오늘 숙제 (2학년만) */}
+      {Number(profile?.grade_code) === 2 && homeworkItems.length > 0 && (
+        <div className="homework-box" aria-label="오늘 숙제">
+          <div className="homework-title">오늘 숙제</div>
+
+          <div className="homework-text">
+            {homeworkItems.map((it, idx) => (
+              <span key={`${selectedDayKey}-hw-${idx}`}>
+                {it.subject}: {it.content}
+                {idx < homeworkItems.length - 1 ? " / " : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {Number(profile?.grade_code) === 2 && verseLines.length > 0 && (
         <div className="verse-box" aria-label="오늘의 말씀">
