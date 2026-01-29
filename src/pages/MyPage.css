@@ -762,3 +762,53 @@ label.gender {
     right: 0;
   }
 }
+
+/* ✅ 내 학년 셀렉트 */
+.grade-select{
+  width: 100%;
+  max-width: 260px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-size: var(--fs-input);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.grade-select:focus{
+  border-color: rgba(255,122,162,0.55);
+  box-shadow: 0 0 0 6px rgba(255,122,162,0.14);
+}
+
+.grade-hint{
+  margin-top: 6px;
+  font-size: 0.88rem;
+  color: var(--muted);
+  opacity: 0.9;
+}
+.grade-select {
+  width: 100%;
+  padding: 8px 34px 8px 10px; /* 오른쪽 여백 중요 */
+  font-size: 1rem;
+
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+
+  /* 기본 화살표 제거 */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* 커스텀 화살표 */
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'>\
+<path d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none' stroke-linecap='round'/>\
+</svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 8px;
+}

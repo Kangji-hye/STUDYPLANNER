@@ -5,6 +5,7 @@ import supabase from "../supabaseClient";
 import "./MyPage.css";
 import { calcLevelFromStamps, levelToRatio, MAX_LEVEL } from "../utils/leveling";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import { GRADE_OTHER } from "../utils/grade";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
@@ -43,18 +44,13 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   const currentYear = new Date().getFullYear();
   const code = currentYear - y - 6;
 
-  if (code < -1) return -1;
-  if (code > 6) return 6;
-  return code;
+  // ✅ 자동 범위
+  if (code >= -1 && code <= 6) return code;
+
+  // ✅ 범위 밖은 "기타"
+  return GRADE_OTHER; // 99
 }
 
-// 학년 코드 → 표시 라벨
-function gradeLabel(code) {
-  if (code === -1) return "6세";
-  if (code === 0) return "7세";
-  if (code >= 1 && code <= 6) return `${code}학년`;
-  return "자동(생년월일 기준)";
-}
 
 const MyPage = () => {
   const navigate = useNavigate();
@@ -79,8 +75,8 @@ const MyPage = () => {
     birthdate: "",
     is_male: true,
     finish_sound: DEFAULT_FINISH_SOUND,
-    grade_code: null,
-    grade_manual: false, // false면 자동, true면 사용자가 직접 선택
+    grade_code: GRADE_OTHER,  
+    grade_manual: false,       
   });
 
   // 효과음 셀렉트 UI 전용 상태
@@ -131,12 +127,13 @@ const MyPage = () => {
           birthdate: user.user_metadata?.birthdate ?? "",
           is_male: user.user_metadata?.is_male ?? true,
           finish_sound: DEFAULT_FINISH_SOUND,
-          grade_code: null,
-          grade_manual: false,
+           grade_code: user.user_metadata?.grade_code ?? GRADE_OTHER,  
+           grade_manual: user.user_metadata?.grade_manual ?? false, 
         }
       : {
           ...profileData,
           finish_sound: profileData?.finish_sound || DEFAULT_FINISH_SOUND,
+           grade_code: Number.isFinite(Number(profileData?.grade_code)) ? Number(profileData.grade_code) : GRADE_OTHER,
           grade_manual: Boolean(profileData?.grade_manual),
         };
 
@@ -157,7 +154,7 @@ const MyPage = () => {
       birthdate: nextProfile.birthdate ?? "",
       is_male: Boolean(nextProfile.is_male),
       finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
-      grade_code: nextProfile.grade_code ?? null,
+      grade_code: Number.isFinite(Number(nextProfile.grade_code)) ? Number(nextProfile.grade_code) : GRADE_OTHER,
       grade_manual: Boolean(nextProfile.grade_manual),
     });
 
@@ -251,8 +248,8 @@ const MyPage = () => {
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
       finish_sound: form.finish_sound || DEFAULT_FINISH_SOUND,
-      grade_code: form.grade_code,
-      grade_manual: Boolean(form.grade_manual),
+      grade_code: Number(form.grade_code),         
+      grade_manual: Boolean(form.grade_manual),   
     };
 
     const { data, error } = await supabase
@@ -314,7 +311,6 @@ const MyPage = () => {
   };
 
   const savedSoundLabel = getSoundLabelByValue(profile?.finish_sound || DEFAULT_FINISH_SOUND);
-  const savedGradeText = gradeLabel(profile?.grade_code);
 
   if (loading) {
     return (
@@ -438,47 +434,39 @@ const MyPage = () => {
 
         {/* 학년 */}
         <div className="row">
-          <span className="label">학년</span>
+          <span className="label">내 학년</span>
+
           <span className="value">
-            <div className="select-wrap">
-              <select
-                className="sound-select"
-                value={form.grade_code ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
+            <select
+              className="grade-select"
+              value={form.grade_code}
+              onChange={(e) => {
+                const v = Number(e.target.value);
 
-                  if (raw === "") {
-                    const auto = calcGradeCodeFromBirthdate(form.birthdate);
-                    setForm((p) => ({
-                      ...p,
-                      grade_code: auto,
-                      grade_manual: false,
-                    }));
-                    return;
-                  }
+                setForm((p) => ({
+                  ...p,
+                  grade_code: v,
+                  grade_manual: true,
+                }));
+              }}
+            >
+              <option value={-1}>6세</option>
+              <option value={0}>7세</option>
 
-                  const v = Number(raw);
-                  setForm((p) => ({
-                    ...p,
-                    grade_code: Number.isFinite(v) ? v : null,
-                    grade_manual: true,
-                  }));
-                }}
-              >
-                <option value="">자동(생년월일 기준)</option>
-                <option value={-1}>6세</option>
-                <option value={0}>7세</option>
-                <option value={1}>1학년</option>
-                <option value={2}>2학년</option>
-                <option value={3}>3학년</option>
-                <option value={4}>4학년</option>
-                <option value={5}>5학년</option>
-                <option value={6}>6학년</option>
-              </select>
-            </div>
-            <div className="grade-hint">설정되어 있는 학년: {savedGradeText}</div>
+              <option value={1}>1학년</option>
+              <option value={2}>2학년</option>
+              <option value={3}>3학년</option>
+              <option value={4}>4학년</option>
+              <option value={5}>5학년</option>
+              <option value={6}>6학년</option>
+
+              {/* ✅ 기타(99) */}
+              <option value={GRADE_OTHER}>기타</option>
+            </select>
+
           </span>
         </div>
+
 
         {/* 성별 */}
         <div className="row gender">

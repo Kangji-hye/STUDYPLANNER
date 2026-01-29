@@ -15,7 +15,7 @@ export default function Share() {
   const [copyMsg, setCopyMsg] = useState("");
 
   // ✅ 공유할 링크(배포/로컬 모두 대응): 현재 사이트의 기본 주소를 사용
-  // 예: https://내도메인.vercel.app
+  // 예: https://studyplanner-tau.vercel.app/
   const shareUrl = useMemo(() => window.location.origin, []);
 
   // ✅ 로고는 public 폴더에 있는 걸 쓰면 제일 편합니다.
