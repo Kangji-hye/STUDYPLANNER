@@ -44,12 +44,28 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   const currentYear = new Date().getFullYear();
   const code = currentYear - y - 6;
 
-  // ✅ 자동 범위
+  // 자동 범위
   if (code >= -1 && code <= 6) return code;
 
-  // ✅ 범위 밖은 "기타"
+  // 범위 밖은 "기타"
   return GRADE_OTHER; // 99
 }
+
+// 알림 권한 요청
+const requestAlarmPermission = async () => {
+  if (!("Notification" in window)) {
+    alert("이 기기는 웹 알림을 지원하지 않아요.");
+    return;
+  }
+
+  const p = await Notification.requestPermission();
+  if (p === "granted") {
+    alert("알림이 켜졌어요! 이제 설정된 시간에 알려드릴게요.");
+  } else {
+    alert("알림이 꺼져 있어요. 브라우저/기기 설정에서 알림을 허용해 주세요.");
+  }
+};
+
 
 
 const MyPage = () => {
@@ -62,10 +78,10 @@ const MyPage = () => {
 
   const previewAudioRef = useRef(null);
 
-  // ✅ 내 도장(참 잘했어요) 총 개수 (훅은 컴포넌트 안!)
+  // 내 도장(참 잘했어요) 총 개수 (훅은 컴포넌트 안!)
   const [stampCount, setStampCount] = useState(0);
 
-  // ✅ 레벨 계산도 컴포넌트 안에서 useMemo로!
+  // 레벨 계산도 컴포넌트 안에서 useMemo로!
   const levelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
   const levelRatio = useMemo(() => levelToRatio(levelInfo.level), [levelInfo.level]);
 
@@ -493,6 +509,19 @@ const MyPage = () => {
               <img src="/icon_girl.png" alt="여자" className="gender-icon" />
               <span className="gendertext">여자</span>
             </label>
+          </span>
+        </div>
+
+        {/* 알림 */}
+        <div className="row gender">
+          <span className="label">알림</span>
+          <span className="value gender">
+            <button type="button" className="mypage-alarm-btn" onClick={requestAlarmPermission}>
+              🔔 알림 기능 켜기
+            </button>
+            <span className="mypage-alarm-help">
+              스터디 알람을 보내드립니다^^
+            </span> 
           </span>
         </div>
 

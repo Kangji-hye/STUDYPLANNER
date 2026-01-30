@@ -821,6 +821,60 @@ label.gender {
 
 
 
+/* =========================
+   MyPage - 알림 버튼 박스(이질감 제거)
+========================= */
+
+.mypage-alarm-box{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;                 /* ✅ 화면 좁으면 자연스럽게 줄바꿈 */
+
+  padding: 10px 12px;
+  border-radius: 16px;
+
+  /* ✅ 다른 카드/인풋 톤과 맞추는 연한 테두리 */
+  border: 1.5px solid rgba(241, 215, 230, 0.95);
+  background: rgba(255, 122, 162, 0.06);   /* 연핑크 살짝 */
+}
+
+.mypage-alarm-btn{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+
+  background: #fff;
+  border: 1.5px solid rgba(255, 122, 162, 0.45);
+  color: var(--text);
+  font-weight: 700;
+
+  cursor: pointer;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.mypage-alarm-btn:hover{
+  background: rgba(255, 122, 162, 0.06);
+}
+
+.mypage-alarm-help{
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+/* 모바일에서 버튼이 한 줄 꽉 차게 보이면 더 안정적 */
+@media (max-width: 660px){
+  .mypage-alarm-btn{
+    width: 100%;
+    text-align: center;
+  }
+}
+
+
+
+
 
 /* ✅ 내 학년 셀렉트 */
 .grade-select{

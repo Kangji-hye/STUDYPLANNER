@@ -572,6 +572,74 @@ const playFinishSound = (overrideSrc) => {
     return { id: data?.id ?? null };
   };
 
+  //  오늘 적용되는 알람 설정 1개 가져오기
+  // - kind별로 "가장 최근 업데이트된 1개"를 사용
+  // - 기간(start_day~end_day)이 있으면 오늘이 그 안에 있을 때만 적용
+  async function fetchTodayAlarm(kind, todayKey) {
+    // todayKey는 "YYYY-MM-DD"
+    const { data, error } = await supabase
+      .from("alarm_settings")
+      .select("id, kind, title, message, time_hhmm, start_day, end_day, is_active, updated_at")
+      .eq("kind", kind)
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("fetchTodayAlarm error:", error);
+      return null;
+    }
+
+    const rows = data ?? [];
+    if (rows.length === 0) return null;
+
+    // 오늘 날짜가 기간에 포함되는지 검사
+    const today = new Date(`${todayKey}T00:00:00`);
+    const isInRange = (row) => {
+      const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
+      const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
+
+      if (s && today < s) return false;
+      if (e && today > e) return false;
+      return true;
+    };
+
+    // 기간 설정된 게 우선이 되게: 포함되는 것 중 최신 1개
+    const inRange = rows.filter(isInRange);
+    if (inRange.length > 0) return inRange[0];
+
+    // 아무 기간도 안 맞으면, 기간이 비어있는(항상 적용) 것 중 최신 1개
+    const always = rows.filter((r) => !r.start_day && !r.end_day);
+    return always[0] ?? null;
+  }
+
+  // 브라우저 알림 띄우기 (PWA면 더 자연스럽게 보입니다)
+  async function showLocalNotification({ title, body }) {
+    try {
+      // 권한 없으면 스킵
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "granted") return;
+
+      // 서비스워커가 있으면 그걸로 띄우는 게 더 안정적
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.showNotification(title, {
+            body,
+            icon: "/pwa-192x192.png",
+            badge: "/pwa-192x192.png",
+          });
+          return;
+        }
+      }
+
+      // fallback: 그냥 Notification
+      new Notification(title, { body });
+    } catch (e) {
+      console.warn("showLocalNotification failed:", e);
+    }
+  }
+
+
   // =======================
   // 초기 로딩
   // =======================
@@ -1502,6 +1570,49 @@ const deleteSelectedTodos = async () => {
     ],
     []
   );
+
+  // 오늘 알람 예약(사용자가 플래너를 열었을 때 그날 한 번 예약)
+  useEffect(() => {
+    if (!me?.id) return;          // 로그인 사용자 있어야 함
+    if (loading) return;          // 로딩 중엔 하지 않기
+
+    let timerId = null;
+
+    const schedule = async () => {
+      const todayKey = toKstDayKey(new Date());
+
+      // 예: 오늘 할 일 알람 1개 가져오기
+      const alarm = await fetchTodayAlarm("todo_remind", todayKey);
+      if (!alarm) return;
+
+      // 오늘 날짜 + HH:MM 을 KST 기준 Date로 만들기
+      const hhmm = String(alarm.time_hhmm || "19:30");
+      const [hh, mm] = hhmm.split(":").map((x) => Number(x));
+
+      const now = new Date();
+      const target = new Date(now);
+      target.setHours(hh || 0, mm || 0, 0, 0);
+
+      const diffMs = target.getTime() - now.getTime();
+
+      // 이미 시간이 지났으면 오늘은 예약 안 함(원하면 “즉시 한 번 띄우기”로 바꿀 수 있어요)
+      if (diffMs <= 0) return;
+
+      timerId = window.setTimeout(() => {
+        showLocalNotification({
+          title: "초등 스터디 플래너",
+          body: alarm.message,
+        });
+      }, diffMs);
+    };
+
+    schedule();
+
+    return () => {
+      if (timerId) window.clearTimeout(timerId);
+    };
+  }, [me?.id, loading]);
+
 
   // 첫 방문이면 자동으로 투어 시작
   useEffect(() => {
