@@ -4,16 +4,18 @@ import { Link, useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Signup.css";
 
+
+
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [birthY, setBirthY] = useState(""); // 4자리
-  const [birthM, setBirthM] = useState(""); // 2자리
-  const [birthD, setBirthD] = useState(""); // 2자리
+  const [birthY, setBirthY] = useState(""); 
+  const [birthM, setBirthM] = useState(""); 
+  const [birthD, setBirthD] = useState(""); 
   const [nickname, setNickname] = useState("");
   const [isMale, setIsMale] = useState(true);
-  
+  const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿀 거예요
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -39,6 +41,21 @@ const Signup = () => {
   const monthOptions = Array.from({ length: 12 }, (_, i) =>
     String(i + 1).padStart(2, "0")
   );
+  
+    // ✅ 학년 선택 옵션 (프로젝트 규칙 + 추가 2개)
+  //  -2 = 5세 이하, -1 = 6세, 0 = 7세, 1~6 = 1~6학년, 99 = 중학생 이상
+  const GRADE_OPTIONS = [
+    { label: "5세 이하", value: -2 },
+    { label: "6세", value: -1 },
+    { label: "7세", value: 0 },
+    { label: "1학년", value: 1 },
+    { label: "2학년", value: 2 },
+    { label: "3학년", value: 3 },
+    { label: "4학년", value: 4 },
+    { label: "5학년", value: 5 },
+    { label: "6학년", value: 6 },
+    { label: "중학생 이상", value: 99 },
+  ];
 
   const getDayOptions = (year, month) => {
     if (!year || !month) return [];
@@ -70,6 +87,15 @@ const Signup = () => {
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
 
+        // ✅ 학년 값(숫자) 만들기
+    const safeGradeCode = Number(gradeCode);
+    if (!Number.isFinite(safeGradeCode)) {
+      alert("학년을 선택해 주세요.");
+      setLoading(false);
+      return;
+    }
+
+
     // 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
     if (!safeBirthdate) {
       alert("생년월일을 YYYY / MM / DD 형식으로 모두 입력해 주세요.");
@@ -97,6 +123,8 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
+            grade_code: safeGradeCode, // ✅ 추가
+            grade_manual: true,        // ✅ “내가 직접 고른 값” 표시(자동계산이 덮어쓰지 않게)
           },
         },
       });
@@ -119,6 +147,8 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
+            grade_code: safeGradeCode, // ✅ 추가
+            grade_manual: true,        // ✅ 추가
           },
           { onConflict: "id" }
         );
@@ -137,6 +167,8 @@ const Signup = () => {
       setLoading(false);
     }
   };
+
+  
 
   return (
     <div className="signup auth-page">
@@ -271,6 +303,24 @@ const Signup = () => {
         >
           {loading ? "가입 중..." : "가입하기"}
         </button>
+
+        {/* ✅ 학년 선택 */}
+        <div className="grade-wrap">
+          <select
+            value={gradeCode}
+            onChange={(e) => setGradeCode(e.target.value)}
+            required
+            aria-label="학년 선택"
+          >
+            <option value="">학년 선택</option>
+            {GRADE_OPTIONS.map((x) => (
+              <option key={x.value} value={String(x.value)}>
+                {x.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
       </form>
 
       <p className="auth-foot">

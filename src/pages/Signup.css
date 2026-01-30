@@ -131,3 +131,6 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+.grade-wrap {
+  margin-top: 10px;
+}

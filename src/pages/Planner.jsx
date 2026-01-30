@@ -675,7 +675,12 @@ const playFinishSound = (overrideSrc) => {
       // 내 목록 상태 확인(1회)
       const { id: myListId } = await fetchMySingleListInfo(user.id);
 
-      // 내 목록이 없고, 오늘 할 일도 없으면 샘플 주입
+      // ✅ 1) 내 목록이 있고 + 오늘이 비어있으면 -> 내 목록 자동 불러오기
+      if (myListId && loaded.length === 0) {
+        await autoImportMyListIfEmptyToday({ userId: user.id, dayKey: selectedDayKey });
+      }
+
+      // ✅ 2) 내 목록도 없고 + 오늘도 비어있으면 -> 샘플 주입
       if (!myListId && loaded.length === 0) {
         await seedSampleTodosIfEmpty({
           userId: user.id,
@@ -684,6 +689,7 @@ const playFinishSound = (overrideSrc) => {
         });
         await fetchTodos(user.id, selectedDayKey);
       }
+
 
       // 명예의 전당 로딩
       await fetchHallOfFame(selectedDayKey);
@@ -699,19 +705,29 @@ const playFinishSound = (overrideSrc) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  // 날짜 바뀌면 재조회
+  // 날짜 바뀌면 재조회 + 내 목록 자동 불러오기
   useEffect(() => {
     if (!me?.id) return;
 
     const run = async () => {
-      // const rows = await fetchTodos(me.id, selectedDayKey);
+      // ✅ rows를 먼저 "정의"해야 아래에서 rows.length를 쓸 수 있어요
+      const rows = await fetchTodos(me.id, selectedDayKey);
+
       await fetchHallOfFame(selectedDayKey);
-      // await autoPopulateIfEmpty(me.id, selectedDayKey, rows ?? []);
+
+      // 오늘 + 비어있음 + 내 목록 있음 -> 자동 채우기
+      if ((rows ?? []).length === 0 && hasMyList) {
+        await autoImportMyListIfEmptyToday({
+          userId: me.id,
+          dayKey: selectedDayKey,
+        });
+      }
     };
 
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayKey, me?.id, hasMyList]);
+
 
   // 명예의 전당 자동 새로고침
   useEffect(() => {
@@ -1010,6 +1026,93 @@ useEffect(() => {
       setBusyMyList(false);
     }
   };
+
+    // =======================
+  // 새 날(오늘) 시작 시: "내 목록" 자동 불러오기
+  // - 조건: 오늘 날짜 + 오늘 할 일 0개 + 내 목록 있음
+  // - 하루에 1번만 자동 실행(무한 반복 방지)
+  // =======================
+  const autoImportMyListIfEmptyToday = async ({ userId, dayKey }) => {
+    if (!userId || !dayKey) return;
+
+    // 1) 오늘만 자동 채우기 (원하면 "미래도"로 바꿀 수 있어요)
+    if (dayKey !== toKstDayKey(new Date())) return;
+
+    // 2) 이미 오늘 자동 불러오기를 한 번 했으면 또 하지 않기
+    const onceKey = `auto_mylist_loaded_v1:${userId}:${dayKey}`;
+    try {
+      if (localStorage.getItem(onceKey) === "1") return;
+    } catch {
+      // localStorage 실패해도 앱은 돌아가야 하니 그냥 진행
+    }
+
+    // 3) 혹시라도 이미 화면/DB에 todo가 생겼으면 중단
+    const current = todosRef.current ?? [];
+    if (current.length > 0) return;
+
+    try {
+      // 4) 내 목록(단일) set_id 가져오기
+      const { data: setRow, error: setErr } = await supabase
+        .from("todo_sets")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("kind", "single")
+        .maybeSingle();
+
+      if (setErr) throw setErr;
+      if (!setRow?.id) return; // 내 목록 자체가 없으면 종료
+
+      // 5) 내 목록 아이템 가져오기
+      const { data: items, error: itemsErr } = await supabase
+        .from("todo_set_items")
+        .select("item_key, title, sort_order")
+        .eq("set_id", setRow.id)
+        .order("sort_order", { ascending: true });
+
+      if (itemsErr) throw itemsErr;
+
+      const rows = (items ?? [])
+        .map((x) => {
+          const base = Number(x.sort_order ?? 0) || 0;
+          const itemKey = String(x.item_key ?? "").trim();
+
+          // ✅ 자동 주입은 "교체" 개념이라 sort_order는 1부터 깔끔하게
+          return {
+            user_id: userId,
+            day_key: dayKey,
+            title: String(x.title ?? "").trim(),
+            completed: false,
+            sort_order: base,
+            // ✅ 중복 방지 키(오늘은 같은 itemKey는 1번만)
+            source_set_item_key: `${dayKey}:auto_single:${itemKey}`,
+          };
+        })
+        .filter((x) => x.title && x.source_set_item_key);
+
+      if (rows.length === 0) return;
+
+      // 6) 오늘 날짜 todos에 넣기 (중복은 무시)
+      const { error: upErr } = await supabase.from("todos").upsert(rows, {
+        onConflict: "user_id,source_set_item_key",
+        ignoreDuplicates: true,
+      });
+      if (upErr) throw upErr;
+
+      // 7) 화면 갱신
+      await fetchTodos(userId, dayKey);
+
+      // 8) 오늘 자동 주입 완료 표시(하루 1번)
+      try {
+        localStorage.setItem(onceKey, "1");
+      } catch {
+        //
+      }
+    } catch (e) {
+      console.error("autoImportMyListIfEmptyToday error:", e);
+      // 자동 기능은 조용히 실패하는 편이 UX가 좋아서 alert는 일부러 안 띄웁니다.
+    }
+  };
+
 
   // =======================
   // 정렬

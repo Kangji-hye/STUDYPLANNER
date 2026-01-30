@@ -763,6 +763,65 @@ label.gender {
   }
 }
 
+
+/* ===============================
+   ✅ (모바일 가로 포함) 모달 하단 버튼 안 보이는 문제 해결
+   - 모달 카드 높이를 화면 안으로 제한
+   - 내용은 modal-body에서만 스크롤
+   - iOS 안전영역(safe-area)까지 고려
+================================ */
+
+/* 1) 기본: 모달이 화면 밖으로 튀지 않게 "카드 높이 제한 + 내부 스크롤" */
+.modal-card{
+  /* 화면 높이를 넘지 않게 */
+  max-height: calc(100dvh - 32px);
+
+  /* head + body를 위/아래로 쌓기 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 내용이 길면 body만 스크롤되게 */
+.modal-body{
+  overflow-y: auto;
+
+  /* iOS 하단 바/노치 영역 때문에 버튼이 가려지는 걸 방지 */
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+/* 2) 특히 "모바일 가로"처럼 높이가 짧은 경우 더 공격적으로 공간 확보 */
+@media (max-height: 520px) and (orientation: landscape){
+  .modal-backdrop{
+    /* 위에 붙이면 아래가 잘리기 쉬워서 가운데로 */
+    align-items: center;
+    padding: 8px;
+  }
+
+  .modal-card{
+    width: min(520px, 100%);
+    margin: 0 auto;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .modal-body{
+    /* 헤더 높이만큼 빼고 body를 스크롤 영역으로 확실히 */
+    max-height: calc(100dvh - 120px);
+  }
+}
+
+/* 3) (선택) 버튼을 스크롤 끝까지 내려도 항상 보이게 "붙이기"
+   - 미리보기/옵션이 길어져도 버튼이 모달 안에서 따라다님 */
+.modal-primary{
+  position: sticky;
+  bottom: 0;
+
+  /* 스크롤 중에도 버튼 배경이 비치지 않게 */
+  z-index: 2;
+}
+
+
+
+
 /* ✅ 내 학년 셀렉트 */
 .grade-select{
   width: 100%;
@@ -802,8 +861,6 @@ label.gender {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-
-  /* 커스텀 화살표 */
   background-image: url("data:image/svg+xml;utf8,\
 <svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'>\
 <path d='M1 1l5 5 5-5' stroke='%23999' stroke-width='2' fill='none' stroke-linecap='round'/>\
