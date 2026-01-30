@@ -139,6 +139,7 @@ export default function Admin() {
   const [alarmTime, setAlarmTime] = useState("19:30"); // "HH:MM"
   const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"(선택)
   const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(선택)
+  const [editingAlarmId, setEditingAlarmId] = useState(null);
 
   // ✅ 추가: 평일/주말 옵션(전체/평일/주말)
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
@@ -167,7 +168,7 @@ export default function Admin() {
     setAlarmList(rows);
   };
 
-  // ✅ 알람 저장
+  // 알람 저장 (추가/수정 공용)
   const saveAlarm = async () => {
     const msg = String(alarmMessage ?? "").trim();
     const hhmm = String(alarmTime ?? "").trim();
@@ -181,6 +182,7 @@ export default function Admin() {
       return;
     }
 
+    // ✅ 공통 payload(추가/수정 모두 사용)
     const payload = {
       kind: alarmKind,
       title: String(alarmTitle ?? "").trim() || `${alarmKind} 알람`,
@@ -188,35 +190,47 @@ export default function Admin() {
       time_hhmm: hhmm,
       start_day: alarmStartDay ? alarmStartDay : null,
       end_day: alarmEndDay ? alarmEndDay : null,
-
-      // ✅ 추가: 평일/주말 옵션 저장
-      day_type: alarmDayType,
-
-      is_active: true,
+      day_type: alarmDayType, // all | weekday | weekend
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("alarm_settings").insert(payload);
+    try {
+      // ✅ 1) 수정 모드면 update
+      if (editingAlarmId) {
+        const { error } = await supabase
+          .from("alarm_settings")
+          .update(payload)
+          .eq("id", editingAlarmId);
 
-    if (error) {
-      console.error("saveAlarm error:", error);
-      alert("알람 저장 중 오류가 발생했습니다. (권한/RLS 또는 day_type 컬럼 존재 여부 확인)");
-      return;
+        if (error) throw error;
+
+        alert("알람을 수정했습니다!");
+        setEditingAlarmId(null); // 수정 모드 종료
+        await loadAlarmList();
+        return;
+      }
+
+      // ✅ 2) 새로 추가 모드면 insert
+      const { error } = await supabase
+        .from("alarm_settings")
+        .insert({ ...payload, is_active: true });
+
+      if (error) throw error;
+
+      alert("알람을 저장했습니다!");
+      await loadAlarmList();
+
+      // 새로 추가 후 입력칸 정리(취향)
+      setAlarmTitle("");
+      // setAlarmMessage("오늘의 할 일을 끝내보세요."); // 문구 기본값 유지하고 싶으면 주석 그대로
+      // 기간은 방학용으로 여러 개 입력할 때가 많아서 유지하는 편이 편합니다.
+    } catch (err) {
+      console.error("saveAlarm error:", err);
+      alert("알람 저장 중 오류가 발생했습니다. (권한/RLS 또는 컬럼 확인)");
     }
-
-    alert("알람을 저장했습니다!");
-
-    // 저장 후 입력칸을 살짝 정리(원하면 이 부분은 삭제해도 됨)
-    setAlarmTitle("");
-    // message는 자주 쓰는 문구일 수 있어서 유지
-    // setAlarmMessage("오늘의 할 일을 끝내보세요.");
-    // 기간은 방학용으로 계속 저장할 수 있어서 유지해도 좋고, 비우고 싶으면 아래 주석 해제
-    // setAlarmStartDay(""); setAlarmEndDay("");
-
-    await loadAlarmList();
   };
 
-  // ✅ 알람 삭제
+  //  알람 삭제
   const deleteAlarmFromList = async (row) => {
     const ok = window.confirm(
       `이 알람을 삭제할까요?\n\n[${row.kind}] ${row.title}\n시간: ${row.time_hhmm}\n옵션: ${dayTypeLabel(row.day_type)}\n\n※ 삭제하면 되돌릴 수 없어요.`
@@ -235,13 +249,56 @@ export default function Admin() {
     alert("알람을 삭제했습니다.");
   };
 
-  // ✅ 알람 활성/비활성 토글(삭제 대신 잠깐 꺼두고 싶을 때)
+  //  수정 취소(새로 추가 모드로 돌아가기)
+  const cancelAlarmEdit = () => {
+    setEditingAlarmId(null);
+
+    // 원하는 기본값으로 리셋
+    setAlarmKind("todo_remind");
+    setAlarmTitle("");
+    setAlarmMessage("오늘의 할 일을 끝내보세요.");
+    setAlarmTime("19:30");
+    setAlarmDayType("all");
+    setAlarmStartDay("");
+    setAlarmEndDay("");
+  };
+
+    // 알람 수정 시작: 목록의 값을 위 입력칸으로 올려서 편집 모드로 전환
+  const editAlarmFromList = (row) => {
+    setEditingAlarmId(row.id);
+
+    setAlarmKind(String(row.kind ?? "todo_remind"));
+    setAlarmTitle(String(row.title ?? ""));
+    setAlarmMessage(String(row.message ?? ""));
+    setAlarmTime(String(row.time_hhmm ?? "19:30"));
+
+    setAlarmStartDay(row.start_day ? String(row.start_day) : "");
+    setAlarmEndDay(row.end_day ? String(row.end_day) : "");
+
+    // day_type이 null인 옛 데이터 대비
+    setAlarmDayType(String(row.day_type ?? "all"));
+
+    // 사용성이 좋아요: 위로 올려서 바로 수정하게
+    try {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
+
+  // 알람 활성/비활성 토글
   const toggleAlarmActive = async (row) => {
-    const next = !Boolean(row.is_active);
+    // Boolean(...) 같은 불필요한 감싸기 없이 바로 반전하면 됩니다.
+    // row.is_active가 null/undefined여도 !null => true라서 "켜기"로 자연스럽게 동작해요.
+    const next = !row.is_active;
 
     const { error } = await supabase
       .from("alarm_settings")
-      .update({ is_active: next, updated_at: new Date().toISOString() })
+      .update({
+        is_active: next,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", row.id);
 
     if (error) {
@@ -252,6 +309,7 @@ export default function Admin() {
 
     await loadAlarmList();
   };
+
 
   // =======================
   // 말씀 목록 불러오기
@@ -957,13 +1015,20 @@ export default function Admin() {
         </div>
 
         <div className="admin-actions">
-          <button className="admin-btn" onClick={saveAlarm}>
-            알람 저장
-          </button>
-          <button className="admin-btn ghost" onClick={loadAlarmList}>
-            알람 목록 새로고침
-          </button>
-        </div>
+            <button className="admin-btn" onClick={saveAlarm}>
+              {editingAlarmId ? "알람 수정 저장" : "알람 저장"}
+            </button>
+
+            {editingAlarmId ? (
+              <button className="admin-btn ghost" type="button" onClick={cancelAlarmEdit}>
+                수정 취소
+              </button>
+            ) : (
+              <button className="admin-btn ghost" onClick={loadAlarmList}>
+                알람 목록 새로고침
+              </button>
+            )}
+          </div>
 
         <div style={{ marginTop: 10 }}>
           {alarmList.length === 0 ? (
@@ -984,11 +1049,21 @@ export default function Admin() {
                     <button
                       type="button"
                       className="admin-mini-btn"
+                      onClick={() => editAlarmFromList(a)}
+                      title="이 알람을 위 입력칸으로 올려서 수정합니다"
+                    >
+                      수정
+                    </button>
+
+                    <button
+                      type="button"
+                      className="admin-mini-btn"
                       onClick={() => toggleAlarmActive(a)}
                       title="알람을 켜거나 끕니다"
                     >
                       {a.is_active ? "끄기" : "켜기"}
                     </button>
+
                     <button
                       type="button"
                       className="admin-mini-btn danger"
@@ -998,6 +1073,7 @@ export default function Admin() {
                       삭제
                     </button>
                   </div>
+
                 </div>
               ))}
               {alarmList.length > 20 ? <div style={{ opacity: 0.7 }}>… (너무 길면 20개까지만 보여요)</div> : null}
