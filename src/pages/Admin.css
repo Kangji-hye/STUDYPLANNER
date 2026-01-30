@@ -68,7 +68,7 @@
 .admin-row select,
 .admin-row input[type="date"]{
   flex: 1;
-  height: 44px;
+  /* height: 44px; */
   border-radius: 14px;
   border: 2px solid var(--line);
   padding: 0 12px;
@@ -178,7 +178,7 @@
 
 .admin-verse-ref {
   font-weight: 500;
-  margin-bottom: 6px;
+  /* margin-bottom: 6px; */
 }
 
 .admin-verse-text {
@@ -194,7 +194,7 @@
 .admin-verse-actions{
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  /* margin-top: 10px; */
   flex-wrap: wrap;
 }
 
@@ -231,8 +231,8 @@
 }
 
 .admin-mini-nav{
-  width: 38px;
-  height: 38px;
+  /* width: 38px;
+  height: 38px; */
   border-radius: 12px;
   border: 1px solid var(--line);
   background: #fff;
@@ -276,7 +276,7 @@
 }
 
 .admin-inline-cal-cell{
-  height: 42px;
+  /* height: 42px; */
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #fff;

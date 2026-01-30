@@ -161,53 +161,51 @@ function Planner() {
     calMonth,
   });
 
-//말씀
- const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
+    const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
 
-function pickStableColor(seedText) {
-  // 아주 간단한 해시(문자 코드 합) → 같은 seed는 같은 색
-  const s = String(seedText ?? "");
-  let sum = 0;
-  for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
-  return VERSE_COLORS[sum % VERSE_COLORS.length];
-}
+    function pickStableColor(seedText) {
+      // 아주 간단한 해시(문자 코드 합) → 같은 seed는 같은 색
+      const s = String(seedText ?? "");
+      let sum = 0;
+      for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+      return VERSE_COLORS[sum % VERSE_COLORS.length];
+    }
 
-// 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
-const SAMPLE_VERSES = [
-  {
-    ref: "시편 23편 1절",
-    lines: ["여호와는 나의 목자시니", "내게 부족함이 없으리로다"],
-  },
-  {
-    ref: "빌립보서 4장 13절",
-    lines: ["내게 능력 주시는 자 안에서", "내가 모든 것을 할 수 있느니라"],
-  },
-  {
-    ref: "잠언 3장 5절",
-    lines: ["너는 마음을 다하여 여호와를 신뢰하고", "네 명철을 의지하지 말라"],
-  },
-  {
-    ref: "이사야 41장 10절",
-    lines: ["두려워하지 말라 내가 너와 함께 함이라", "놀라지 말라 나는 네 하나님이 됨이라"],
-  },
-];
+  // 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
+  const SAMPLE_VERSES = [
+    {
+      ref: "시편 23편 1절",
+      lines: ["여호와는 나의 목자시니", "내게 부족함이 없으리로다"],
+    },
+    {
+      ref: "빌립보서 4장 13절",
+      lines: ["내게 능력 주시는 자 안에서", "내가 모든 것을 할 수 있느니라"],
+    },
+    {
+      ref: "잠언 3장 5절",
+      lines: ["너는 마음을 다하여 여호와를 신뢰하고", "네 명철을 의지하지 말라"],
+    },
+    {
+      ref: "이사야 41장 10절",
+      lines: ["두려워하지 말라 내가 너와 함께 함이라", "놀라지 말라 나는 네 하나님이 됨이라"],
+    },
+  ];
 
-// 날짜 기반 "고정 랜덤" (같은 날짜면 항상 같은 결과)
-function pickIndexBySeed(seedText, mod) {
-  const s = String(seedText ?? "");
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  // 날짜 기반 "고정 랜덤" (같은 날짜면 항상 같은 결과)
+  function pickIndexBySeed(seedText, mod) {
+    const s = String(seedText ?? "");
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    }
+    return mod <= 0 ? 0 : h % mod;
   }
-  return mod <= 0 ? 0 : h % mod;
-}
 
-//도움말
-const [showHelpModal, setShowHelpModal] = useState(false);
+  //도움말
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
-const openHelp = () => setShowHelpModal(true);
-const closeHelp = () => setShowHelpModal(false);
-
+  const openHelp = () => setShowHelpModal(true);
+  const closeHelp = () => setShowHelpModal(false);
 
   // =======================
   // 프로필(캐시)
@@ -237,10 +235,7 @@ const closeHelp = () => setShowHelpModal(false);
     todosRef.current = todos;
   }, [todos]);
 
-
-
-
-    // =======================
+  // =======================
   // 목록 불러오기 모달
   // =======================
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -286,20 +281,17 @@ const closeHelp = () => setShowHelpModal(false);
     if (importingSample || busyMyList) return;
     setShowLoadModal(false);
   };
-
   
-  // ✅ 레벨업(트로피) 모달
-const [levelUpOpen, setLevelUpOpen] = useState(false);
-const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
-const closeLevelUp = () => setLevelUpOpen(false);
+  // 레벨업(트로피) 모달
+  const [levelUpOpen, setLevelUpOpen] = useState(false);
+  const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
+  const closeLevelUp = () => setLevelUpOpen(false);
 
-  // ✅ 내 도장(참 잘했어요) 총 개수
-const [stampCount, setStampCount] = useState(0);
+    // 내 도장(참 잘했어요) 총 개수
+  const [stampCount, setStampCount] = useState(0);
 
-// ✅ 닉네임 옆에 보여줄 내 레벨 정보
-const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
-
-
+  // 닉네임 옆에 보여줄 내 레벨 정보
+  const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
 
   // =======================
   // 명예의 전당
@@ -354,18 +346,16 @@ const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount])
     }
   };
 
+  // 내 도장(=hall_of_fame 기록) 개수만 숫자로 가져오기
+  const fetchMyStampCountNumber = async (userId) => {
+    const { count, error } = await supabase
+      .from("hall_of_fame")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
 
-// ✅ 내 도장(=hall_of_fame 기록) 개수만 숫자로 가져오기
-const fetchMyStampCountNumber = async (userId) => {
-  const { count, error } = await supabase
-    .from("hall_of_fame")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (error) throw error;
-  return count ?? 0;
-};
-
+    if (error) throw error;
+    return count ?? 0;
+  };
 
   const removeCompletionForDay = async (dayKey) => {
     if (!me?.id) return;
@@ -421,67 +411,67 @@ const fetchMyStampCountNumber = async (userId) => {
   };
 
   //  모두 완료 효과음
-const playFinishSound = (overrideSrc) => {
-  try {
-    // 소리 설정 OFF면 재생하지 않음
-    if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
+  const playFinishSound = (overrideSrc) => {
+    try {
+      // 소리 설정 OFF면 재생하지 않음
+      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
 
-    // 1) 재생할 소스 결정 (우선순위: override > profile > 기본값)
-    let src = String(overrideSrc ?? profile?.finish_sound ?? DEFAULT_FINISH_SOUND).trim();
-    if (!src) src = DEFAULT_FINISH_SOUND;
+      // 1) 재생할 소스 결정 (우선순위: override > profile > 기본값)
+      let src = String(overrideSrc ?? profile?.finish_sound ?? DEFAULT_FINISH_SOUND).trim();
+      if (!src) src = DEFAULT_FINISH_SOUND;
 
-    // 2) 확장자 체크(지금 프로젝트는 mp3만 쓰는 전제)
-    //    혹시 다른 값이 들어오면 기본값으로 되돌림
-    if (!src.toLowerCase().endsWith(".mp3")) {
-      src = DEFAULT_FINISH_SOUND;
-    }
-
-    // 3) 오디오 객체는 재사용 (매번 new Audio 하면 모바일에서 불안정해질 수 있어요)
-    if (!finishAudioRef.current) {
-      finishAudioRef.current = new Audio();
-      finishAudioRef.current.preload = "auto";
-    }
-
-    const a = finishAudioRef.current;
-
-    // 4) src가 바뀌면 교체 + 로드
-    const nextHref = new URL(src, window.location.origin).href;
-    if (a.src !== nextHref) {
-      a.src = src;
-      a.load();
-    }
-
-    // 5) 볼륨/되감기
-    a.volume = 0.9;
-    try { a.pause(); } catch {
-      //
-    }
-    a.currentTime = 0;
-
-    // 6) 재생 (실패하면 기본값으로 1번 더 시도)
-    a.play().catch((e) => {
-      console.warn("finish sound blocked:", e);
-
-      // NotSupportedError면 대부분 "파일 없음/오디오 아님/코덱 문제"라서
-      // 기본값으로 한 번 더 바꿔서 재생 시도
-      if (String(e?.name) === "NotSupportedError") {
-        try {
-          const fallbackHref = new URL(DEFAULT_FINISH_SOUND, window.location.origin).href;
-          if (a.src !== fallbackHref) {
-            a.src = DEFAULT_FINISH_SOUND;
-            a.load();
-          }
-          a.currentTime = 0;
-          a.play().catch((e2) => console.warn("finish sound fallback failed:", e2));
-        } catch (e3) {
-          console.warn("finish sound fallback error:", e3);
-        }
+      // 2) 확장자 체크(지금 프로젝트는 mp3만 쓰는 전제)
+      //    혹시 다른 값이 들어오면 기본값으로 되돌림
+      if (!src.toLowerCase().endsWith(".mp3")) {
+        src = DEFAULT_FINISH_SOUND;
       }
-    });
-  } catch (e) {
-    console.warn("finish sound error:", e);
-  }
-};
+
+      // 3) 오디오 객체는 재사용 (매번 new Audio 하면 모바일에서 불안정해질 수 있어요)
+      if (!finishAudioRef.current) {
+        finishAudioRef.current = new Audio();
+        finishAudioRef.current.preload = "auto";
+      }
+
+      const a = finishAudioRef.current;
+
+      // 4) src가 바뀌면 교체 + 로드
+      const nextHref = new URL(src, window.location.origin).href;
+      if (a.src !== nextHref) {
+        a.src = src;
+        a.load();
+      }
+
+      // 5) 볼륨/되감기
+      a.volume = 0.9;
+      try { a.pause(); } catch {
+        //
+      }
+      a.currentTime = 0;
+
+      // 6) 재생 (실패하면 기본값으로 1번 더 시도)
+      a.play().catch((e) => {
+        console.warn("finish sound blocked:", e);
+
+        // NotSupportedError면 대부분 "파일 없음/오디오 아님/코덱 문제"라서
+        // 기본값으로 한 번 더 바꿔서 재생 시도
+        if (String(e?.name) === "NotSupportedError") {
+          try {
+            const fallbackHref = new URL(DEFAULT_FINISH_SOUND, window.location.origin).href;
+            if (a.src !== fallbackHref) {
+              a.src = DEFAULT_FINISH_SOUND;
+              a.load();
+            }
+            a.currentTime = 0;
+            a.play().catch((e2) => console.warn("finish sound fallback failed:", e2));
+          } catch (e3) {
+            console.warn("finish sound fallback error:", e3);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("finish sound error:", e);
+    }
+  };
 
   // =======================
   // 날짜별 todos 조회(레이스 방지)
@@ -743,12 +733,12 @@ const playFinishSound = (overrideSrc) => {
       // 내 목록 상태 확인(1회)
       const { id: myListId } = await fetchMySingleListInfo(user.id);
 
-      // ✅ 1) 내 목록이 있고 + 오늘이 비어있으면 -> 내 목록 자동 불러오기
+      // 1) 내 목록이 있고 + 오늘이 비어있으면 -> 내 목록 자동 불러오기
       if (myListId && loaded.length === 0) {
         await autoImportMyListIfEmptyToday({ userId: user.id, dayKey: selectedDayKey });
       }
 
-      // ✅ 2) 내 목록도 없고 + 오늘도 비어있으면 -> 샘플 주입
+      // 2) 내 목록도 없고 + 오늘도 비어있으면 -> 샘플 주입
       if (!myListId && loaded.length === 0) {
         await seedSampleTodosIfEmpty({
           userId: user.id,
@@ -778,7 +768,7 @@ const playFinishSound = (overrideSrc) => {
     if (!me?.id) return;
 
     const run = async () => {
-      // ✅ rows를 먼저 "정의"해야 아래에서 rows.length를 쓸 수 있어요
+      // rows를 먼저 "정의"해야 아래에서 rows.length를 쓸 수 있어요
       const rows = await fetchTodos(me.id, selectedDayKey);
 
       await fetchHallOfFame(selectedDayKey);
@@ -1144,14 +1134,14 @@ useEffect(() => {
           const base = Number(x.sort_order ?? 0) || 0;
           const itemKey = String(x.item_key ?? "").trim();
 
-          // ✅ 자동 주입은 "교체" 개념이라 sort_order는 1부터 깔끔하게
+          // 자동 주입은 "교체" 개념이라 sort_order는 1부터 깔끔하게
           return {
             user_id: userId,
             day_key: dayKey,
             title: String(x.title ?? "").trim(),
             completed: false,
             sort_order: base,
-            // ✅ 중복 방지 키(오늘은 같은 itemKey는 1번만)
+            // 중복 방지 키(오늘은 같은 itemKey는 1번만)
             source_set_item_key: `${dayKey}:auto_single:${itemKey}`,
           };
         })
@@ -1343,7 +1333,7 @@ useEffect(() => {
 
   const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-  // ✅ (A) UI 즉시 반응
+  // (A) UI 즉시 반응
   if (!wasAllCompleted && willAllCompleted) {
     fireConfetti();
     playFinishSound();
@@ -1538,7 +1528,7 @@ const deleteSelectedTodos = async () => {
         targetRef: refAddBtn,
       },
       {
-        title: "✅ 오늘 할 일 목록",
+        title: "오늘 할 일 목록",
         body: (
           <>
             할 일을 끝내면 완료(체크)를 눌러요.<br />
@@ -1848,7 +1838,7 @@ const deleteSelectedTodos = async () => {
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
     // =======================
-  // ✅ 오늘 숙제 2학년만 보이게 (daily_homeworks)
+  //  오늘 숙제 2학년만 보이게 (daily_homeworks)
   // =======================
   useEffect(() => {
     // 1) 로그인 안 됐으면 중지
@@ -1896,82 +1886,6 @@ const deleteSelectedTodos = async () => {
     run();
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
-
-//기존소스 : 원래대로 복원할때
-//  useEffect(() => {
-//   if (!me?.id) return;
-
-//   const myGrade = Number(profile?.grade_code);
-
-//   // 학년이 없더라도 "샘플"은 보여줄 수 있으니,
-//   // 여기서는 학년이 없으면 myGrade를 NaN으로 두고 fallback 로직으로 
-//   const run = async () => {
-//     try {
-//       //  1) 그 날짜의 모든 학년 말씀을 한 번에 가져오기
-//       const { data, error } = await supabase
-//         .from("daily_verses")
-//         .select("grade_code, ref_text, content")
-//         .eq("day_key", selectedDayKey);
-
-//       if (error) throw error;
-
-//       const rows = data ?? [];
-
-//       //  2) DB에 그 날짜 말씀이 하나라도 있으면:
-//       if (rows.length > 0) {
-//         // content가 빈 것도 있을 수 있으니 걸러주기
-//         const valid = rows
-//           .map((r) => ({
-//             grade_code: Number(r.grade_code),
-//             ref_text: String(r.ref_text ?? "").trim(),
-//             content: String(r.content ?? "").trim(),
-//           }))
-//           .filter((r) => r.content.length > 0);
-
-//         if (valid.length === 0) {
-//           // 데이터는 있는데 전부 비어있으면 샘플로
-//           const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-//           setVerseRef(SAMPLE_VERSES[idx].ref);
-//           setVerseLines(SAMPLE_VERSES[idx].lines);
-//           return;
-//         }
-
-//         // 내 학년 우선
-//         const mine =
-//           Number.isFinite(myGrade) ? valid.find((r) => r.grade_code === myGrade) : null;
-
-//         const chosen = mine
-//           ? mine
-//           : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
-
-//         setVerseRef(chosen.ref_text || "");
-//         const lines = chosen.content
-//           .split("\n")
-//           .map((s) => s.trim())
-//           .filter(Boolean);
-
-//         setVerseLines(lines);
-//         return;
-//       }
-
-//       //  3) 그 날짜에 말씀이 하나도 없으면 샘플에서 날짜 고정 랜덤
-//       const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-//       setVerseRef(SAMPLE_VERSES[idx].ref);
-//       setVerseLines(SAMPLE_VERSES[idx].lines);
-//     } catch (err) {
-//       console.error("load daily_verses fallback error:", err);
-
-//       // 에러가 나도 화면이 비면 썰렁하니까 샘플 하나라도
-//       const idx = pickIndexBySeed(`sample:${selectedDayKey}`, SAMPLE_VERSES.length);
-//       setVerseRef(SAMPLE_VERSES[idx].ref);
-//       setVerseLines(SAMPLE_VERSES[idx].lines);
-//     }
-//   };
-
-//   run();
-// }, [me?.id, selectedDayKey, profile?.grade_code]);
-
-
   // =======================
   // 아이콘/닉네임
   // =======================
@@ -1984,9 +1898,6 @@ const deleteSelectedTodos = async () => {
   // =======================
   const handleLogout = async () => {
     await supabase.auth.signOut({ scope: "local" });
-
-    // PROFILE_CACHE_KEY는 위에서 선언되어 있어야 합니다.
-    // (만약 위에서 지웠다면: const PROFILE_CACHE_KEY = "planner_profile_cache_v1"; 를 다시 넣어주세요.)
     try {
       localStorage.removeItem(PROFILE_CACHE_KEY);
     } catch (e) {
@@ -2044,7 +1955,6 @@ const deleteSelectedTodos = async () => {
     }, 1500);
   };
 
-
   // =======================
   // 렌더
   // =======================
@@ -2059,8 +1969,6 @@ const deleteSelectedTodos = async () => {
           >
             초등 스터디 플래너
           </h1>
-
-
 
         {/* 관리자버튼 */}
           <div className="top-right">
@@ -2084,26 +1992,9 @@ const deleteSelectedTodos = async () => {
             </div>
           </div>
 
-
-
-
-          {/* <div className="weather" title="오늘의 날씨">
-            <WeatherIcon code={weatherCode} size={52} />
-          </div> */}
-
-          
-
         </div>
 
         <div className="sub-row">
-          {/* <div
-            className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"} clickable`}
-            onClick={() => navigate("/mypage")}
-            title="마이페이지로 이동"
-          >
-            <img src={kidIconSrc} alt={kidAlt} />
-            {kidName}
-          </div> */}
           <div
             className={`kid-name ${profile?.is_male ? "kid-boy" : "kid-girl"} clickable`}
             onClick={() => navigate("/mypage")}
@@ -2117,7 +2008,6 @@ const deleteSelectedTodos = async () => {
               Lev.{myLevelInfo.level}
             </span>
           </div>
-
 
           <div className="date-stack">
             <div className="today-row" title="선택한 날짜">
@@ -2231,132 +2121,132 @@ const deleteSelectedTodos = async () => {
         
       </div>
 
-      {/* ✅ 리스트 영역: ul은 하나만 쓰기 */}
-<div ref={refTodoList}>
-  {(filteredTodos ?? []).length === 0 ? (
-    <div className="empty-todo">오늘 일정이 없습니다.</div>
-  ) : (
-    <ul className="todo-list">
-      {filteredTodos.map((t, idx) => (
-        <TodoItem
-          key={t.id}
-          t={t}
-          onToggle={onToggle}
-          onDelete={onDelete}
-          reorderMode={reorderMode}
-          onMoveUp={moveTodoUp}
-          onMoveDown={moveTodoDown}
-          isFirst={idx === 0}
-          isLast={idx === filteredTodos.length - 1}
-          readOnly={isPastSelected}
-          deleteMode={deleteMode}
-          deleteChecked={selectedDeleteIds.has(t.id)}
-          onToggleDeleteCheck={() => toggleSelectForDelete(t.id)}
-        />
-      ))}
-    </ul>
-  )}
-
-  {/* ✅ 아래 한 줄: 왼쪽 삭제 / 오른쪽 순서변경 */}
-  <div className="todo-bottom-row">
-    {/* ===== 왼쪽: 삭제 영역 ===== */}
-    <div className="todo-bottom-left">
-      {!deleteMode ? (
-        <button
-          type="button"
-          className={`filter-btn reorder-btn ${deleteMode ? "active" : ""}`}
-          onClick={() => {
-            if ((filteredTodos ?? []).length === 0) {
-              alert("삭제할 것이 없어요 🙂");
-              return;
-            }
-            setDeleteMode(true);
-            clearAllForDelete();
-          }}
-        >
-          삭제
-        </button>
-      ) : (
-        <div className="delete-mode-row">
-          <div className="filter-group-left" style={{ flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="filter-btn reorder-btn"
-              onClick={toggleSelectAllForDelete}
-            >
-              <input
-                type="checkbox"
-                checked={
-                  filteredTodos?.length > 0 &&
-                  selectedDeleteIds.size === filteredTodos.length
-                }
-                readOnly
-                onClick={(e) => e.stopPropagation()}
-                className="select-all-checkbox"
+      {/* 리스트 영역: ul은 하나만 쓰기 */}
+      <div ref={refTodoList}>
+        {(filteredTodos ?? []).length === 0 ? (
+          <div className="empty-todo">오늘 일정이 없습니다.</div>
+        ) : (
+          <ul className="todo-list">
+            {filteredTodos.map((t, idx) => (
+              <TodoItem
+                key={t.id}
+                t={t}
+                onToggle={onToggle}
+                onDelete={onDelete}
+                reorderMode={reorderMode}
+                onMoveUp={moveTodoUp}
+                onMoveDown={moveTodoDown}
+                isFirst={idx === 0}
+                isLast={idx === filteredTodos.length - 1}
+                readOnly={isPastSelected}
+                deleteMode={deleteMode}
+                deleteChecked={selectedDeleteIds.has(t.id)}
+                onToggleDeleteCheck={() => toggleSelectForDelete(t.id)}
               />
-              {filteredTodos?.length > 0 && selectedDeleteIds.size === filteredTodos.length
-                ? "모두 해제"
-                : "모두 선택"}
-            </button>
+            ))}
+          </ul>
+        )}
 
-            <button
-              type="button"
-              className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
-              onClick={async () => {
-                if (selectedDeleteIds.size === 0) {
-                  alert("삭제할 항목을 먼저 선택해 주세요.");
-                  return;
-                }
+        {/* 아래 한 줄: 왼쪽 삭제 / 오른쪽 순서변경 */}
+        <div className="todo-bottom-row">
+          {/* ===== 왼쪽: 삭제 영역 ===== */}
+          <div className="todo-bottom-left">
+            {!deleteMode ? (
+              <button
+                type="button"
+                className={`filter-btn reorder-btn ${deleteMode ? "active" : ""}`}
+                onClick={() => {
+                  if ((filteredTodos ?? []).length === 0) {
+                    alert("삭제할 것이 없어요 🙂");
+                    return;
+                  }
+                  setDeleteMode(true);
+                  clearAllForDelete();
+                }}
+              >
+                삭제
+              </button>
+            ) : (
+              <div className="delete-mode-row">
+                <div className="filter-group-left" style={{ flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="filter-btn reorder-btn"
+                    onClick={toggleSelectAllForDelete}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={
+                        filteredTodos?.length > 0 &&
+                        selectedDeleteIds.size === filteredTodos.length
+                      }
+                      readOnly
+                      onClick={(e) => e.stopPropagation()}
+                      className="select-all-checkbox"
+                    />
+                    {filteredTodos?.length > 0 && selectedDeleteIds.size === filteredTodos.length
+                      ? "모두 해제"
+                      : "모두 선택"}
+                  </button>
 
-                const ok = window.confirm(
-                  `선택한 ${selectedDeleteIds.size}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`
-                );
+                  <button
+                    type="button"
+                    className={`filter-btn ${selectedDeleteIds.size > 0 ? "active" : ""}`}
+                    onClick={async () => {
+                      if (selectedDeleteIds.size === 0) {
+                        alert("삭제할 항목을 먼저 선택해 주세요.");
+                        return;
+                      }
 
-                if (!ok) return;
+                      const ok = window.confirm(
+                        `선택한 ${selectedDeleteIds.size}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`
+                      );
 
-                await deleteSelectedTodos();
-              }}
-            >
-              선택 삭제 ({selectedDeleteIds.size})
-            </button>
+                      if (!ok) return;
+
+                      await deleteSelectedTodos();
+                    }}
+                  >
+                    선택 삭제 ({selectedDeleteIds.size})
+                  </button>
 
 
-            <button
-              type="button"
-              className="filter-btn"
-              onClick={() => {
-                setDeleteMode(false);
-                clearAllForDelete();
-              }}
-            >
-              닫기
-            </button>
+                  <button
+                    type="button"
+                    className="filter-btn"
+                    onClick={() => {
+                      setDeleteMode(false);
+                      clearAllForDelete();
+                    }}
+                  >
+                    닫기
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ===== 오른쪽: 순서 변경하기 ===== */}
+          <div className="todo-bottom-right">
+            {filter === "all" && !deleteMode && (
+              <button
+                type="button"
+                className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
+                disabled={isPastSelected}
+                onClick={async () => {
+                  const next = !reorderMode;
+                  if (next) setFilter("all");
+                  setReorderMode(next);
+                  if (next) await ensureSortOrderForDay();
+                }}
+                title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
+              >
+                {reorderMode ? "순서변경완료" : "순서변경하기"}
+              </button>
+            )}
           </div>
         </div>
-      )}
-    </div>
-
-    {/* ===== 오른쪽: 순서 변경하기 ===== */}
-    <div className="todo-bottom-right">
-      {filter === "all" && !deleteMode && (
-        <button
-          type="button"
-          className={`filter-btn filter-btn-nowrap ${reorderMode ? "active" : ""}`}
-          disabled={isPastSelected}
-          onClick={async () => {
-            const next = !reorderMode;
-            if (next) setFilter("all");
-            setReorderMode(next);
-            if (next) await ensureSortOrderForDay();
-          }}
-          title={reorderMode ? "순서 변경 종료" : "순서 변경하기"}
-        >
-          {reorderMode ? "순서변경완료" : "순서변경하기"}
-        </button>
-      )}
-    </div>
-  </div>
-</div>
+      </div>
 
       <div className="finish">
         <span className="title">메모</span>
@@ -2441,22 +2331,26 @@ const deleteSelectedTodos = async () => {
         resetHagada={resetHagada}
       />
 
-      {/* ✅ 오늘 숙제 (2학년만) */}
+      {/* 오늘 숙제 (2학년만) */}
       {Number(profile?.grade_code) === 2 && homeworkItems.length > 0 && (
         <div className="homework-box" aria-label="오늘 숙제">
           <div className="homework-title">오늘 숙제</div>
 
           <div className="homework-text">
             {homeworkItems.map((it, idx) => (
-              <span key={`${selectedDayKey}-hw-${idx}`}>
-                {it.subject}: {it.content}
-                {idx < homeworkItems.length - 1 ? " / " : ""}
-              </span>
+              <div
+                key={`${selectedDayKey}-hw-${idx}`}
+                className="homework-line"
+              >
+                {/* 한 줄에 "과목: 내용" */}
+                🔹{it.subject}: {it.content}
+              </div>
             ))}
           </div>
         </div>
       )}
 
+      {/* 오늘의 말씀 (2학년만) */}
       {Number(profile?.grade_code) === 2 && verseLines.length > 0 && (
         <div className="verse-box" aria-label="오늘의 말씀">
          <div className="verse-header">
@@ -2528,29 +2422,6 @@ const deleteSelectedTodos = async () => {
         onChangeStep={setTourStep}
       />
 
-      {/* <ConfirmModal
-        open={deleteTargetId !== null}
-        title="삭제 확인"
-        message="정말 삭제하시겠습니까?"
-        onCancel={() => setDeleteTargetId(null)}
-        onConfirm={() => {
-          onDelete(deleteTargetId);
-          setDeleteTargetId(null);
-        }}
-      />
-
-      <ConfirmModal
-        open={deleteSelectedConfirmOpen}
-        title="선택 삭제 확인"
-        message={`선택한 ${selectedDeleteIds.size}개를 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`}
-        onCancel={() => setDeleteSelectedConfirmOpen(false)}
-        onConfirm={async () => {
-          setDeleteSelectedConfirmOpen(false);
-          await deleteSelectedTodos();
-        }}
-      /> */}
-
-
       {/* 레벨업 트로피 모달 */}
       {levelUpOpen && (
         <div className="levelup-overlay" role="dialog" aria-modal="true" aria-label="레벨 업">
@@ -2567,7 +2438,6 @@ const deleteSelectedTodos = async () => {
           </div>
         </div>
       )}
-
 
       <footer className="planner-footer-simple">
         <div className="footer-links">

@@ -27,7 +27,7 @@ const toDayKey = (d = new Date()) => {
   return `${y}-${m}-${dd}`;
 };
 
-// ✅ 관리자 미리보기에서도 "플래너와 비슷한 느낌"으로 줄마다 색을 고정해 주기
+// 관리자 미리보기에서도 "플래너와 비슷한 느낌"으로 줄마다 색을 고정해 주기
 const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
 function pickStableColor(seedText) {
   const s = String(seedText ?? "");
@@ -43,7 +43,7 @@ function keyToNum(k) {
   return Number.isFinite(n) ? n : 0;
 }
 
-// ✅ 인라인 달력 유틸
+// 인라인 달력 유틸
 function buildMonthGrid(year, monthIndex) {
   const first = new Date(year, monthIndex, 1);
   const last = new Date(year, monthIndex + 1, 0);
@@ -85,7 +85,7 @@ function isSameDay(a, b) {
   );
 }
 
-// ✅ 알람 day_type 라벨
+// 알람 day_type 라벨
 function dayTypeLabel(v) {
   if (v === "weekday") return "평일만";
   if (v === "weekend") return "주말만";
@@ -107,7 +107,7 @@ export default function Admin() {
   const [verseRef, setVerseRef] = useState("");
   const [verseText, setVerseText] = useState("");
 
-  // ✅ 오늘 숙제 관리(편집 영역)
+  // 오늘 숙제 관리(편집 영역)
   const [hwSubject, setHwSubject] = useState("");
   const [hwContent, setHwContent] = useState("");
   const [hwItems, setHwItems] = useState([]);
@@ -131,7 +131,7 @@ export default function Admin() {
   const [hwVisibleCount, setHwVisibleCount] = useState(7);
 
   // =========================
-  // ✅ 알람 설정(훅/함수 전부 Admin() 안!)
+  // 알람 설정(훅/함수 전부 Admin() 안!)
   // =========================
   const [alarmKind, setAlarmKind] = useState("todo_remind"); // 기본: 오늘 할 일
   const [alarmTitle, setAlarmTitle] = useState(""); // 예: 방학-저녁 알림
@@ -141,12 +141,12 @@ export default function Admin() {
   const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(선택)
   const [editingAlarmId, setEditingAlarmId] = useState(null);
 
-  // ✅ 추가: 평일/주말 옵션(전체/평일/주말)
+  // 추가: 평일/주말 옵션(전체/평일/주말)
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
 
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
 
-  // ✅ 알람 목록 불러오기
+  // 알람 목록 불러오기
   const loadAlarmList = async () => {
     const { data, error } = await supabase
       .from("alarm_settings")
@@ -182,7 +182,7 @@ export default function Admin() {
       return;
     }
 
-    // ✅ 공통 payload(추가/수정 모두 사용)
+    // 공통 payload(추가/수정 모두 사용)
     const payload = {
       kind: alarmKind,
       title: String(alarmTitle ?? "").trim() || `${alarmKind} 알람`,
@@ -195,7 +195,7 @@ export default function Admin() {
     };
 
     try {
-      // ✅ 1) 수정 모드면 update
+      // 1) 수정 모드면 update
       if (editingAlarmId) {
         const { error } = await supabase
           .from("alarm_settings")
@@ -210,7 +210,7 @@ export default function Admin() {
         return;
       }
 
-      // ✅ 2) 새로 추가 모드면 insert
+      // 2) 새로 추가 모드면 insert
       const { error } = await supabase
         .from("alarm_settings")
         .insert({ ...payload, is_active: true });
@@ -415,7 +415,7 @@ export default function Admin() {
     setHwList([...todayList, ...futureList, ...pastList]);
   };
 
-  // ✅ 선택된 날짜/학년에 맞는 말씀 불러오기
+  // 선택된 날짜/학년에 맞는 말씀 불러오기
   const loadVerse = async () => {
     const { data, error } = await supabase
       .from("daily_verses")
@@ -434,7 +434,7 @@ export default function Admin() {
     setVerseText(String(data?.content ?? ""));
   };
 
-  // ✅ 선택된 날짜/학년에 맞는 숙제 불러오기
+  // 선택된 날짜/학년에 맞는 숙제 불러오기
   const loadHomework = async () => {
     const { data, error } = await supabase
       .from("daily_homeworks")
@@ -460,7 +460,7 @@ export default function Admin() {
     setHwItems(normalized);
   };
 
-  // ✅ 오늘 숙제 저장
+  // 오늘 숙제 저장
   const saveHomework = async () => {
     const cleaned = (hwItems ?? [])
       .map((x) => ({
@@ -491,7 +491,7 @@ export default function Admin() {
     await loadHomeworkList();
   };
 
-  // ✅ 말씀 저장
+  // 말씀 저장
   const saveVerse = async () => {
     const text = String(verseText ?? "").trim();
     const refText = String(verseRef ?? "").trim();
@@ -528,7 +528,7 @@ export default function Admin() {
     await loadVerseList();
   };
 
-  // ✅ 로그인 유저 확인 + 관리자 판별 (1회)
+  // 로그인 유저 확인 + 관리자 판별 (1회)
   useEffect(() => {
     let mounted = true;
 
@@ -600,7 +600,7 @@ export default function Admin() {
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
   }, [dayKey]);
 
-  // ✅ 목록에서 수정: 위 입력칸으로 올려서 편집
+  // 목록에서 수정: 위 입력칸으로 올려서 편집
   const editFromList = (row) => {
     setDayKey(String(row.day_key));
     setGradeCode(Number(row.grade_code));
@@ -614,7 +614,7 @@ export default function Admin() {
     }
   };
 
-  // ✅ 목록에서 삭제: 확인 후 DB 삭제
+  // 목록에서 삭제: 확인 후 DB 삭제
   const deleteFromList = async (row) => {
     const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(row.grade_code))?.label ?? "-";
 
@@ -647,7 +647,7 @@ export default function Admin() {
     alert("삭제했습니다.");
   };
 
-  // ✅ 숙제 목록에서 수정: 위 입력칸으로 올려서 편집
+  // 숙제 목록에서 수정: 위 입력칸으로 올려서 편집
   const editHomeworkFromList = (row) => {
     setDayKey(String(row.day_key));
     setGradeCode(Number(row.grade_code));
@@ -669,7 +669,7 @@ export default function Admin() {
     }
   };
 
-  // ✅ 숙제 목록에서 삭제: 확인 후 DB 삭제
+  // 숙제 목록에서 삭제: 확인 후 DB 삭제
   const deleteHomeworkFromList = async (row) => {
     const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(row.grade_code))?.label ?? "-";
 
@@ -725,7 +725,7 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* ✅ 날짜/요일 + 항상 떠있는 달력 카드 */}
+      {/* 날짜/요일 + 항상 떠있는 달력 카드 */}
       <div className="admin-card">
         <div className="admin-row admin-row-between">
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -938,7 +938,138 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* ✅ 알람 설정 카드 */}
+      
+
+      {/* 저장된 말씀 목록 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          저장된 말씀 목록
+        </div>
+
+        {verseList.length === 0 ? (
+          <div className="admin-help">아직 저장된 말씀이 없어요. 위에서 저장해보세요.</div>
+        ) : (
+          verseList.slice(0, verseVisibleCount).map((v, idx) => {
+            const lines = String(v.content ?? "")
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean);
+
+            const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(v.grade_code))?.label ?? "-";
+
+            return (
+              <div key={`${v.day_key}-${v.grade_code}-${idx}`} className="admin-verse-preview">
+                <div className="admin-verse-meta">
+                  📅 {v.day_key} · {gradeName}
+                </div>
+
+                {String(v.ref_text ?? "").trim() ? <div className="admin-verse-ref">{v.ref_text}</div> : null}
+
+                <div className="admin-verse-text">
+                  {lines.map((line, i) => (
+                    <span key={i} className="admin-verse-line" style={{ color: pickStableColor(`${v.day_key}:${i}`) }}>
+                      {line}
+                      {i < lines.length - 1 ? " " : ""}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="admin-verse-actions">
+                  <button type="button" className="admin-mini-btn" onClick={() => editFromList(v)}>
+                    수정
+                  </button>
+                  <button type="button" className="admin-mini-btn danger" onClick={() => deleteFromList(v)}>
+                    삭제
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {verseList.length > verseVisibleCount && (
+        <div className="admin-actions" style={{ marginTop: 7 }}>
+          <button className="admin-btn ghost" type="button" onClick={() => setVerseVisibleCount((prev) => prev + 7)}>
+            더 보기 (+7)
+          </button>
+        </div>
+      )}
+
+      {/* 저장된 숙제 목록 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          저장된 숙제 목록
+        </div>
+
+        {hwList.length === 0 ? (
+          <div className="admin-help">아직 저장된 숙제가 없어요. 위에서 저장해보세요.</div>
+        ) : (
+          hwList.slice(0, hwVisibleCount).map((h, idx) => {
+            const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(h.grade_code))?.label ?? "-";
+
+            const items = Array.isArray(h.items) ? h.items : [];
+            const normalized = items
+              .map((x) => ({
+                subject: String(x?.subject ?? "").trim(),
+                content: String(x?.content ?? "").trim(),
+              }))
+              .filter((x) => x.subject && x.content);
+
+            return (
+              <div key={`${h.day_key}-${h.grade_code}-${idx}`} className="admin-verse-preview">
+                <div className="admin-verse-meta">
+                  📅 {h.day_key} · {gradeName}
+                </div>
+
+                {normalized.length === 0 ? (
+                  <div className="admin-help">숙제 항목이 비어있어요.</div>
+                ) : (
+                  <div className="admin-verse-text">
+                    {normalized.map((it, i) => (
+                      <span
+                        key={i}
+                        className="admin-verse-line"
+                        style={{ color: pickStableColor(`${h.day_key}:hw:${i}`) }}
+                      >
+                        {it.subject}: {it.content}
+                        {i < normalized.length - 1 ? " " : ""}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="admin-verse-actions">
+                  <button type="button" className="admin-mini-btn" onClick={() => editHomeworkFromList(h)}>
+                    수정
+                  </button>
+                  <button type="button" className="admin-mini-btn danger" onClick={() => deleteHomeworkFromList(h)}>
+                    삭제
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+
+        <div className="admin-actions" style={{ marginTop: 10 }}>
+          <button className="admin-btn ghost" onClick={loadHomeworkList}>
+            숙제 목록 새로고침
+          </button>
+        </div>
+      </div>
+
+      {hwList.length > hwVisibleCount && (
+        <div className="admin-actions" style={{ marginTop: 7 }}>
+          <button className="admin-btn ghost" type="button" onClick={() => setHwVisibleCount((prev) => prev + 7)}>
+            더 보기 (+7)
+          </button>
+        </div>
+      )}
+
+
+
+      {/* 알람 설정 카드 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
           알람 설정
@@ -987,7 +1118,7 @@ export default function Admin() {
           />
         </div>
 
-        {/* ✅ 추가: 평일/주말 옵션 */}
+        {/* 추가: 평일/주말 옵션 */}
         <div className="admin-row">
           <span className="admin-label">요일</span>
           <select value={alarmDayType} onChange={(e) => setAlarmDayType(e.target.value)}>
@@ -1082,132 +1213,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 저장된 말씀 목록 */}
-      <div className="admin-card">
-        <div className="admin-title" style={{ marginBottom: 8 }}>
-          저장된 말씀 목록
-        </div>
 
-        {verseList.length === 0 ? (
-          <div className="admin-help">아직 저장된 말씀이 없어요. 위에서 저장해보세요.</div>
-        ) : (
-          verseList.slice(0, verseVisibleCount).map((v, idx) => {
-            const lines = String(v.content ?? "")
-              .split("\n")
-              .map((s) => s.trim())
-              .filter(Boolean);
-
-            const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(v.grade_code))?.label ?? "-";
-
-            return (
-              <div key={`${v.day_key}-${v.grade_code}-${idx}`} className="admin-verse-preview">
-                <div className="admin-verse-meta">
-                  📅 {v.day_key} · {gradeName}
-                </div>
-
-                {String(v.ref_text ?? "").trim() ? <div className="admin-verse-ref">{v.ref_text}</div> : null}
-
-                <div className="admin-verse-text">
-                  {lines.map((line, i) => (
-                    <span key={i} className="admin-verse-line" style={{ color: pickStableColor(`${v.day_key}:${i}`) }}>
-                      {line}
-                      {i < lines.length - 1 ? " " : ""}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="admin-verse-actions">
-                  <button type="button" className="admin-mini-btn" onClick={() => editFromList(v)}>
-                    수정
-                  </button>
-                  <button type="button" className="admin-mini-btn danger" onClick={() => deleteFromList(v)}>
-                    삭제
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {verseList.length > verseVisibleCount && (
-        <div className="admin-actions" style={{ marginTop: 7 }}>
-          <button className="admin-btn ghost" type="button" onClick={() => setVerseVisibleCount((prev) => prev + 7)}>
-            더 보기 (+7)
-          </button>
-        </div>
-      )}
-
-      {/* ✅ 저장된 숙제 목록 */}
-      <div className="admin-card">
-        <div className="admin-title" style={{ marginBottom: 8 }}>
-          저장된 숙제 목록
-        </div>
-
-        {hwList.length === 0 ? (
-          <div className="admin-help">아직 저장된 숙제가 없어요. 위에서 저장해보세요.</div>
-        ) : (
-          hwList.slice(0, hwVisibleCount).map((h, idx) => {
-            const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(h.grade_code))?.label ?? "-";
-
-            const items = Array.isArray(h.items) ? h.items : [];
-            const normalized = items
-              .map((x) => ({
-                subject: String(x?.subject ?? "").trim(),
-                content: String(x?.content ?? "").trim(),
-              }))
-              .filter((x) => x.subject && x.content);
-
-            return (
-              <div key={`${h.day_key}-${h.grade_code}-${idx}`} className="admin-verse-preview">
-                <div className="admin-verse-meta">
-                  📅 {h.day_key} · {gradeName}
-                </div>
-
-                {normalized.length === 0 ? (
-                  <div className="admin-help">숙제 항목이 비어있어요.</div>
-                ) : (
-                  <div className="admin-verse-text">
-                    {normalized.map((it, i) => (
-                      <span
-                        key={i}
-                        className="admin-verse-line"
-                        style={{ color: pickStableColor(`${h.day_key}:hw:${i}`) }}
-                      >
-                        {it.subject}: {it.content}
-                        {i < normalized.length - 1 ? " " : ""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="admin-verse-actions">
-                  <button type="button" className="admin-mini-btn" onClick={() => editHomeworkFromList(h)}>
-                    수정
-                  </button>
-                  <button type="button" className="admin-mini-btn danger" onClick={() => deleteHomeworkFromList(h)}>
-                    삭제
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-
-        <div className="admin-actions" style={{ marginTop: 10 }}>
-          <button className="admin-btn ghost" onClick={loadHomeworkList}>
-            숙제 목록 새로고침
-          </button>
-        </div>
-      </div>
-
-      {hwList.length > hwVisibleCount && (
-        <div className="admin-actions" style={{ marginTop: 7 }}>
-          <button className="admin-btn ghost" type="button" onClick={() => setHwVisibleCount((prev) => prev + 7)}>
-            더 보기 (+7)
-          </button>
-        </div>
-      )}
     </div>
   );
 }

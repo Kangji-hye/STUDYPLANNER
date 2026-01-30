@@ -51,21 +51,22 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   return GRADE_OTHER; // 99
 }
 
-// 알림 권한 요청
-const requestAlarmPermission = async () => {
-  if (!("Notification" in window)) {
-    alert("이 기기는 웹 알림을 지원하지 않아요.");
-    return;
-  }
+// 알림 토글 저장 키 (유저별로 저장)
+// const alarmKeyOf = (userId) => `planner_alarm_enabled_v1:${userId ?? "anon"}`;
 
-  const p = await Notification.requestPermission();
-  if (p === "granted") {
-    alert("알림이 켜졌어요! 이제 설정된 시간에 알려드릴게요.");
-  } else {
-    alert("알림이 꺼져 있어요. 브라우저/기기 설정에서 알림을 허용해 주세요.");
-  }
-};
+// 알림 권한 요청: "허용(true) / 거절(false)"로 결과를 돌려줌
+// const requestAlarmPermission = async () => {
+//   if (!("Notification" in window)) {
+//     alert("이 기기는 웹 알림을 지원하지 않아요.");
+//     return false;
+//   }
 
+//   // 이미 허용된 경우는 바로 true
+//   if (Notification.permission === "granted") return true;
+
+//   const p = await Notification.requestPermission();
+//   return p === "granted";
+// };
 
 
 const MyPage = () => {
@@ -97,6 +98,9 @@ const MyPage = () => {
 
   // 효과음 셀렉트 UI 전용 상태
   const [soundPickerValue, setSoundPickerValue] = useState("");
+  // 알림 토글 상태 (UI에서 켜짐/꺼짐이 바로 보이게)
+  const [alarmEnabled, setAlarmEnabled] = useState(false);
+  const [alarmPermission, setAlarmPermission] = useState("default"); // "default" | "granted" | "denied"
 
   // =========================
   // 프로필 로딩
@@ -114,7 +118,21 @@ const MyPage = () => {
 
     const user = userData.user;
 
-    // ✅ 내 도장 개수 불러오기 (여기서는 setState만 하고, 훅(useMemo)은 절대 쓰지 않기)
+    // 알림 토글: 로컬 저장값 + 현재 권한 상태로 초기화
+    try {
+      const saved = localStorage.getItem(`planner_alarm_enabled_v1:${user.id}`);
+      setAlarmEnabled(saved === "1");
+    } catch {
+      setAlarmEnabled(false);
+    }
+
+    try {
+      if ("Notification" in window) setAlarmPermission(Notification.permission);
+    } catch {
+      setAlarmPermission("default");
+    }
+
+    // 내 도장 개수 불러오기 (여기서는 setState만 하고, 훅(useMemo)은 절대 쓰지 않기)
     try {
       const { count, error } = await supabase
         .from("hall_of_fame")
@@ -198,6 +216,91 @@ const MyPage = () => {
       return { ...prev, grade_code: auto };
     });
   }, [form.birthdate, form.grade_manual, loading]);
+
+  const persistAlarmEnabled = (userId, on) => {
+  try {
+    localStorage.setItem(`planner_alarm_enabled_v1:${userId}`, on ? "1" : "0");
+  } catch {
+    //
+  }
+};
+
+  // "켜짐" 선택 시에만 권한 요청
+  const turnAlarmOn = async () => {
+    if (!("Notification" in window)) {
+      alert("이 기기는 웹 알림을 지원하지 않아요.");
+      setAlarmEnabled(false);
+      return;
+    }
+
+    // 이미 허용이면 그대로 ON
+    if (Notification.permission === "granted") {
+      setAlarmEnabled(true);
+      persistAlarmEnabled(profile?.id, true);
+      setAlarmPermission("granted");
+      return;
+    }
+
+    const p = await Notification.requestPermission();
+    setAlarmPermission(p);
+
+    if (p === "granted") {
+      setAlarmEnabled(true);
+      persistAlarmEnabled(profile?.id, true);
+      alert("알림이 켜졌어요!");
+    } else {
+      // 거부/차단이면 다시 OFF로
+      setAlarmEnabled(false);
+      persistAlarmEnabled(profile?.id, false);
+      alert("알림이 차단되어 있어요. 브라우저/기기 설정에서 알림을 허용해 주세요.");
+    }
+  };
+
+  const turnAlarmOff = () => {
+    setAlarmEnabled(false);
+    if (profile?.id) persistAlarmEnabled(profile.id, false);
+  };
+
+
+
+//   // 알림을 켜기/끄기 (켜기=권한 요청 포함)
+//   const setAlarmOnOff = async (nextOn) => {
+//   const { data } = await supabase.auth.getUser();
+//   const user = data?.user;
+//   const userId = user?.id;
+
+//   // 유저 id가 없으면(로그인 풀림 등) UI만 바꾸지 않음
+//   if (!userId) return;
+
+//   if (!nextOn) {
+//     // ✅ 끄기: 그냥 저장하고 끝
+//     setAlarmEnabled(false);
+//     persistAlarmEnabled(userId, false);
+//     return;
+//   }
+
+//   // ✅ 켜기: 권한 요청
+//   const ok = await requestAlarmPermission();
+
+//   // 현재 권한 상태 저장
+//   try {
+//     if ("Notification" in window) setAlarmPermission(Notification.permission);
+//   } catch {
+//     //
+//   }
+
+//   if (ok) {
+//     setAlarmEnabled(true);
+//     persistAlarmEnabled(userId, true);
+//     alert("알림이 켜졌어요! (허용됨)");
+//   } else {
+//     // 허용이 안 되면 켜짐으로 둘 수 없으니 다시 OFF
+//     setAlarmEnabled(false);
+//     persistAlarmEnabled(userId, false);
+//     alert("알림이 차단되어 있어요. 브라우저/기기 설정에서 알림을 허용해 주세요.");
+//   }
+// };
+
 
   // =========================
   // 로그아웃
@@ -512,18 +615,40 @@ const MyPage = () => {
           </span>
         </div>
 
-        {/* 알림 */}
-        <div className="row gender">
+        {/* 알림 (라디오) */}
+        <div className="row">
           <span className="label">알림</span>
-          <span className="value gender">
-            <button type="button" className="mypage-alarm-btn" onClick={requestAlarmPermission}>
-              🔔 알림 기능 켜기
-            </button>
-            <span className="mypage-alarm-help">
-              스터디 알람을 보내드립니다^^
-            </span> 
+
+          <span className="value">
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8, marginRight: 14 }}>
+              <input
+                type="radio"
+                name="alarm"
+                checked={alarmEnabled === true}
+                onChange={turnAlarmOn}
+              />
+              <span>켜짐</span>
+            </label>
+
+            <label style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="radio"
+                name="alarm"
+                checked={alarmEnabled === false}
+                onChange={turnAlarmOff}
+              />
+              <span>꺼짐</span>
+            </label>
+
+            {alarmPermission === "denied" && (
+              <div style={{ marginTop: 6, fontSize: "0.86rem", opacity: 0.85 }}>
+                현재 알림이 차단되어 있어요. (설정에서 허용해 주세요)
+              </div>
+            )}
           </span>
         </div>
+
+
 
         {/* 완료 음악 선택 */}
         <div className="row">
