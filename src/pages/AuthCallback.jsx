@@ -3,30 +3,6 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 
-const makeGuestNickname = () => {
-  const n = Math.floor(1000 + Math.random() * 9000); // 1000~9999
-  return `친구${n}`;
-};
-
-const pickNicknameCandidate = (user) => {
-  const meta = user?.user_metadata ?? {};
-
-  const candidates = [
-    meta.nickname,
-    meta.name,
-    meta.full_name,
-    meta.user_name,
-  ];
-
-  for (const c of candidates) {
-    const s = String(c ?? "").trim();
-    if (s) return Array.from(s).slice(0, 6).join("");
-  }
-
-  // 전부 없으면 null
-  return null;
-};
-
 const AuthCallback = () => {
   const navigate = useNavigate();
 
@@ -68,45 +44,28 @@ const AuthCallback = () => {
           return;
         }
 
-        // ============================
-        // - profiles에 닉네임이 비어있으면 자동 생성해서 저장
-        // ============================
         const user = session.user;
 
-        try {
-          // 1) 기존 프로필 확인
-          const { data: profileRow, error: profileErr } = await supabase
+        const { data: profileRow, error: profileErr } = await supabase
+          .from("profiles")
+          .select("id, nickname")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profileRow || profileErr) {
+          await supabase
             .from("profiles")
-            .select("id, nickname")
-            .eq("id", user.id)
-            .maybeSingle();
+            .upsert({ id: user.id }, { onConflict: "id" });
+        }
 
-          const currentNickname = String(profileRow?.nickname ?? "").trim();
+        const currentName = String(profileRow?.nickname ?? "").trim();
+        const compact = currentName.replace(/\s+/g, "");
 
-          const compact = currentNickname.replace(/\s+/g, "");
-          const needNickname =
-            !currentNickname || compact === "익명" || compact.startsWith("익명") || profileErr;
-
-          if (needNickname) {
-            const candidate = pickNicknameCandidate(user);
-            const finalNickname = candidate || makeGuestNickname();
-
-            const { error: upErr } = await supabase
-              .from("profiles")
-              .upsert(
-                {
-                  id: user.id,
-                  nickname: finalNickname,
-                },
-                { onConflict: "id" }
-              );
-
-            if (upErr) {
-              console.warn("profiles nickname upsert failed:", upErr);
-            }
-          }
-        } catch (e) {
-          console.warn("profile normalize failed:", e);
+        if (!currentName || compact === "익명" || compact === "닉네임") {
+          alert("처음 1회만 이름을 설정해야 해요. 마이페이지에서 이름을 저장해 주세요.");
+          if (!alive) return;
+          navigate("/mypage", { replace: true });
+          return;
         }
 
         if (!alive) return;

@@ -354,10 +354,16 @@ const MyPage = () => {
     if (!profile?.id) return;
 
     const nickname = form.nickname.trim();
-    if (!nickname) {
-      alert("닉네임을 입력해 주세요.");
-      return;
-    }
+
+      if (!nickname) {
+        alert("이름을 입력해 주세요.");
+        return;
+      }
+
+      if (nickname === "닉네임" || nickname === "익명") {
+        alert("이름을 직접 입력해 주세요.");
+        return;
+      }
 
     setSaving(true);
 
