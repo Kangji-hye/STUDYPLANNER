@@ -18,21 +18,24 @@ export default function Ranking() {
         const { data, error } = await supabase.rpc("get_stamp_ranking", { limit_n: 11 });
         if (error) throw error;
 
-        const list = (data ?? []).map((r) => {
-          const stampCount = Number(r.stamp_count ?? 0);
-          const lv = calcLevelFromStamps(stampCount).level;
+        const list = (data ?? [])
+          .map((r) => {
+            const stampCount = Number(r.stamp_count ?? 0);
+            const lv = calcLevelFromStamps(stampCount).level;
 
-          const nickname = String(r.nickname ?? "").trim();
+            const nickname = String(r.nickname ?? "").trim();
 
-          return {
-            user_id: r.user_id,
-            nickname,              
-            stamp_count: stampCount,
-            level: lv,
-          };
-        })
-
-        .filter((r) => r.nickname !== "");
+            return {
+              user_id: r.user_id,
+              nickname,
+              stamp_count: stampCount,
+              level: lv,
+            };
+          })
+          .filter((row) => {
+            const n = String(row.nickname ?? "").trim();
+            return n !== "" && n !== "익명";
+          });
 
         list.sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
@@ -40,6 +43,7 @@ export default function Ranking() {
         });
 
         setRows(list);
+
       } catch (e) {
         console.error("ranking load error:", e);
         setRows([]);
