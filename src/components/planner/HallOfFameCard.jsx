@@ -1,24 +1,43 @@
 // src/components/planner/HallOfFameCard.jsx
-//오늘 함께 해낸 친구들 명예의 전당
+// 오늘 함께 해낸 친구들 명예의 전당
 import React from "react";
 
 export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
-  // ✅ 닉네임 앞에 붙은 메달/이모지를 분리해서 폭을 안정화
-  // 예: "🥇 지혜" → badge="🥇", name="지혜"
-  // 예: "🏅민준" (띄어쓰기 없음) → 분리 어려워서 name으로 그대로 둠(그래도 CSS로 폭 확보)
   const splitBadgeAndName = (nickname) => {
     const s = String(nickname ?? "").trim();
     if (!s) return { badge: "", name: "익명" };
 
     const parts = s.split(/\s+/);
-    // 첫 토큰이 이모지처럼 보이고(길이 짧음), 뒤에 이름이 있으면 badge로 분리
     if (parts.length >= 2 && Array.from(parts[0]).length <= 3) {
       return { badge: parts[0], name: parts.slice(1).join(" ") };
     }
-
     return { badge: "", name: s };
   };
 
+  const sortedByTime = React.useMemo(() => {
+    if (!hof || hof.length === 0) return [];
+    return [...hof].sort(
+      (a, b) => new Date(a.finished_at) - new Date(b.finished_at)
+    );
+  }, [hof]);
+
+  const topThree = React.useMemo(() => sortedByTime.slice(0, 3), [sortedByTime]);
+
+  const shuffledRest = React.useMemo(() => {
+    const rest = sortedByTime.slice(3);
+    if (rest.length <= 1) return rest;
+
+    const arr = [...rest];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [sortedByTime]);
+
+  const displayHof = React.useMemo(() => {
+    return [...topThree, ...shuffledRest];
+  }, [topThree, shuffledRest]);
 
   return (
     <div className="hof-card">
@@ -28,11 +47,13 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
 
       {hofLoading ? (
         <div className="hof-empty">불러오는 중...</div>
-      ) : hof.length === 0 ? (
-        <div className="hof-empty">오늘의 처음으로 공부를 끝내서 내 닉네임을 여기에 올려볼까? </div>
+      ) : (hof?.length ?? 0) === 0 ? (
+        <div className="hof-empty">
+          오늘의 처음으로 공부를 끝내서 내 이름을 여기에 올려볼까?
+        </div>
       ) : (
         <div className="hof-chips" aria-label="오늘 함께 공부한 친구들">
-          {hof.map((x) => {
+          {displayHof.map((x, idx) => {
             const isMe = meId && x.user_id === meId;
 
             return (
@@ -41,19 +62,23 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
                 className={`hof-chip ${isMe ? "is-me" : ""}`}
                 title={x.nickname ?? ""}
               >
-                <span className="hof-medal" aria-hidden="true">🏅</span>
+                <span className="hof-medal" aria-hidden="true">
+                  {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "🏅"}
+                </span>
 
                 {(() => {
                   const { badge, name } = splitBadgeAndName(x.nickname);
                   return (
                     <>
-                      {badge && <span className="hof-chip-badge" aria-hidden="true">{badge}</span>}
+                      {badge && (
+                        <span className="hof-chip-badge" aria-hidden="true">
+                          {badge}
+                        </span>
+                      )}
                       <span className="hof-chip-name">{cutName6(name)}</span>
                     </>
                   );
                 })()}
-
-                
               </div>
             );
           })}

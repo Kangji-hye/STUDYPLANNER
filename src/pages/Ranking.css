@@ -282,3 +282,43 @@
 .weather{
   padding: 0;
 }
+/* ✅ 이름 + 학년배지 한 줄 묶음 */
+.ranking-name-wrap{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0; /* 긴 이름에서도 줄임표 안정 */
+}
+
+/* 기존 .ranking-name은 유지하되, 줄임표가 잘 동작하게 */
+.ranking-name{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ✅ 학년 작은 회색 배지 */
+.ranking-grade{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  font-size: 0.78rem;
+  line-height: 1;
+  white-space: nowrap;
+
+  color: var(--muted);
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 999px;
+  padding: 3px 8px;
+  opacity: 0.95;
+}
+
+/* ✅ “작은 회색 아이콘 느낌”을 점으로 살짝만 */
+.ranking-grade::before{
+  content: "●";
+  font-size: 0.55rem;
+  opacity: 0.6;
+}

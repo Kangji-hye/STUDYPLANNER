@@ -735,8 +735,8 @@ label.gender {
   align-items: center;
 }
 .mypage-card .row{
-  position: relative;       /* ::before 점선을 row 위에 올리기 위해 필요 */
-  padding: 12px 0;          /* 위아래 숨 쉴 공간(점선이 답답하지 않게) */
+  position: relative;     
+  padding: 12px 0 0 ;         
 }
 
 /* 첫 번째 row는 위에 선이 필요 없으니 제외 */

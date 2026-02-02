@@ -150,7 +150,7 @@ const MyPage = () => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual")
+      .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual, nickname_locked")
       .eq("id", user.id)
       .single();
 
@@ -164,6 +164,7 @@ const MyPage = () => {
           finish_sound: DEFAULT_FINISH_SOUND,
            grade_code: user.user_metadata?.grade_code ?? GRADE_OTHER,  
            grade_manual: user.user_metadata?.grade_manual ?? false, 
+           nickname_locked: false,
         }
       : {
           ...profileData,
@@ -371,6 +372,10 @@ const MyPage = () => {
     if (!profile?.id) return;
 
     const nickname = form.nickname.trim();
+      if (nicknameLocked && nickname !== String(profile?.nickname ?? "").trim()) {
+        alert("이름이 잠겨 있어서 변경할 수 없어요.");
+        return;
+      }
 
       if (!nickname) {
         alert("이름을 입력해 주세요.");
@@ -384,9 +389,11 @@ const MyPage = () => {
 
     setSaving(true);
 
+    const nicknameToSave = nicknameLocked ? (profile?.nickname ?? nickname) : nickname;
+
     const payload = {
       id: profile.id,
-      nickname,
+      nickname: nicknameToSave, 
       birthdate: form.birthdate || null,
       is_male: Boolean(form.is_male),
       finish_sound: form.finish_sound || DEFAULT_FINISH_SOUND,
@@ -397,7 +404,7 @@ const MyPage = () => {
     const { data, error } = await supabase
       .from("profiles")
       .upsert(payload, { onConflict: "id" })
-      .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual")
+      .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual, nickname_locked")
       .single();
 
     setSaving(false);
@@ -453,6 +460,7 @@ const MyPage = () => {
   };
 
   const savedSoundLabel = getSoundLabelByValue(profile?.finish_sound || DEFAULT_FINISH_SOUND);
+  const nicknameLocked = Boolean(profile?.nickname_locked);
 
   if (loading) {
     return (
@@ -551,8 +559,19 @@ const MyPage = () => {
               type="text"
               value={form.nickname}
               maxLength={6}
-              onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+              disabled={nicknameLocked}               
+              onChange={(e) => {
+                if (nicknameLocked) return;            
+                setForm({ ...form, nickname: e.target.value });
+              }}
+              placeholder={nicknameLocked ? "이름이 잠겨 있어요" : "이름을 입력해 주세요"}
+              style={nicknameLocked ? { opacity: 0.65, cursor: "not-allowed" } : undefined}
             />
+            {nicknameLocked && (
+              <div style={{ marginTop: 6, fontSize: "0.86rem", opacity: 0.85 }}>
+                {/* 이름은 바꿀 수 없어요. */}
+              </div>
+            )}
           </span>
         </div>
 
