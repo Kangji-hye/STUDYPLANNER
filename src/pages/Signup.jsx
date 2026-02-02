@@ -42,8 +42,6 @@ const Signup = () => {
     String(i + 1).padStart(2, "0")
   );
   
-    // ✅ 학년 선택 옵션 (프로젝트 규칙 + 추가 2개)
-  //  -2 = 5세 이하, -1 = 6세, 0 = 7세, 1~6 = 1~6학년, 99 = 중학생 이상
   const GRADE_OPTIONS = [
     { label: "5세 이하", value: -2 },
     { label: "6세", value: -1 },
@@ -87,7 +85,6 @@ const Signup = () => {
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
 
-        // ✅ 학년 값(숫자) 만들기
     const safeGradeCode = Number(gradeCode);
     if (!Number.isFinite(safeGradeCode)) {
       alert("학년을 선택해 주세요.");
@@ -123,8 +120,8 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
-            grade_code: safeGradeCode, // ✅ 추가
-            grade_manual: true,        // ✅ “내가 직접 고른 값” 표시(자동계산이 덮어쓰지 않게)
+            grade_code: safeGradeCode, 
+            grade_manual: true,        
           },
         },
       });
@@ -147,8 +144,8 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
-            grade_code: safeGradeCode, // ✅ 추가
-            grade_manual: true,        // ✅ 추가
+            grade_code: safeGradeCode,
+            grade_manual: true,       
           },
           { onConflict: "id" }
         );
@@ -212,7 +209,7 @@ const Signup = () => {
 
         <input
           type="text"
-          placeholder="이름(닉네임)"
+          placeholder="이름"
           value={nickname}
           onChange={(e) => setNickname(e.target.value)}
           required
@@ -304,7 +301,6 @@ const Signup = () => {
           {loading ? "가입 중..." : "가입하기"}
         </button>
 
-        {/* ✅ 학년 선택 */}
         <div className="grade-wrap">
           <select
             value={gradeCode}

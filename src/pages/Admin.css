@@ -301,3 +301,10 @@
   box-shadow: 0 0 0 6px rgba(255, 122, 162, 0.14);
 }
 
+.admin-hamburger-menu {
+  position: fixed;       /* 화면 기준으로 고정 */
+  right: 16px;           /* 오른쪽 여백 */
+  bottom: 16px;          /* 아래쪽 여백 */
+  z-index: 1000;         /* 다른 요소 위로 */
+}
+

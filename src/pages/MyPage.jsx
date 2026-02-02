@@ -522,7 +522,7 @@ const MyPage = () => {
         </div>
 
         <div className="row">
-          <span className="label">닉네임</span>
+          <span className="label">이름</span>
           <span className="value">
             <input
               type="text"

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Admin.css";
+import HamburgerMenu from "../components/common/HamburgerMenu";
 
 /**
  * 학년 규칙(숫자 저장):
@@ -719,10 +720,8 @@ export default function Admin() {
           <div className="admin-title">관리자</div>
           <div className="admin-sub">로그인: {myEmail}</div>
         </div>
+        <HamburgerMenu />
 
-        <button className="admin-back" onClick={() => navigate("/planner")}>
-          플래너로
-        </button>
       </div>
 
       {/* 날짜/요일 + 항상 떠있는 달력 카드 */}
@@ -1211,9 +1210,10 @@ export default function Admin() {
             </div>
           )}
         </div>
+         <div className="admin-hamburger-menu"> 
+           <HamburgerMenu />
+         </div> 
       </div>
-
-
     </div>
   );
 }
