@@ -21,13 +21,18 @@ export default function Ranking() {
         const list = (data ?? []).map((r) => {
           const stampCount = Number(r.stamp_count ?? 0);
           const lv = calcLevelFromStamps(stampCount).level;
+
+          const nickname = String(r.nickname ?? "").trim();
+
           return {
             user_id: r.user_id,
-            nickname: String(r.nickname ?? "익명"),
+            nickname,              
             stamp_count: stampCount,
             level: lv,
           };
-        });
+        })
+
+        .filter((r) => r.nickname !== "");
 
         list.sort((a, b) => {
           if (b.level !== a.level) return b.level - a.level;
