@@ -34,7 +34,14 @@ export default function Ranking() {
           })
           .filter((row) => {
             const n = String(row.nickname ?? "").trim();
-            return n !== "" && n !== "익명";
+            const compact = n.replace(/\s+/g, "");
+
+            if (!n) return false;
+            if (compact === "익명") return false;
+            if (compact.startsWith("익명")) return false;
+            if (compact === "닉네임") return false;
+
+            return true;
           });
 
         list.sort((a, b) => {
