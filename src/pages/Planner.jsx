@@ -1797,10 +1797,7 @@ const deleteSelectedTodos = async () => {
                 관리자
               </button>
             )}
-
-            <div className="weather" title="오늘의 날씨">
-              <WeatherIcon code={weatherCode} size={52} />
-            </div>
+           
             <div ref={refHamburgerMenu}>
              <HamburgerMenu />
             </div>
@@ -1826,6 +1823,10 @@ const deleteSelectedTodos = async () => {
           <div className="date-stack">
             <div className="today-row" title="선택한 날짜">
               <span className="today">{formatSelectedKorean()}</span>
+
+               <div className="weather" title="오늘의 날씨">
+                <WeatherIcon code={weatherCode} size={40} />
+              </div>
 
               <button type="button" className="cal-btn" ref={refCalendarBtn} onClick={openCalendar} title="달력 열기">
                 <svg

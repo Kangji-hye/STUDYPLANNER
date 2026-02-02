@@ -455,6 +455,21 @@
   width: auto;
 }
 
+
+/* ✅ 모바일에서는 날씨 영역 자체를 숨김(이중 안전장치) */
+@media (max-width: 600px){
+  .weather{
+    display: none !important;
+  }
+
+  .today-row{
+    gap: 8px; /* 필요하면 6~10px 사이로 조절 */
+  }
+  .preset-btn, .todo-add-btn{
+    padding: 12px 10px 12px 6px; 
+  }
+}
+
 @media (max-width: 480px){
   .top-right{
     gap: 8px;
@@ -471,6 +486,8 @@
   .weather{
     padding: 6px 8px;
   }
+
+  
 }
 
 /* =========================
@@ -502,4 +519,55 @@
   font-size: 0.95rem;
   line-height: 1.6;
   color: #000;
+}
+
+/* ✅ 날짜 줄에 들어가는 날씨는 작고 가볍게 */
+.weather.weather-inline{
+  padding: 0;                 /* 기존 .weather의 패딩 제거 */
+  background: transparent;    /* 박스 느낌 제거 */
+  border-radius: 0;
+}
+
+/* 아이콘이 날짜 줄에서 가운데 정렬되게 */
+.today-row .weather{
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 버튼 두개 나란히 */
+.todo-bar-actions{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;     
+  min-width: 0;
+}
+
+.todo-bar-actions .preset-btn{
+  flex: 1 1 0;           
+  min-width: 0;           
+  white-space: nowrap;  
+  overflow: hidden;       
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 600px){
+  .todo-bar-actions{
+    gap: 6px;
+  }
+
+  .todo-bar-actions .preset-btn{
+    padding: 10px 8px;    
+    font-size: 0.86rem;  
+  }
+}
+
+@media (max-width: 360px){
+  .todo-bar-actions .preset-btn{
+    padding: 9px 7px;
+    font-size: 0.82rem;
+  }
+}
+@media (max-width: 600px){
+  .todo-bar-actions{ flex-wrap: nowrap !important; }
 }
