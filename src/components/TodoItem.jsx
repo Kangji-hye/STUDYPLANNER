@@ -1,16 +1,5 @@
 // src/components/TodoItem.jsx
-import React, { useEffect } from "react";
-
-let DONE_AUDIO = null;
-
-const getDoneAudio = () => {
-  if (!DONE_AUDIO) {
-    DONE_AUDIO = new Audio("/done.mp3");
-    DONE_AUDIO.preload = "auto";
-    DONE_AUDIO.volume = 0.9;
-  }
-  return DONE_AUDIO;
-};
+import React from "react";
 
 const TodoItem = ({
   t,
@@ -24,20 +13,6 @@ const TodoItem = ({
   deleteChecked = false,
   onToggleDeleteCheck,
 }) => {
-  useEffect(() => {
-    getDoneAudio();
-  }, []);
-
-  const playDoneSound = () => {
-    try {
-      const audio = getDoneAudio();
-      audio.currentTime = 0;
-      audio.play().catch(() => {
-      });
-    } catch (e) {
-      console.warn("done sound error:", e);
-    }
-  };
 
   return (
     <li>
@@ -105,11 +80,6 @@ const TodoItem = ({
           className={`todo-done-btn ${t.completed ? "done" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
-
-            if (!t.completed) {
-              playDoneSound();
-            }
-
             onToggle(t);
           }}
         >

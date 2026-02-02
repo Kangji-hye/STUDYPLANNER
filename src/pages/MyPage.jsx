@@ -1,11 +1,12 @@
 // src/pages/MyPage.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./MyPage.css";
 import { calcLevelFromStamps, levelToRatio, MAX_LEVEL } from "../utils/leveling";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import { GRADE_OTHER } from "../utils/grade";
+import { useAppSounds } from "../hooks/useAppSounds";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
@@ -77,7 +78,7 @@ const MyPage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
-  const previewAudioRef = useRef(null);
+  // const previewAudioRef = useRef(null);
 
   // 내 도장(참 잘했어요) 총 개수 (훅은 컴포넌트 안!)
   const [stampCount, setStampCount] = useState(0);
@@ -327,25 +328,41 @@ const MyPage = () => {
   // =========================
   // 효과음 미리듣기
   // =========================
+  // const previewSound = async () => {
+  //   try {
+  //     const src = form.finish_sound || DEFAULT_FINISH_SOUND;
+
+  //     if (!previewAudioRef.current) {
+  //       previewAudioRef.current = new Audio(src);
+  //     } else {
+  //       previewAudioRef.current.pause();
+  //       previewAudioRef.current.currentTime = 0;
+  //       previewAudioRef.current.src = src;
+  //     }
+
+  //     previewAudioRef.current.volume = 0.9;
+  //     await previewAudioRef.current.play();
+  //   } catch (err) {
+  //     console.warn("미리듣기 재생 실패", err);
+  //     alert("효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요.");
+  //   }
+  // };
+  
+  const { previewAllDone } = useAppSounds({
+    allDoneDefaultSrc: DEFAULT_FINISH_SOUND,
+  });
+
+
   const previewSound = async () => {
     try {
       const src = form.finish_sound || DEFAULT_FINISH_SOUND;
-
-      if (!previewAudioRef.current) {
-        previewAudioRef.current = new Audio(src);
-      } else {
-        previewAudioRef.current.pause();
-        previewAudioRef.current.currentTime = 0;
-        previewAudioRef.current.src = src;
-      }
-
-      previewAudioRef.current.volume = 0.9;
-      await previewAudioRef.current.play();
+      await previewAllDone(src);
     } catch (err) {
       console.warn("미리듣기 재생 실패", err);
       alert("효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요.");
     }
   };
+
 
   // =========================
   // 저장

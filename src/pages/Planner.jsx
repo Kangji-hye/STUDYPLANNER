@@ -21,11 +21,10 @@ import StudyTools from "../components/planner/StudyTools";
 import { toKstDayKey } from "../utils/dateKst";
 import { useBootSplash } from "../hooks/useBootSplash";
 import { useRestoreToToday } from "../hooks/useRestoreToToday";
-import { useAudioUnlock } from "../hooks/useAudioUnlock";
 import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
 import { calcLevelFromStamps } from "../utils/leveling";
-// import ConfirmModal from "../components/common/ConfirmModal";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import { useAppSounds } from "../hooks/useAppSounds";
 
 // =======================
 // 이모지 풀
@@ -126,14 +125,8 @@ function Planner() {
 
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
 
-  // "오늘/과거/미래" 판별 (KST day_key는 YYYY-MM-DD라 문자열 비교가 안전해요)
   const todayDayKey = toKstDayKey(new Date());     // 오늘(한국시간) 키
   const isPastSelected = selectedDayKey < todayDayKey;   // 과거(지난 날짜)
-  // const isFutureSelected = selectedDayKey > todayDayKey; // 미래(내일 이후)
-  // const canEditSelectedDate = () => !isPastSelected;;           // 오늘+미래는 수정 가능
-
-  //  기존 함수는 "오늘만"이 아니라 "과거만 막기"에 쓰면 돼요
-  // const isEditableDate = () => canEditSelectedDate;
 
   // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
@@ -142,8 +135,6 @@ function Planner() {
   }, [selectedDayKey]);
 
   const fetchTodosSeqRef = useRef(0);
-
-  // const isTodaySelected = () => selectedDayKey === toKstDayKey(new Date());
 
   // =======================
   // 달력 모달
@@ -164,14 +155,12 @@ function Planner() {
     const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
 
     function pickStableColor(seedText) {
-      // 아주 간단한 해시(문자 코드 합) → 같은 seed는 같은 색
       const s = String(seedText ?? "");
       let sum = 0;
       for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
       return VERSE_COLORS[sum % VERSE_COLORS.length];
     }
 
-  // 샘플 말씀(그 날짜에 DB 말씀이 0개일 때 사용)
   const SAMPLE_VERSES = [
     {
       ref: "시편 23편 1절",
@@ -191,7 +180,6 @@ function Planner() {
     },
   ];
 
-  // 날짜 기반 "고정 랜덤" (같은 날짜면 항상 같은 결과)
   function pickIndexBySeed(seedText, mod) {
     const s = String(seedText ?? "");
     let h = 0;
@@ -224,12 +212,14 @@ function Planner() {
   const weatherCode = useWeatherYongin();
 
   // 완료 사운드(재사용)
-  const finishAudioRef = useRef(null);
 
-  // 오디오 언락(중복 useEffect 제거)
-  useAudioUnlock(finishAudioRef, profile?.finish_sound ?? DEFAULT_FINISH_SOUND);
+  const { playTodoDone, playTimerEnd, playAllDone } = useAppSounds({
+    todoDoneSrc: "/done.mp3",
+    timerEndSrc: "/time1.mp3",
+    allDoneDefaultSrc: DEFAULT_FINISH_SOUND, // "/finish1.mp3"
+    finishEnabled, // 기존 useSoundSettings()의 finishEnabled 그대로 사용
+  });
 
-  // 최신 todos 참조
   const todosRef = useRef([]);
   useEffect(() => {
     todosRef.current = todos;
@@ -269,9 +259,7 @@ function Planner() {
   const [hasMyList, setHasMyList] = useState(false);
 
   const openLoadModal = () => {
-    // 내 목록이 있으면 기본을 "내가 만든 목록"으로, 없으면 방학 샘플로
     setLoadChoice(hasMyList ? "my" : "vacation");
-    // 체크박스(교체) 기본은 OFF
     setSampleModeReplace(false);
     setLoadReplace(false);
     setShowLoadModal(true);
@@ -410,72 +398,6 @@ function Planner() {
     });
   };
 
-  //  모두 완료 효과음
-  const playFinishSound = (overrideSrc) => {
-    try {
-      // 소리 설정 OFF면 재생하지 않음
-      if (typeof finishEnabled === "boolean" && finishEnabled === false) return;
-
-      // 1) 재생할 소스 결정 (우선순위: override > profile > 기본값)
-      let src = String(overrideSrc ?? profile?.finish_sound ?? DEFAULT_FINISH_SOUND).trim();
-      if (!src) src = DEFAULT_FINISH_SOUND;
-
-      // 2) 확장자 체크(지금 프로젝트는 mp3만 쓰는 전제)
-      //    혹시 다른 값이 들어오면 기본값으로 되돌림
-      if (!src.toLowerCase().endsWith(".mp3")) {
-        src = DEFAULT_FINISH_SOUND;
-      }
-
-      // 3) 오디오 객체는 재사용 (매번 new Audio 하면 모바일에서 불안정해질 수 있어요)
-      if (!finishAudioRef.current) {
-        finishAudioRef.current = new Audio();
-        finishAudioRef.current.preload = "auto";
-      }
-
-      const a = finishAudioRef.current;
-
-      // 4) src가 바뀌면 교체 + 로드
-      const nextHref = new URL(src, window.location.origin).href;
-      if (a.src !== nextHref) {
-        a.src = src;
-        a.load();
-      }
-
-      // 5) 볼륨/되감기
-      a.volume = 0.9;
-      try { a.pause(); } catch {
-        //
-      }
-      a.currentTime = 0;
-
-      // 6) 재생 (실패하면 기본값으로 1번 더 시도)
-      a.play().catch((e) => {
-        console.warn("finish sound blocked:", e);
-
-        // NotSupportedError면 대부분 "파일 없음/오디오 아님/코덱 문제"라서
-        // 기본값으로 한 번 더 바꿔서 재생 시도
-        if (String(e?.name) === "NotSupportedError") {
-          try {
-            const fallbackHref = new URL(DEFAULT_FINISH_SOUND, window.location.origin).href;
-            if (a.src !== fallbackHref) {
-              a.src = DEFAULT_FINISH_SOUND;
-              a.load();
-            }
-            a.currentTime = 0;
-            a.play().catch((e2) => console.warn("finish sound fallback failed:", e2));
-          } catch (e3) {
-            console.warn("finish sound fallback error:", e3);
-          }
-        }
-      });
-    } catch (e) {
-      console.warn("finish sound error:", e);
-    }
-  };
-
-  // =======================
-  // 날짜별 todos 조회(레이스 방지)
-  // =======================
   const fetchTodos = async (userId, dayKey) => {
     const mySeq = ++fetchTodosSeqRef.current;
 
@@ -495,7 +417,6 @@ function Planner() {
 
     const rows = data ?? [];
 
-    // 마지막 요청 + 현재 보고 있는 날짜만 화면 반영
     if (mySeq === fetchTodosSeqRef.current && dayKey === selectedDayKeyRef.current) {
       setTodos(rows);
     }
@@ -562,9 +483,6 @@ function Planner() {
     return { id: data?.id ?? null };
   };
 
-  //  오늘 적용되는 알람 설정 1개 가져오기
-  // - kind별로 "가장 최근 업데이트된 1개"를 사용
-  // - 기간(start_day~end_day)이 있으면 오늘이 그 안에 있을 때만 적용
   async function fetchTodayAlarm(kind, todayKey) {
     // todayKey는 "YYYY-MM-DD"
     const { data, error } = await supabase
@@ -582,7 +500,6 @@ function Planner() {
     const rows = data ?? [];
     if (rows.length === 0) return null;
 
-    // 오늘 날짜가 기간에 포함되는지 검사
     const today = new Date(`${todayKey}T00:00:00`);
     const isInRange = (row) => {
       const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
@@ -593,23 +510,19 @@ function Planner() {
       return true;
     };
 
-    // 기간 설정된 게 우선이 되게: 포함되는 것 중 최신 1개
     const inRange = rows.filter(isInRange);
     if (inRange.length > 0) return inRange[0];
 
-    // 아무 기간도 안 맞으면, 기간이 비어있는(항상 적용) 것 중 최신 1개
     const always = rows.filter((r) => !r.start_day && !r.end_day);
     return always[0] ?? null;
   }
 
-  // 브라우저 알림 띄우기 (PWA면 더 자연스럽게 보입니다)
+  // 브라우저 알림 띄우기 
   async function showLocalNotification({ title, body }) {
     try {
-      // 권한 없으면 스킵
       if (!("Notification" in window)) return;
       if (Notification.permission !== "granted") return;
 
-      // 서비스워커가 있으면 그걸로 띄우는 게 더 안정적
       if ("serviceWorker" in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
@@ -622,13 +535,11 @@ function Planner() {
         }
       }
 
-      // fallback: 그냥 Notification
       new Notification(title, { body });
     } catch (e) {
       console.warn("showLocalNotification failed:", e);
     }
   }
-
 
   // =======================
   // 초기 로딩
@@ -676,7 +587,6 @@ function Planner() {
             }
           : profileData;
       
-          // 생년월일이 있는데 grade_code가 비어있고(수동 설정도 안 했으면) 자동으로 채우기
           try {
             const hasBirth = String(nextProfile?.birthdate ?? "").trim().length > 0;
             const gradeManual = Boolean(nextProfile?.grade_manual);
@@ -686,11 +596,9 @@ function Planner() {
               const autoCode = calcGradeCodeFromBirthdate(nextProfile.birthdate);
 
               if (Number.isFinite(autoCode)) {
-                // nextProfile에 먼저 반영(화면에서 바로 적용)
                 nextProfile.grade_code = autoCode;
                 nextProfile.grade_manual = false;
 
-                // DB에도 저장(이미 생년월일 넣은 기존 사용자도 자동 반영되게)
                 const { error: gErr } = await supabase
                   .from("profiles")
                   .update({ grade_code: autoCode, grade_manual: false })
@@ -733,12 +641,10 @@ function Planner() {
       // 내 목록 상태 확인(1회)
       const { id: myListId } = await fetchMySingleListInfo(user.id);
 
-      // 1) 내 목록이 있고 + 오늘이 비어있으면 -> 내 목록 자동 불러오기
       if (myListId && loaded.length === 0) {
         await autoImportMyListIfEmptyToday({ userId: user.id, dayKey: selectedDayKey });
       }
 
-      // 2) 내 목록도 없고 + 오늘도 비어있으면 -> 샘플 주입
       if (!myListId && loaded.length === 0) {
         await seedSampleTodosIfEmpty({
           userId: user.id,
@@ -747,11 +653,7 @@ function Planner() {
         });
         await fetchTodos(user.id, selectedDayKey);
       }
-
-
-      // 명예의 전당 로딩
       await fetchHallOfFame(selectedDayKey);
-
       if (mounted) setLoading(false);
     };
 
@@ -763,17 +665,12 @@ function Planner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
-  // 날짜 바뀌면 재조회 + 내 목록 자동 불러오기
   useEffect(() => {
     if (!me?.id) return;
 
     const run = async () => {
-      // rows를 먼저 "정의"해야 아래에서 rows.length를 쓸 수 있어요
       const rows = await fetchTodos(me.id, selectedDayKey);
-
       await fetchHallOfFame(selectedDayKey);
-
-      // 오늘 + 비어있음 + 내 목록 있음 -> 자동 채우기
       if ((rows ?? []).length === 0 && hasMyList) {
         await autoImportMyListIfEmptyToday({
           userId: me.id,
@@ -785,7 +682,6 @@ function Planner() {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDayKey, me?.id, hasMyList]);
-
 
   // 명예의 전당 자동 새로고침
   useEffect(() => {
@@ -821,7 +717,6 @@ useEffect(() => {
   fetchMyStampCount();
 }, [me?.id]);
 
-
   // 메모 불러오기
   useEffect(() => {
     if (!me?.id) return;
@@ -855,7 +750,6 @@ useEffect(() => {
       alert("지난 날짜에는 샘플 숙제 불러오기를 사용할 수 없습니다.\n(내일 날짜는 미리 셋팅할 수 있어요!)");
       return;
     }
-
 
     const useKey = sampleKeyOverride || selectedSampleKey;
     const tableName = SAMPLE_TABLE_BY_KEY[useKey];
@@ -1085,31 +979,22 @@ useEffect(() => {
     }
   };
 
-    // =======================
-  // 새 날(오늘) 시작 시: "내 목록" 자동 불러오기
-  // - 조건: 오늘 날짜 + 오늘 할 일 0개 + 내 목록 있음
-  // - 하루에 1번만 자동 실행(무한 반복 방지)
-  // =======================
   const autoImportMyListIfEmptyToday = async ({ userId, dayKey }) => {
     if (!userId || !dayKey) return;
 
-    // 1) 오늘만 자동 채우기 (원하면 "미래도"로 바꿀 수 있어요)
     if (dayKey !== toKstDayKey(new Date())) return;
 
-    // 2) 이미 오늘 자동 불러오기를 한 번 했으면 또 하지 않기
     const onceKey = `auto_mylist_loaded_v1:${userId}:${dayKey}`;
     try {
       if (localStorage.getItem(onceKey) === "1") return;
     } catch {
-      // localStorage 실패해도 앱은 돌아가야 하니 그냥 진행
+      //
     }
 
-    // 3) 혹시라도 이미 화면/DB에 todo가 생겼으면 중단
     const current = todosRef.current ?? [];
     if (current.length > 0) return;
 
     try {
-      // 4) 내 목록(단일) set_id 가져오기
       const { data: setRow, error: setErr } = await supabase
         .from("todo_sets")
         .select("id")
@@ -1118,9 +1003,8 @@ useEffect(() => {
         .maybeSingle();
 
       if (setErr) throw setErr;
-      if (!setRow?.id) return; // 내 목록 자체가 없으면 종료
+      if (!setRow?.id) return; 
 
-      // 5) 내 목록 아이템 가져오기
       const { data: items, error: itemsErr } = await supabase
         .from("todo_set_items")
         .select("item_key, title, sort_order")
@@ -1134,14 +1018,12 @@ useEffect(() => {
           const base = Number(x.sort_order ?? 0) || 0;
           const itemKey = String(x.item_key ?? "").trim();
 
-          // 자동 주입은 "교체" 개념이라 sort_order는 1부터 깔끔하게
           return {
             user_id: userId,
             day_key: dayKey,
             title: String(x.title ?? "").trim(),
             completed: false,
             sort_order: base,
-            // 중복 방지 키(오늘은 같은 itemKey는 1번만)
             source_set_item_key: `${dayKey}:auto_single:${itemKey}`,
           };
         })
@@ -1149,17 +1031,14 @@ useEffect(() => {
 
       if (rows.length === 0) return;
 
-      // 6) 오늘 날짜 todos에 넣기 (중복은 무시)
       const { error: upErr } = await supabase.from("todos").upsert(rows, {
         onConflict: "user_id,source_set_item_key",
         ignoreDuplicates: true,
       });
       if (upErr) throw upErr;
 
-      // 7) 화면 갱신
       await fetchTodos(userId, dayKey);
 
-      // 8) 오늘 자동 주입 완료 표시(하루 1번)
       try {
         localStorage.setItem(onceKey, "1");
       } catch {
@@ -1167,7 +1046,6 @@ useEffect(() => {
       }
     } catch (e) {
       console.error("autoImportMyListIfEmptyToday error:", e);
-      // 자동 기능은 조용히 실패하는 편이 UX가 좋아서 alert는 일부러 안 띄웁니다.
     }
   };
 
@@ -1333,10 +1211,13 @@ useEffect(() => {
 
   const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-  // (A) UI 즉시 반응
+  if (!item.completed) {
+    playTodoDone();
+  }
+
   if (!wasAllCompleted && willAllCompleted) {
     fireConfetti();
-    playFinishSound();
+    playAllDone(profile?.finish_sound);
   }
 
   setTodos(nextTodos);
@@ -1374,9 +1255,7 @@ useEffect(() => {
   }
 };
 
-
   const doneCount = todos.filter((t) => t.completed).length;
-
   const notDoneCount = todos.filter((t) => !t.completed).length;
 
 //삭제 관련
@@ -1399,24 +1278,18 @@ const clearAllForDelete = () => {
   setSelectedDeleteIds(new Set());
 };
 
-//  "모두 선택" 버튼을 토글로 만드는 함수
 const toggleSelectAllForDelete = () => {
   const list = filteredTodos ?? [];
 
-  // 삭제 모드인데도 목록이 0개면 할 게 없으니 안내
   if (list.length === 0) {
     alert("선택할 것이 없어요 🙂");
     return;
   }
-
-  // 지금 전부 선택된 상태인지 확인
   const isAllSelected = selectedDeleteIds.size === list.length;
 
   if (isAllSelected) {
-    //  전부 선택되어 있으면 -> 전부 해제
     clearAllForDelete();
   } else {
-    //  전부 선택 안 되어 있으면 -> 전부 선택
     selectAllForDelete();
   }
 };
@@ -1563,19 +1436,17 @@ const deleteSelectedTodos = async () => {
 
   // 오늘 알람 예약(사용자가 플래너를 열었을 때 그날 한 번 예약)
   useEffect(() => {
-    if (!me?.id) return;          // 로그인 사용자 있어야 함
-    if (loading) return;          // 로딩 중엔 하지 않기
+    if (!me?.id) return;         
+    if (loading) return;        
 
     let timerId = null;
 
     const schedule = async () => {
       const todayKey = toKstDayKey(new Date());
 
-      // 예: 오늘 할 일 알람 1개 가져오기
       const alarm = await fetchTodayAlarm("todo_remind", todayKey);
       if (!alarm) return;
 
-      // 오늘 날짜 + HH:MM 을 KST 기준 Date로 만들기
       const hhmm = String(alarm.time_hhmm || "19:30");
       const [hh, mm] = hhmm.split(":").map((x) => Number(x));
 
@@ -1585,7 +1456,6 @@ const deleteSelectedTodos = async () => {
 
       const diffMs = target.getTime() - now.getTime();
 
-      // 이미 시간이 지났으면 오늘은 예약 안 함(원하면 “즉시 한 번 띄우기”로 바꿀 수 있어요)
       if (diffMs <= 0) return;
 
       timerId = window.setTimeout(() => {
@@ -1602,7 +1472,6 @@ const deleteSelectedTodos = async () => {
       if (timerId) window.clearTimeout(timerId);
     };
   }, [me?.id, loading]);
-
 
   // 첫 방문이면 자동으로 투어 시작
   useEffect(() => {
@@ -1621,8 +1490,6 @@ const deleteSelectedTodos = async () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, me?.id]);
-
-
   
   useEffect(() => () => clearInterval(timerRef.current), []);
 
@@ -1729,24 +1596,14 @@ const deleteSelectedTodos = async () => {
     setRemainingSec(timerMin * 60);
   };
 
-  // 타이머 종료 소리
-  const TIMER_END_SOUND = "/time1.mp3";
-  const timerAudioRef = useRef(null);
   const timerEndedRef = useRef(false);
-
   useEffect(() => {
     if (remainingSec === 0 && !timerEndedRef.current) {
       timerEndedRef.current = true;
+
       if (!timerSoundOn) return;
 
-      try {
-        if (!timerAudioRef.current) timerAudioRef.current = new Audio(TIMER_END_SOUND);
-        timerAudioRef.current.currentTime = 0;
-        timerAudioRef.current.volume = 0.9;
-        timerAudioRef.current.play().catch(() => {});
-      } catch (err) {
-        console.warn("타이머 종료 효과음 재생 실패", err);
-      }
+      playTimerEnd();
     }
 
     if (remainingSec > 0) timerEndedRef.current = false;
@@ -1757,27 +1614,16 @@ const deleteSelectedTodos = async () => {
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
 
-
- //관리자 : 오늘의 말씀 2학년만 보이게
+ //관리자 : 숙제 내용 2학년만 보이게
   useEffect(() => {
-    //로그인 안 됐으면 아무 것도 하지 않기
     if (!me?.id) return;
-
-    //학년이 아니면: 말씀을 '비워서' 화면에 안 보이게 만들기
     const myGrade = Number(profile?.grade_code);
-    //  const isAdmin = (me?.email === "kara@kara.com" || profile?.is_admin === true);
     const isSecondGrade = (myGrade === 2);
-
     if (!isSecondGrade) {
       setVerseLines([]); 
       setVerseRef("");  
       return;         
     }
-
-    // ------------------------------
-    //여기부터는 "2학년일 때만" 실행됩니다.
-    // ------------------------------
-
     const run = async () => {
       try {
         const { data, error } = await supabase
@@ -1805,12 +1651,7 @@ const deleteSelectedTodos = async () => {
             return;
           }
 
-          // 2학년이므로 "grade_code === 2"인 우선 선택
           const mine = valid.find((r) => r.grade_code === 2);
-          // const chosen = mine
-          //   ? mine
-          //   : valid[pickIndexBySeed(`fallback:${selectedDayKey}`, valid.length)];
-
           if (!mine) {
             setVerseLines([]);  
             setVerseRef("");
@@ -1837,24 +1678,14 @@ const deleteSelectedTodos = async () => {
     run();
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
-    // =======================
-  //  오늘 숙제 2학년만 보이게 (daily_homeworks)
-  // =======================
   useEffect(() => {
-    // 1) 로그인 안 됐으면 중지
     if (!me?.id) return;
-
-    // 2) 내 학년 확인
     const myGrade = Number(profile?.grade_code);
     const isSecondGrade = (myGrade === 2);
-
-    // 3) 2학년이 아니면 숙제 숨김
     if (!isSecondGrade) {
       setHomeworkItems([]);
       return;
     }
-
-    // 4) 2학년일 때만 DB에서 오늘 숙제 불러오기
     const run = async () => {
       try {
         const { data, error } = await supabase
@@ -1867,8 +1698,6 @@ const deleteSelectedTodos = async () => {
         if (error) throw error;
 
         const items = Array.isArray(data?.items) ? data.items : [];
-
-        // 혹시 이상한 값이 섞여도 안전하게 정리
         const normalized = items
           .map((x) => ({
             subject: String(x?.subject ?? "").trim(),
@@ -1918,39 +1747,24 @@ const deleteSelectedTodos = async () => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
-
   // =======================
   // 푸터
   // =======================
   const openGrapeSeed = () => {
     const ua = navigator.userAgent.toLowerCase();
-
-    // 1) PC/모바일 공통으로 먼저 시도할 "학생 웹"
     const studentWeb = "https://students.grapeseed.com"; // 공식 학생 웹(일반적으로 이쪽이 기본)
-
-    // 2) 스토어 링크 (너가 적어준 것 그대로 OK)
     const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn";
     const appStore  = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
-
-    // 0) 문자열 includes 사용 (contains는 JS에 없음!)
     const isAndroid = ua.includes("android");
     const isIOS = ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
-
-    // 1) 일단 학생 웹을 열어본다 (유효하지 않다 팝업이 안 뜸)
-    //    - 같은 탭에서 열면 사용자가 "뒤로가기"도 편함
     window.location.href = studentWeb;
-
-    // 2) '웹으로 갔는데도 앱이 안 열리는' 사용자에게 선택권을 주기 위해
-    //    잠깐 뒤 스토어로 유도(원하면 이 부분은 confirm으로 바꿔도 됨)
     setTimeout(() => {
       if (isAndroid) {
         window.location.href = playStore;
       } else if (isIOS) {
         window.location.href = appStore;
       } else {
-        // PC는 이미 studentWeb로 갔을 테니, 여기선 추가 동작 없어도 됨
-        // 필요하면 새 탭으로 열기:
-        // window.open(studentWeb, "_blank");
+        // 
       }
     }, 1500);
   };
