@@ -173,7 +173,7 @@ export default function Ranking() {
       )}
 
       <div className="ranking-tip">
-        도장을 많이 모을수록 레벨이 올라가요. 뒤 레벨은 점점 더 어려워져요 🙂
+        달력에 "참 잘했어요" 도장을 매일 모을수록 레벨이 올라가요. 뒤 레벨은 점점 더 어려워져요 🙂
       </div>
     </div>
   );

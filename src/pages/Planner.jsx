@@ -2226,7 +2226,13 @@ const deleteSelectedTodos = async () => {
               {weekHwImgOpen && (
                 <div className="weekly-hw-overlay" role="dialog" aria-modal="true">
                   <div className="weekly-hw-card">
-                    <img src={weekHwImgUrl} alt="주간 숙제" />
+                    <div className="weekly-hw-image-wrap">
+                      <img
+                        src={weekHwImgUrl}
+                        alt="주간 숙제"
+                        className="weekly-hw-image"
+                      />
+                    </div>
                     <button type="button" onClick={() => setWeekHwImgOpen(false)}>
                       닫기
                     </button>

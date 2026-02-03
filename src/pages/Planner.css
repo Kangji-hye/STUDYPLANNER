@@ -521,10 +521,10 @@
   color: #000;
 }
 
-/* ✅ 날짜 줄에 들어가는 날씨는 작고 가볍게 */
+/* 날짜 줄에 들어가는 날씨는 작고 가볍게 */
 .weather.weather-inline{
-  padding: 0;                 /* 기존 .weather의 패딩 제거 */
-  background: transparent;    /* 박스 느낌 제거 */
+  padding: 0;                 
+  background: transparent;   
   border-radius: 0;
 }
 
@@ -570,4 +570,101 @@
 }
 @media (max-width: 600px){
   .todo-bar-actions{ flex-wrap: nowrap !important; }
+}
+
+/* 주간 숙제 모달 배경 */
+.weekly-hw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* 카드(모달 박스) */
+.weekly-hw-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  width: 90vw;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 이미지 크기 제어 */
+.weekly-hw-image {
+  width: 100%;         
+  max-height: 65vh;     
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+/* 닫기 버튼 */
+.weekly-hw-close {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #eee;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+/* 모달 배경 */
+.weekly-hw-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* 카드 */
+.weekly-hw-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  width: 90vw;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.weekly-hw-image-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;      
+  justify-content: center;  
+  overflow: auto;          
+  -webkit-overflow-scrolling: touch; 
+}
+
+.weekly-hw-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  touch-action: pinch-zoom;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 닫기 버튼 */
+.weekly-hw-close {
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #eee;
+  font-size: 0.95rem;
+  cursor: pointer;
 }
