@@ -88,6 +88,7 @@ async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   });
 }
 
+
 function Planner() {
   const navigate = useNavigate();
   const { finishEnabled } = useSoundSettings();
@@ -731,6 +732,8 @@ useEffect(() => {
     }
   }, [me?.id, selectedDayKey]);
 
+  
+
   // "YYYY-MM-DD" -> Date
   function dayKeyToDate(dayKey) {
     const [y, m, d] = String(dayKey).split("-").map((x) => Number(x));
@@ -753,6 +756,7 @@ useEffect(() => {
     d.setDate(d.getDate() + diffToMon);
     return dateToDayKey(d);
   }
+
 
 
   // =======================
@@ -2209,30 +2213,29 @@ const deleteSelectedTodos = async () => {
             )}
           </div>
 
-          {/* 일주일 숙제 보기(이미지) */}
-          <div style={{ marginTop: 10 }}>
-            <button
-              type="button"
-              onClick={() => {
-                if (!weekHwImgUrl) {
-                  alert("이번 주 숙제 사진이 아직 없어요 🙂 (관리자가 사진을 올려야 보여요)");
-                  return;
-                }
-                setWeekHwImgOpen(true);
-              }}
-              style={{
-                padding: 0,
-                background: "transparent",
-                border: "none",
-                color: "#2563eb",
-                fontWeight: 700,
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-            >
-              📸 일주일 숙제 보기
-            </button>
-          </div>
+          {weekHwImgUrl && (
+            <>
+              <button
+                type="button"
+                className="weekly-hw-btn"
+                onClick={() => setWeekHwImgOpen(true)}
+              >
+                일주일 숙제 보기
+              </button>
+
+              {weekHwImgOpen && (
+                <div className="weekly-hw-overlay" role="dialog" aria-modal="true">
+                  <div className="weekly-hw-card">
+                    <img src={weekHwImgUrl} alt="주간 숙제" />
+                    <button type="button" onClick={() => setWeekHwImgOpen(false)}>
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
 
         </div>
       )}
@@ -2325,48 +2328,6 @@ const deleteSelectedTodos = async () => {
           </div>
         </div>
       )}
-
-       {/* 주간 숙제 이미지 모달 */}
-      {weekHwImgOpen && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="일주일 숙제 사진"
-          onClick={() => setWeekHwImgOpen(false)}
-        >
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">일주일 숙제</div>
-              <button className="modal-close" type="button" onClick={() => setWeekHwImgOpen(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
-              <img
-                src={weekHwImgUrl}
-                alt="일주일 숙제 사진"
-                style={{
-                  width: "100%",
-                  maxHeight: "70vh",
-                  objectFit: "contain",
-                  borderRadius: 14,
-                  background: "#fff",
-                  border: "1px solid rgba(0,0,0,0.08)",
-                }}
-              />
-            </div>
-
-            <div className="modal-actions">
-              <button className="modal-primary" type="button" onClick={() => setWeekHwImgOpen(false)}>
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
 
       <footer className="planner-footer-simple">
         <div className="footer-links">

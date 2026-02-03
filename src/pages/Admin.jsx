@@ -69,17 +69,6 @@ function parseDayKeyToDate(dayKey) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-function getWeekStartDayKey(dayKey) {
-  const d = parseDayKeyToDate(dayKey); // 이미 파일에 있는 함수 재사용
-  const day = d.getDay(); // 0(일)~6(토)
-
-  // 월요일(1)을 한 주 시작으로 맞추기
-  const diffToMon = (day === 0 ? -6 : 1 - day);
-  d.setDate(d.getDate() + diffToMon);
-
-  return dateToDayKey(d); // 이미 파일에 있는 함수 재사용
-}
-
 function dateToDayKey(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -97,6 +86,15 @@ function isSameDay(a, b) {
   );
 }
 
+// 선택된 dayKey 기준 "그 주의 월요일"
+function getWeekStartDayKey(dayKey) {
+  const d = parseDayKeyToDate(dayKey);
+  const day = d.getDay(); // 0(일)~6(토)
+  const diffToMon = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diffToMon);
+  return dateToDayKey(d);
+}
+
 // 알람 day_type 라벨
 function dayTypeLabel(v) {
   if (v === "weekday") return "평일만";
@@ -106,7 +104,6 @@ function dayTypeLabel(v) {
 
 export default function Admin() {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(true);
 
   // 관리자 확인용
@@ -155,20 +152,19 @@ export default function Admin() {
 
   // 추가: 평일/주말 옵션(전체/평일/주말)
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
-
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
 
-    // =========================
-  // ✅ 주간 숙제 사진 업로드(2학년용)
+  // =========================
+  // 주간 숙제 사진 업로드
   // =========================
   const [weekImgFile, setWeekImgFile] = useState(null);
-  const [weekImgUrl, setWeekImgUrl] = useState("");     // 관리자 미리보기용
+  const [weekImgUrl, setWeekImgUrl] = useState(""); // 관리자 미리보기용(또는 DB 저장 URL)
   const [weekImgUploading, setWeekImgUploading] = useState(false);
 
   // 선택된 dayKey 기준 "그 주의 월요일"
   const weekStartDayKey = useMemo(() => getWeekStartDayKey(dayKey), [dayKey]);
 
-  // ✅ 이번 주 이미지 불러오기(관리자에서 미리 보기)
+  // 이번 주 이미지 불러오기(관리자에서 미리 보기)
   const loadWeekImage = async () => {
     const { data, error } = await supabase
       .from("weekly_homework_images")
@@ -200,7 +196,7 @@ export default function Admin() {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const safeExt = ext.length <= 5 ? ext : "jpg";
 
-      // storage 경로: weekly-homework/{grade}/{weekStart}/xxxxx.jpg
+      // storage 경로: {grade}/{weekStart}/{timestamp}.jpg
       const path = `${Number(gradeCode)}/${weekStartDayKey}/${Date.now()}.${safeExt}`;
 
       const bucket = supabase.storage.from("weekly-homework");
@@ -216,7 +212,7 @@ export default function Admin() {
       // 2) Public URL 얻기(버킷을 Public로 해둔 경우)
       const { data: pub } = bucket.getPublicUrl(path);
       const publicUrl = String(pub?.publicUrl ?? "").trim();
-      if (!publicUrl) throw new Error("publicUrl 생성 실패");
+      if (!publicUrl) throw new Error("publicUrl 생성 실패 (버킷 공개 설정 확인)");
 
       // 3) DB에 upsert (이번 주 + 학년으로 한 장만 유지)
       const { error: dbErr } = await supabase
@@ -236,19 +232,19 @@ export default function Admin() {
 
       alert(`주간 숙제 사진을 저장했어요! (주 시작: ${weekStartDayKey} / ${gradeLabel})`);
 
-      // 화면 정리 + 미리보기 갱신
       setWeekImgFile(null);
       await loadWeekImage();
     } catch (err) {
       console.error("uploadWeekImage error:", err);
-      alert("사진 업로드 중 오류가 났어요. (버킷/권한/RLS 확인)");
+      alert(err?.message ?? "사진 업로드 중 오류가 났어요. (버킷/권한/RLS 확인)");
     } finally {
       setWeekImgUploading(false);
     }
   };
 
-
+  // =======================
   // 알람 목록 불러오기
+  // =======================
   const loadAlarmList = async () => {
     const { data, error } = await supabase
       .from("alarm_settings")
@@ -284,7 +280,6 @@ export default function Admin() {
       return;
     }
 
-    // 공통 payload(추가/수정 모두 사용)
     const payload = {
       kind: alarmKind,
       title: String(alarmTitle ?? "").trim() || `${alarmKind} 알람`,
@@ -297,33 +292,21 @@ export default function Admin() {
     };
 
     try {
-      // 1) 수정 모드면 update
       if (editingAlarmId) {
-        const { error } = await supabase
-          .from("alarm_settings")
-          .update(payload)
-          .eq("id", editingAlarmId);
-
+        const { error } = await supabase.from("alarm_settings").update(payload).eq("id", editingAlarmId);
         if (error) throw error;
 
         alert("알람을 수정했습니다!");
-        setEditingAlarmId(null); 
+        setEditingAlarmId(null);
         await loadAlarmList();
-        await loadWeekImage(); 
         return;
       }
 
-      // 2) 새로 추가 모드면 insert
-      const { error } = await supabase
-        .from("alarm_settings")
-        .insert({ ...payload, is_active: true });
-
+      const { error } = await supabase.from("alarm_settings").insert({ ...payload, is_active: true });
       if (error) throw error;
 
       alert("알람을 저장했습니다!");
       await loadAlarmList();
-      await loadWeekImage(); 
-
       setAlarmTitle("");
     } catch (err) {
       console.error("saveAlarm error:", err);
@@ -331,10 +314,11 @@ export default function Admin() {
     }
   };
 
-  //  알람 삭제
   const deleteAlarmFromList = async (row) => {
     const ok = window.confirm(
-      `이 알람을 삭제할까요?\n\n[${row.kind}] ${row.title}\n시간: ${row.time_hhmm}\n옵션: ${dayTypeLabel(row.day_type)}\n\n※ 삭제하면 되돌릴 수 없어요.`
+      `이 알람을 삭제할까요?\n\n[${row.kind}] ${row.title}\n시간: ${row.time_hhmm}\n옵션: ${dayTypeLabel(
+        row.day_type
+      )}\n\n※ 삭제하면 되돌릴 수 없어요.`
     );
     if (!ok) return;
 
@@ -350,11 +334,8 @@ export default function Admin() {
     alert("알람을 삭제했습니다.");
   };
 
-  //  수정 취소(새로 추가 모드로 돌아가기)
   const cancelAlarmEdit = () => {
     setEditingAlarmId(null);
-
-    // 원하는 기본값으로 리셋
     setAlarmKind("todo_remind");
     setAlarmTitle("");
     setAlarmMessage("오늘의 할 일을 끝내보세요.");
@@ -364,7 +345,6 @@ export default function Admin() {
     setAlarmEndDay("");
   };
 
-    // 알람 수정 시작: 목록의 값을 위 입력칸으로 올려서 편집 모드로 전환
   const editAlarmFromList = (row) => {
     setEditingAlarmId(row.id);
 
@@ -375,11 +355,8 @@ export default function Admin() {
 
     setAlarmStartDay(row.start_day ? String(row.start_day) : "");
     setAlarmEndDay(row.end_day ? String(row.end_day) : "");
-
-    // day_type이 null인 옛 데이터 대비
     setAlarmDayType(String(row.day_type ?? "all"));
 
-    // 사용성이 좋아요: 위로 올려서 바로 수정하게
     try {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -387,19 +364,12 @@ export default function Admin() {
     }
   };
 
-
-  // 알람 활성/비활성 토글
   const toggleAlarmActive = async (row) => {
-    // Boolean(...) 같은 불필요한 감싸기 없이 바로 반전하면 됩니다.
-    // row.is_active가 null/undefined여도 !null => true라서 "켜기"로 자연스럽게 동작해요.
     const next = !row.is_active;
 
     const { error } = await supabase
       .from("alarm_settings")
-      .update({
-        is_active: next,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ is_active: next, updated_at: new Date().toISOString() })
       .eq("id", row.id);
 
     if (error) {
@@ -410,7 +380,6 @@ export default function Admin() {
 
     await loadAlarmList();
   };
-
 
   // =======================
   // 말씀 목록 불러오기
@@ -573,11 +542,7 @@ export default function Admin() {
     const { error } = await supabase
       .from("daily_homeworks")
       .upsert(
-        {
-          day_key: dayKey,
-          grade_code: Number(gradeCode),
-          items: cleaned,
-        },
+        { day_key: dayKey, grade_code: Number(gradeCode), items: cleaned },
         { onConflict: "day_key,grade_code" }
       );
 
@@ -675,6 +640,7 @@ export default function Admin() {
       await loadHomework();
       await loadHomeworkList();
       await loadAlarmList();
+      await loadWeekImage();
 
       if (mounted) setLoading(false);
     };
@@ -692,7 +658,7 @@ export default function Admin() {
     if (!isAdmin) return;
     loadVerse();
     loadHomework();
-    loadWeekImage(); 
+    loadWeekImage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, dayKey, gradeCode]);
 
@@ -822,7 +788,6 @@ export default function Admin() {
           <div className="admin-sub">로그인: {myEmail}</div>
         </div>
         <HamburgerMenu />
-
       </div>
 
       {/* 날짜/요일 + 항상 떠있는 달력 카드 */}
@@ -831,12 +796,7 @@ export default function Admin() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span className="admin-label">날짜</span>
 
-            <input
-              type="date"
-              value={dayKey}
-              onChange={(e) => setDayKey(e.target.value)}
-              aria-label="날짜 선택"
-            />
+            <input type="date" value={dayKey} onChange={(e) => setDayKey(e.target.value)} aria-label="날짜 선택" />
 
             <span className="admin-weekday">
               {`${selectedDateObj.getMonth() + 1}월 ${selectedDateObj.getDate()}일 (${getKoreanWeekday(
@@ -929,8 +889,8 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          매일 모든 학년을 다 채울 필요는 없어요. 한 학년만 저장해도, 사용자는 그 날짜에 “저장된 학년 중
-          하나”를 볼 수 있게 만들 수 있습니다.
+          매일 모든 학년을 다 채울 필요는 없어요. 한 학년만 저장해도, 사용자는 그 날짜에 “저장된 학년 중 하나”를 볼 수
+          있게 만들 수 있습니다.
         </div>
 
         <div className="admin-row">
@@ -960,15 +920,15 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 주간 숙제 사진 업로드 */}
+      {/* 오늘 숙제 입력 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
           오늘 숙제 입력
         </div>
 
         <div className="admin-help">
-          예) 수학: 30페이지 / 영어: 20쪽 쓰기 / 국어: 받아쓰기 3페이지 처럼 입력해요. “추가”를 누르면 아래에
-          쌓이고, “숙제 저장”을 누르면 DB에 저장됩니다.
+          예) 수학: 30페이지 / 영어: 20쪽 쓰기 / 국어: 받아쓰기 3페이지 처럼 입력해요. “추가”를 누르면 아래에 쌓이고,
+          “숙제 저장”을 누르면 DB에 저장됩니다.
         </div>
 
         <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
@@ -1038,30 +998,31 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 숙제 이미지로 올리기 */}
+      {/* 주간 숙제 사진 업로드 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
           일주일 숙제 사진 업로드
         </div>
 
         <div className="admin-help">
-          “이번 주 월요일 기준(주 시작일)”로 1장만 저장됩니다. 같은 주에 다시 올리면 사진이 교체돼요.
-          (주 시작일: {weekStartDayKey})
+          “이번 주 월요일 기준(주 시작일)”로 1장만 저장됩니다. 같은 주에 다시 올리면 사진이 교체돼요. (주 시작일:{" "}
+          {weekStartDayKey})
         </div>
 
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (!f) return;
+
             setWeekImgFile(f);
 
             try {
               const url = URL.createObjectURL(f);
               setWeekImgUrl(url);
             } catch {
+              //
             }
           }}
         />
@@ -1095,7 +1056,6 @@ export default function Admin() {
           </button>
         </div>
       </div>
-
 
       {/* 저장된 말씀 목록 */}
       <div className="admin-card">
@@ -1224,8 +1184,6 @@ export default function Admin() {
         </div>
       )}
 
-
-
       {/* 알람 설정 카드 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
@@ -1247,12 +1205,7 @@ export default function Admin() {
 
         <div className="admin-row">
           <span className="admin-label">제목</span>
-          <input
-            type="text"
-            value={alarmTitle}
-            onChange={(e) => setAlarmTitle(e.target.value)}
-            placeholder="예) 방학-저녁 알림"
-          />
+          <input type="text" value={alarmTitle} onChange={(e) => setAlarmTitle(e.target.value)} placeholder="예) 방학-저녁 알림" />
         </div>
 
         <div className="admin-row">
@@ -1267,15 +1220,9 @@ export default function Admin() {
 
         <div className="admin-row">
           <span className="admin-label">시간</span>
-          <input
-            type="time"
-            value={alarmTime}
-            onChange={(e) => setAlarmTime(e.target.value)}
-            aria-label="알람 시간"
-          />
+          <input type="time" value={alarmTime} onChange={(e) => setAlarmTime(e.target.value)} aria-label="알람 시간" />
         </div>
 
-        {/* 추가: 평일/주말 옵션 */}
         <div className="admin-row">
           <span className="admin-label">요일</span>
           <select value={alarmDayType} onChange={(e) => setAlarmDayType(e.target.value)}>
@@ -1287,36 +1234,26 @@ export default function Admin() {
 
         <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
           <span className="admin-label">기간</span>
-          <input
-            type="date"
-            value={alarmStartDay}
-            onChange={(e) => setAlarmStartDay(e.target.value)}
-            aria-label="시작일"
-          />
+          <input type="date" value={alarmStartDay} onChange={(e) => setAlarmStartDay(e.target.value)} aria-label="시작일" />
           <span style={{ opacity: 0.6 }}>~</span>
-          <input
-            type="date"
-            value={alarmEndDay}
-            onChange={(e) => setAlarmEndDay(e.target.value)}
-            aria-label="종료일"
-          />
+          <input type="date" value={alarmEndDay} onChange={(e) => setAlarmEndDay(e.target.value)} aria-label="종료일" />
         </div>
 
         <div className="admin-actions">
-            <button className="admin-btn" onClick={saveAlarm}>
-              {editingAlarmId ? "알람 수정 저장" : "알람 저장"}
-            </button>
+          <button className="admin-btn" onClick={saveAlarm}>
+            {editingAlarmId ? "알람 수정 저장" : "알람 저장"}
+          </button>
 
-            {editingAlarmId ? (
-              <button className="admin-btn ghost" type="button" onClick={cancelAlarmEdit}>
-                수정 취소
-              </button>
-            ) : (
-              <button className="admin-btn ghost" onClick={loadAlarmList}>
-                알람 목록 새로고침
-              </button>
-            )}
-          </div>
+          {editingAlarmId ? (
+            <button className="admin-btn ghost" type="button" onClick={cancelAlarmEdit}>
+              수정 취소
+            </button>
+          ) : (
+            <button className="admin-btn ghost" onClick={loadAlarmList}>
+              알람 목록 새로고침
+            </button>
+          )}
+        </div>
 
         <div style={{ marginTop: 10 }}>
           {alarmList.length === 0 ? (
@@ -1325,8 +1262,8 @@ export default function Admin() {
             <div className="admin-help">
               {alarmList.slice(0, 20).map((a) => (
                 <div key={a.id} style={{ marginBottom: 8 }}>
-                  • [{a.kind}] {a.title} / {a.time_hhmm} / {dayTypeLabel(a.day_type)} /{" "}
-                  {a.is_active ? "ON" : "OFF"} <br />
+                  • [{a.kind}] {a.title} / {a.time_hhmm} / {dayTypeLabel(a.day_type)} / {a.is_active ? "ON" : "OFF"}
+                  <br />
                   {a.message}
                   {a.start_day || a.end_day ? (
                     <> (기간: {a.start_day ?? "-"} ~ {a.end_day ?? "-"})</>
@@ -1361,16 +1298,16 @@ export default function Admin() {
                       삭제
                     </button>
                   </div>
-
                 </div>
               ))}
               {alarmList.length > 20 ? <div style={{ opacity: 0.7 }}>… (너무 길면 20개까지만 보여요)</div> : null}
             </div>
           )}
         </div>
-         <div className="admin-hamburger-menu"> 
-           <HamburgerMenu />
-         </div> 
+
+        <div className="admin-hamburger-menu">
+          <HamburgerMenu />
+        </div>
       </div>
     </div>
   );
