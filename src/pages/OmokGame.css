@@ -158,6 +158,12 @@
   background: rgba(255,255,255,0.12);
 }
 
+.omok-cell.last{
+  outline: 3px solid rgba(255,255,255,0.85);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(255, 213, 79, 0.55); /* 노란 링 */
+}
+
 /* 돌 */
 .stone{
   width:18px;
@@ -210,4 +216,9 @@
 @media (max-width:420px){
   .omok-cell{ width:26px; height:26px; }
   .stone{ width:16px; height:16px; }
+}
+.stone.last-stone{
+  box-shadow:
+    0 0 0 3px rgba(255, 213, 79, 0.65),
+    0 6px 14px rgba(0,0,0,0.18);
 }
