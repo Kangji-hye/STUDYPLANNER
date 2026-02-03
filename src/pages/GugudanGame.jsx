@@ -1,151 +1,205 @@
 // src/pages/GugudanGame.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./GugudanGame.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import "./GugudanGame.css";
 
+/**
+ * ✅ 숫자놀이(구구단) - 초등학생용
+ * - 난이도 3개 모두 "타이머" 있음
+ * - 난이도 3개 모두 "선택형(객관식)"만 사용 (입력 없음)
+ * - 난이도에 따라 선택지 수가 3/4/5개로 증가
+ * - 틀리면 즉시 점수 깎임(바로 반영)
+ * - 시간 0초가 되면 자동 오답 처리(점수 깎임) 후 다음 문제
+ */
 export default function GugudanGame() {
   const navigate = useNavigate();
 
+  // ✅ 난이도
+  // easy: 선택지 3개
+  // normal: 선택지 4개
+  // hard: 선택지 5개
   const [level, setLevel] = useState("easy");
 
+  // ✅ 단 범위 (2~9)
   const [danMin, setDanMin] = useState(2);
   const [danMax, setDanMax] = useState(9);
 
+  // ✅ 곱 범위 (1~9, 1~12)
   const [mulMax, setMulMax] = useState(9);
 
+  // ✅ 한 판 문제 수
   const [totalQuestions, setTotalQuestions] = useState(10);
 
+  // ✅ 진행 상태
   const [idx, setIdx] = useState(0);
-
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [finished, setFinished] = useState(false);
 
-  const [msg, setMsg] = useState("시작해 볼까요? 🙂");
-
+  // ✅ 문제 숫자
   const [a, setA] = useState(2);
   const [b, setB] = useState(1);
 
-  const [answer, setAnswer] = useState("");
-
+  // ✅ 보기(객관식)
   const [choices, setChoices] = useState([]);
 
-  const [finished, setFinished] = useState(false);
+  // ✅ 안내 문구
+  const [msg, setMsg] = useState("시작해 볼까요? 🙂");
 
-  const [timeLeft, setTimeLeft] = useState(30);
+  // ✅ 타이머
+  const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
 
+  // ✅ 정답
   const correct = useMemo(() => a * b, [a, b]);
 
+  // ✅ 난이도별 설정 (선택지 수 / 문제당 제한시간 / 점수)
+  const rules = useMemo(() => {
+    if (level === "easy") {
+      return {
+        label: "하",
+        choiceCount: 3,
+        timePerQuestion: 12,
+        rightBase: 10,
+        wrongPenalty: 5,
+      };
+    }
+    if (level === "normal") {
+      return {
+        label: "중",
+        choiceCount: 4,
+        timePerQuestion: 10,
+        rightBase: 12,
+        wrongPenalty: 7,
+      };
+    }
+    return {
+      label: "상",
+      choiceCount: 5,
+      timePerQuestion: 8,
+      rightBase: 15,
+      wrongPenalty: 10,
+    };
+  }, [level]);
+
+  // ✅ 랜덤 문제 생성 + 선택지 생성
   const makeQuestion = () => {
     const nextA = randInt(danMin, danMax);
-
     const nextB = randInt(1, mulMax);
+    const nextCorrect = nextA * nextB;
 
     setA(nextA);
     setB(nextB);
 
-    if (level === "easy") {
-      const nextCorrect = nextA * nextB;
-
-      const w1 = makeWrong(nextCorrect);
-      const w2 = makeWrong(nextCorrect, w1);
-
-      const arr = shuffle([nextCorrect, w1, w2]);
-      setChoices(arr);
-    } else {
-      setChoices([]);
+    // ✅ 선택지 만들기
+    // - 정답 1개 + 오답 (choiceCount-1)개
+    const wrongs = [];
+    while (wrongs.length < rules.choiceCount - 1) {
+      const w = makeWrong(nextCorrect, wrongs);
+      wrongs.push(w);
     }
+    const arr = shuffle([nextCorrect, ...wrongs]);
+    setChoices(arr);
 
-    setAnswer("");
+    // ✅ 타이머 리셋
+    setTimeLeft(rules.timePerQuestion);
+
+    // ✅ 문구(너무 길지 않게)
+    setMsg(`${rules.label} 난이도! 골라보자 🙂`);
   };
 
+  // ✅ 타이머 시작/정리
+  const stopTimer = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const startTimer = () => {
+    stopTimer();
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => t - 1);
+    }, 1000);
+  };
+
+  // ✅ 게임 리셋
   const resetGame = () => {
+    stopTimer();
     setIdx(0);
     setScore(0);
     setStreak(0);
     setFinished(false);
-    setMsg("좋아요! 시작 🙂");
-
-    // 상 난이도는 타이머 초기화
-    if (level === "hard") setTimeLeft(30);
 
     makeQuestion();
+    startTimer();
   };
 
+  // ✅ 난이도/범위/문제수가 바뀌면 새로 시작
   useEffect(() => {
     resetGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level, danMin, danMax, mulMax, totalQuestions]);
 
+  // ✅ 게임 종료 시 타이머 정지
   useEffect(() => {
-    // hard가 아니면 타이머 끔
-    if (level !== "hard" || finished) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-      return;
-    }
+    if (finished) stopTimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished]);
 
-    // 이미 타이머가 있으면 중복 생성 방지
-    if (timerRef.current) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((t) => t - 1);
-    }, 1000);
-
-    return () => {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [level, finished]);
-
+  // ✅ 시간 0초가 되면 자동 오답 처리
   useEffect(() => {
-    if (level === "hard" && !finished && timeLeft <= 0) {
-      setFinished(true);
-      setMsg("시간 끝! 다음에는 더 빠르게 해보자 🙂");
-    }
-  }, [timeLeft, level, finished]);
-
-  const submit = (picked) => {
     if (finished) return;
+    if (timeLeft > 0) return;
 
-    const userAnswer = Number(picked);
-    const ok = userAnswer === correct;
+    // 타임아웃 = 오답 처리 (즉시 점수 깎기)
+    applyWrong("시간 끝! 😅");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, finished]);
 
-    if (ok) {
-      // 점수 규칙: 기본 10점, 연속 정답이면 보너스
-      const bonus = Math.min(10, streak); // 0~10
-      setScore((s) => s + 10 + bonus);
-      setStreak((st) => st + 1);
-
-      // 칭찬 문구는 너무 길지 않게
-      const praise = streak >= 3 ? "연속 정답 최고! 🔥" : "정답! 👍";
-      setMsg(praise);
-    } else {
-      setStreak(0);
-      setMsg(`아깝다! 정답은 ${correct} 🙂`);
-    }
-
-    // 다음 문제로 이동(마지막이면 종료)
+  // ✅ 다음 문제로 이동 공통
+  const goNext = () => {
     const nextIdx = idx + 1;
+
+    // 마지막 문제면 종료
     if (nextIdx >= totalQuestions) {
       setFinished(true);
+      stopTimer();
+      setMsg("끝! 오늘도 잘했어요 🎉");
       return;
     }
 
     setIdx(nextIdx);
-
-    makeQuestion();
+    makeQuestion(); // 타이머도 함께 리셋됨
   };
 
-  const onKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (answer.trim() === "") return;
-      submit(answer.trim());
-    }
+  // ✅ 정답 처리
+  const applyRight = () => {
+    // 연속 정답 보너스(너무 과하지 않게)
+    const bonus = Math.min(10, streak * 2); // 0,2,4,6...
+    setScore((s) => s + rules.rightBase + bonus);
+    setStreak((st) => st + 1);
+    setMsg(streak >= 2 ? "연속 정답! 🔥" : "정답! 👍");
+    goNext();
   };
 
+  // ✅ 오답 처리(즉시 점수 깎기)
+  const applyWrong = (prefix) => {
+    setScore((s) => Math.max(0, s - rules.wrongPenalty)); // 점수는 0 아래로 안 내려가게
+    setStreak(0);
+    setMsg(`${prefix} 정답은 ${correct} 🙂`);
+    goNext();
+  };
+
+  // ✅ 선택지 클릭
+  const onPick = (picked) => {
+    if (finished) return;
+
+    const userAnswer = Number(picked);
+    if (userAnswer === correct) applyRight();
+    else applyWrong("아깝다!");
+  };
+
+  // ✅ 단 옵션
   const danOptions = [2, 3, 4, 5, 6, 7, 8, 9];
 
   return (
@@ -155,11 +209,16 @@ export default function GugudanGame() {
           ← 플래너
         </button>
 
-        <div className="gugu-title">✖️ 구구단 놀이</div>
+        <div className="gugu-title">✖️ 숫자놀이</div>
 
-        {/* ✅ 오른쪽 고정 햄버거 메뉴 */}
-        <div className="gugu-menu">
-          <HamburgerMenu />
+        {/* ✅ 오른쪽 끝: 항상 같은 자리 */}
+        <div className="gugu-head-right">
+          <button type="button" className="gugu-restart" onClick={resetGame}>
+            다시하기
+          </button>
+          <div className="gugu-menu">
+            <HamburgerMenu />
+          </div>
         </div>
       </div>
 
@@ -168,9 +227,9 @@ export default function GugudanGame() {
           <div className="gugu-label">난이도</div>
           <div className="gugu-controls">
             <select value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="easy">하 (선택)</option>
-              <option value="normal">중 (입력)</option>
-              <option value="hard">상 (시간+혼합)</option>
+              <option value="easy">하 (선택지 3개)</option>
+              <option value="normal">중 (선택지 4개)</option>
+              <option value="hard">상 (선택지 5개)</option>
             </select>
           </div>
         </div>
@@ -180,7 +239,9 @@ export default function GugudanGame() {
           <div className="gugu-controls">
             <select value={danMin} onChange={(e) => setDanMin(Number(e.target.value))}>
               {danOptions.map((v) => (
-                <option key={`min-${v}`} value={v}>{v}단부터</option>
+                <option key={`min-${v}`} value={v}>
+                  {v}단부터
+                </option>
               ))}
             </select>
 
@@ -188,7 +249,9 @@ export default function GugudanGame() {
 
             <select value={danMax} onChange={(e) => setDanMax(Number(e.target.value))}>
               {danOptions.map((v) => (
-                <option key={`max-${v}`} value={v}>{v}단까지</option>
+                <option key={`max-${v}`} value={v}>
+                  {v}단까지
+                </option>
               ))}
             </select>
           </div>
@@ -201,8 +264,6 @@ export default function GugudanGame() {
               <option value={9}>1~9</option>
               <option value={12}>1~12</option>
             </select>
-
-            <span className="gugu-hint">상 난이도는 12까지도 추천 🙂</span>
           </div>
         </div>
 
@@ -221,19 +282,16 @@ export default function GugudanGame() {
 
       <div className="gugu-card gugu-play">
         <div className="gugu-topline">
-          <div className="gugu-progress">
-            {finished ? "끝!" : `${idx + 1} / ${totalQuestions}`}
-          </div>
+          <div className="gugu-progress">{finished ? "끝!" : `${idx + 1} / ${totalQuestions}`}</div>
 
           <div className="gugu-score">
             점수 <b>{score}</b> · 연속 <b>{streak}</b>
           </div>
 
-          {level === "hard" && (
-            <div className={`gugu-timer ${timeLeft <= 5 ? "danger" : ""}`}>
-              ⏱ {Math.max(0, timeLeft)}초
-            </div>
-          )}
+          {/* ✅ 모든 난이도 공통 타이머 */}
+          <div className={`gugu-timer ${timeLeft <= 3 ? "danger" : ""}`}>
+            ⏱ {Math.max(0, timeLeft)}초
+          </div>
         </div>
 
         <div className="gugu-question" aria-label="문제">
@@ -248,41 +306,14 @@ export default function GugudanGame() {
           {msg}
         </div>
 
-        {level === "easy" && !finished && (
-          <div className="gugu-choices">
+        {/* ✅ 세 난이도 모두 선택형 */}
+        {!finished && (
+          <div className={`gugu-choices gugu-choices-${rules.choiceCount}`}>
             {choices.map((c) => (
-              <button
-                key={`c-${c}`}
-                type="button"
-                className="gugu-choice"
-                onClick={() => submit(c)}
-              >
+              <button key={`c-${idx}-${c}`} type="button" className="gugu-choice" onClick={() => onPick(c)}>
                 {c}
               </button>
             ))}
-          </div>
-        )}
-
-        {level !== "easy" && !finished && (
-          <div className="gugu-input-row">
-            <input
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              onKeyDown={onKeyDown}
-              inputMode="numeric"
-              placeholder="정답을 숫자로 입력하고 엔터!"
-              aria-label="정답 입력"
-            />
-            <button
-              type="button"
-              className="gugu-submit"
-              onClick={() => {
-                if (answer.trim() === "") return;
-                submit(answer.trim());
-              }}
-            >
-              확인
-            </button>
           </div>
         )}
 
@@ -290,7 +321,7 @@ export default function GugudanGame() {
           <div className="gugu-finish">
             <div className="gugu-finish-title">오늘도 수고했어요 🎉</div>
             <div className="gugu-finish-sub">
-              점수는 <b>{score}</b>점 입니다.
+              최종 점수는 <b>{score}</b>점 입니다.
             </div>
 
             <div className="gugu-finish-actions">
@@ -304,13 +335,13 @@ export default function GugudanGame() {
           </div>
         )}
       </div>
-
-      <div className="gugu-tip">
-         어렵게 느껴진다면 문제 수를 5개로 줄이는 게 좋아요 🙂
-      </div>
     </div>
   );
 }
+
+/* ---------------------------
+   유틸 함수들
+---------------------------- */
 
 function randInt(min, max) {
   const a = Math.min(min, max);
@@ -318,17 +349,24 @@ function randInt(min, max) {
   return Math.floor(Math.random() * (b - a + 1)) + a;
 }
 
-function makeWrong(correct, avoid) {
+// ✅ 오답 만들기(정답과 너무 멀지 않게, 중복 방지)
+function makeWrong(correct, existingWrongs) {
   let w = correct;
 
-  while (w === correct || w === avoid || w <= 0) {
-    const delta = randInt(-5, 5);
+  while (w === correct || existingWrongs.includes(w) || w <= 0) {
+    // 정답 주변 흔들기
+    const delta = randInt(-6, 6);
     w = correct + delta;
 
-    if (w === correct || w === avoid || w <= 0) {
-      w = randInt(Math.max(1, correct - 8), correct + 8);
+    // 너무 작은/이상한 값이면 다시
+    if (w <= 0) w = correct + Math.abs(delta) + 1;
+
+    // 가끔 더 넓게
+    if (w === correct || existingWrongs.includes(w)) {
+      w = randInt(Math.max(1, correct - 10), correct + 10);
     }
   }
+
   return w;
 }
 

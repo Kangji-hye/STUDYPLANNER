@@ -11,7 +11,7 @@
   justify-content: space-between;
   gap: 10px;
 
-  padding: 12px 12px;
+  padding: 12px;
   margin-bottom: 14px;
 
   background: var(--card);
@@ -28,21 +28,35 @@
   flex: 1;
 }
 
-.gugu-back,
-.gugu-restart{
+.gugu-back{
   border: 1px solid var(--line);
   background: #fff;
   border-radius: 14px;
   padding: 10px 12px;
-  box-shadow: none;
   cursor: pointer;
   white-space: nowrap;
 }
 
+/* ✅ 오른쪽 영역: 다시하기 + 햄버거 */
+.gugu-head-right{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gugu-menu{
+  display: flex;
+  align-items: center;
+}
+
 .gugu-restart{
+  border: 1px solid rgba(0,0,0,0.02);
   background: linear-gradient(135deg, var(--primary), #ff5f8f);
   color: #fff;
-  border: 1px solid rgba(0,0,0,0.02);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .gugu-card{
@@ -93,11 +107,6 @@
   opacity: 0.7;
 }
 
-.gugu-hint{
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-
 .gugu-play{
   padding: 16px;
 }
@@ -118,11 +127,11 @@
 .gugu-score{
   font-weight: 700;
 }
-
 .gugu-score b{
   font-weight: 900;
 }
 
+/* ✅ 모든 난이도 공통 타이머 */
 .gugu-timer{
   padding: 6px 10px;
   border-radius: 999px;
@@ -130,7 +139,6 @@
   background: rgba(255,255,255,0.75);
   font-weight: 900;
 }
-
 .gugu-timer.danger{
   border-color: rgba(225,29,72,0.35);
   background: rgba(225,29,72,0.08);
@@ -160,11 +168,23 @@
   min-height: 24px;
 }
 
+/* ✅ 선택지 영역: 난이도별 3/4/5개 자동 배치 */
 .gugu-choices{
-  margin-top: 8px;
+  margin-top: 10px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+}
+
+.gugu-choices-3{
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.gugu-choices-4{
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.gugu-choices-5{
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .gugu-choice{
@@ -172,7 +192,6 @@
   border-radius: 14px;
   border: 2px solid rgba(241,215,230,0.95);
   background: #fff;
-  box-shadow: none;
   font-weight: 900;
   cursor: pointer;
 }
@@ -182,21 +201,15 @@
   border-color: rgba(255,122,162,0.35);
 }
 
-.gugu-input-row{
-  margin-top: 8px;
-  display: flex;
-  gap: 10px;
-}
-
 .gugu-submit{
   height: 48px;
   padding: 0 14px;
   border-radius: 14px;
   background: linear-gradient(135deg, var(--primary), #ff5f8f);
   color: #fff;
-  box-shadow: none;
   cursor: pointer;
   white-space: nowrap;
+  border: 0;
 }
 
 .gugu-finish{
@@ -221,38 +234,10 @@
   flex-wrap: wrap;
 }
 
-.gugu-tip{
-  margin-top: 8px;
-  padding: 12px 12px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-/* 모바일에서 보기 버튼이 너무 작게 느껴지면 2줄로 */
+/* 모바일에서 5개 선택지가 너무 작아지면 2열로 */
 @media (max-width: 420px){
-  .gugu-choices{
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .gugu-question{
-    font-size: 1.9rem;
-  }
-
-  .gugu-input-row{
-    flex-direction: column;
-  }
-
-  .gugu-submit{
-    width: 100%;
-  }
-}
-
-.gugu-menu{
-  display: flex;
-  align-items: center;
+  .gugu-choices-3{ grid-template-columns: repeat(2, 1fr); }
+  .gugu-choices-4{ grid-template-columns: repeat(2, 1fr); }
+  .gugu-choices-5{ grid-template-columns: repeat(2, 1fr); }
+  .gugu-question{ font-size: 1.9rem; }
 }
