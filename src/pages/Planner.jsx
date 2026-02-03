@@ -2220,7 +2220,7 @@ const deleteSelectedTodos = async () => {
                 className="weekly-hw-btn"
                 onClick={() => setWeekHwImgOpen(true)}
               >
-                일주일 숙제 보기
+                일주일 숙제 이미지로 보기
               </button>
 
               {weekHwImgOpen && (
