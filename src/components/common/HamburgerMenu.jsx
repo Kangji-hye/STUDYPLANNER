@@ -133,6 +133,16 @@ export default function HamburgerMenu() {
 
           <div className="hamburger-divider" />
 
+          <button className="hamburger-item"  type="button" onClick={() => navigate("/gugudan")}>
+            ✖️ 구구단 놀이
+          </button>
+
+          <button className="hamburger-item" type="button" onClick={() => navigate("/omok")}>
+            ⚫ 오목
+          </button>
+
+          <div className="hamburger-divider" />
+
           <button className="hamburger-item danger" onClick={() => go("logout")} role="menuitem">
             🚪 로그아웃
           </button>

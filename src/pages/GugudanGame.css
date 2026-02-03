@@ -1,0 +1,258 @@
+/* src/pages/GugudanGame.css */
+
+.gugu-page{
+  padding: 16px;
+  color: var(--text);
+}
+
+.gugu-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 12px 12px;
+  margin-bottom: 14px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.gugu-title{
+  font-family: "Poor Story", system-ui, -apple-system, "Noto Sans KR", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  flex: 1;
+}
+
+.gugu-back,
+.gugu-restart{
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gugu-restart{
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.02);
+}
+
+.gugu-card{
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.gugu-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gugu-label{
+  width: 80px;
+  color: var(--muted);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.gugu-controls{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.gugu-controls select{
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.gugu-sep{
+  opacity: 0.7;
+}
+
+.gugu-hint{
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.gugu-play{
+  padding: 16px;
+}
+
+.gugu-topline{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gugu-progress{
+  font-weight: 900;
+  color: var(--muted);
+}
+
+.gugu-score{
+  font-weight: 700;
+}
+
+.gugu-score b{
+  font-weight: 900;
+}
+
+.gugu-timer{
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.75);
+  font-weight: 900;
+}
+
+.gugu-timer.danger{
+  border-color: rgba(225,29,72,0.35);
+  background: rgba(225,29,72,0.08);
+  color: #b91c1c;
+}
+
+.gugu-question{
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  font-size: 2.2rem;
+  font-weight: 900;
+  user-select: none;
+}
+
+.gugu-q{
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+}
+
+.gugu-msg{
+  text-align: center;
+  color: var(--muted);
+  margin-top: 6px;
+  min-height: 24px;
+}
+
+.gugu-choices{
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.gugu-choice{
+  height: 48px;
+  border-radius: 14px;
+  border: 2px solid rgba(241,215,230,0.95);
+  background: #fff;
+  box-shadow: none;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gugu-choice:hover{
+  background: rgba(255,122,162,0.06);
+  border-color: rgba(255,122,162,0.35);
+}
+
+.gugu-input-row{
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+}
+
+.gugu-submit{
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  box-shadow: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gugu-finish{
+  margin-top: 10px;
+  text-align: center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 122, 162, 0.06);
+  border: 1px solid rgba(255, 122, 162, 0.20);
+}
+
+.gugu-finish-title{
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.gugu-finish-actions{
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.gugu-tip{
+  margin-top: 8px;
+  padding: 12px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+/* 모바일에서 보기 버튼이 너무 작게 느껴지면 2줄로 */
+@media (max-width: 420px){
+  .gugu-choices{
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gugu-question{
+    font-size: 1.9rem;
+  }
+
+  .gugu-input-row{
+    flex-direction: column;
+  }
+
+  .gugu-submit{
+    width: 100%;
+  }
+}
+
+.gugu-menu{
+  display: flex;
+  align-items: center;
+}
