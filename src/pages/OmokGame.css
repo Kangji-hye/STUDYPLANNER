@@ -1,54 +1,151 @@
-.omok-page{ padding:16px; color:var(--text); }
+/* src/pages/OmokGame.css */
 
+.omok-page{
+  padding:16px;
+  color:var(--text);
+}
+
+/* ✅ 상단 헤더 */
 .omok-head{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding:12px; margin-bottom:14px;
-  background:var(--card); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
-}
-.omok-title{ font-family:"Poor Story",system-ui; font-size:1.05rem; font-weight:700; text-align:center; flex:1; }
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
 
-.omok-back,.omok-restart{
-  border:1px solid var(--line); background:#fff; border-radius:14px; padding:10px 12px;
-  box-shadow:none; cursor:pointer; white-space:nowrap;
-}
-.omok-restart{ background:linear-gradient(135deg,var(--primary),#ff5f8f); color:#fff; border:1px solid rgba(0,0,0,0.02); }
+  padding:12px;
+  margin-bottom:14px;
 
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+}
+
+.omok-title{
+  font-family:"Poor Story", system-ui;
+  font-size:1.05rem;
+  font-weight:700;
+  text-align:center;
+  flex:1;
+}
+
+.omok-back,
+.omok-restart{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:14px;
+  padding:10px 12px;
+  box-shadow:none;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+/* 오른쪽 영역: 다시하기 + 햄버거 (햄버거는 항상 같은 자리) */
+.omok-head-right{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.omok-menu{
+  display:flex;
+  align-items:center;
+}
+
+/* 다시하기 버튼은 플래너 톤처럼 */
+.omok-restart{
+  background:linear-gradient(135deg,var(--primary),#ff5f8f);
+  color:#fff;
+  border:1px solid rgba(0,0,0,0.02);
+}
+
+/* ✅ 정보 카드 */
 .omok-card{
-  background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);
-  padding:14px; display:grid; gap:10px; margin-bottom:12px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  padding:14px;
+  display:grid;
+  gap:10px;
+  margin-bottom:12px;
 }
-.omok-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-.omok-label{ width:80px; color:var(--muted); font-weight:800; flex-shrink:0; }
-.omok-controls{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
+
+.omok-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.omok-label{
+  width:80px;
+  color:var(--muted);
+  font-weight:800;
+  flex-shrink:0;
+}
+
+.omok-controls{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  flex:1;
+  min-width:0;
+}
+
 .omok-controls select{
-  height:44px; padding:0 12px; border-radius:14px; border:2px solid var(--line); background:#fff;
-  font-family:inherit; font-size:1rem;
+  height:44px;
+  padding:0 12px;
+  border-radius:14px;
+  border:2px solid var(--line);
+  background:#fff;
+  font-family:inherit;
+  font-size:1rem;
 }
-.omok-mini{ color:var(--muted); font-size:0.92rem; }
 
-.omok-msg{ text-align:center; color:var(--muted); min-height:22px; }
+.omok-mini{
+  color:var(--muted);
+  font-size:0.92rem;
+}
 
+.omok-msg{
+  text-align:center;
+  color:var(--muted);
+  min-height:22px;
+}
+
+/* ✅ 오목판: "진짜 나무판" */
 .omok-board{
   display:grid;
   gap:4px;
   justify-content:center;
   padding:12px;
-  background: #c9a06a;
-  border: 1px solid rgba(0,0,0,0.18);
-  border-radius: 16px;
+
+  /* 나무판 색 */
+  background:#c9a06a;
+
+  border:1px solid rgba(0,0,0,0.18);
+  border-radius:16px;
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.14);
 }
 
-.omok-rowline{ display:flex; gap:4px; }
+.omok-rowline{
+  display:flex;
+  gap:4px;
+}
 
+/* ✅ 칸(돌을 놓는 곳): 흰색 덮개 제거 → 나무판이 보이게 */
 .omok-cell{
   width:28px;
   height:28px;
   border-radius:8px;
 
+  /* 핵심: 칸 배경을 흰색으로 두면 "판은 갈색인데 칸은 흰색"이 됩니다 */
   background: transparent;
 
-  border: 1px solid rgba(0,0,0,0.22);
+  /* 격자선 느낌(은은하게) */
+  border:1px solid rgba(0,0,0,0.22);
 
   cursor:pointer;
   display:flex;
@@ -58,21 +155,36 @@
 }
 
 .omok-cell:hover{
-  background: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.12);
 }
 
+/* 돌 */
 .stone{
-  width:18px; height:18px; border-radius:999px; display:block;
+  width:18px;
+  height:18px;
+  border-radius:999px;
+  display:block;
 }
-.stone.black{ background:#111; box-shadow: inset 0 2px 4px rgba(255,255,255,0.18); }
-.stone.white{
-  background: #ffffff;
-  border: 2px solid #ffffff;
+
+/* 검은돌 */
+.stone.black{
+  background:#111;
   box-shadow:
-    0 2px 6px rgba(0,0,0,0.12),   /* 바닥 그림자 */
-    inset 0 -2px 3px rgba(0,0,0,0.08), /* 아래쪽 살짝 음영 */
-    inset 0 2px 2px rgba(255,255,255,0.9); /* 윗면 하이라이트 */
+    inset 0 2px 4px rgba(255,255,255,0.18),
+    0 2px 6px rgba(0,0,0,0.20);
 }
+
+/* ✅ 흰돌: 테두리도 흰색(검정 테두리 제거) */
+.stone.white{
+  background:#ffffff;
+  border:2px solid #ffffff;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.12),
+    inset 0 -2px 3px rgba(0,0,0,0.08),
+    inset 0 2px 2px rgba(255,255,255,0.90);
+}
+
+/* 게임 끝 카드 */
 .omok-finish{
   margin-top:12px;
   text-align:center;
@@ -81,15 +193,21 @@
   background:rgba(255,122,162,0.06);
   border:1px solid rgba(255,122,162,0.20);
 }
-.omok-finish-title{ font-weight:900; margin-bottom:8px; }
-.omok-finish-actions{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
 
+.omok-finish-title{
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.omok-finish-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+/* 모바일 조금 더 촘촘하게 */
 @media (max-width:420px){
   .omok-cell{ width:26px; height:26px; }
   .stone{ width:16px; height:16px; }
-}
-
-.omok-menu{
-  display: flex;
-  align-items: center;
 }
