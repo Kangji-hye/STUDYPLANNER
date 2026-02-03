@@ -308,7 +308,16 @@ function Planner() {
         .eq("day_key", dayKey);
 
       if (error) throw error;
-      setHof(shuffleArray(data ?? []));
+
+      const rows = data ?? [];
+      const myId = me?.id;
+
+      const mine = myId ? rows.find((r) => r.user_id === myId) : null;
+
+      const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
+      const mixedOthers = shuffleArray(others);
+
+      setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
     } catch (err) {
       console.error("fetchHallOfFame error:", err);
       setHof([]);
@@ -2220,12 +2229,12 @@ const deleteSelectedTodos = async () => {
                 className="weekly-hw-btn"
                 onClick={() => setWeekHwImgOpen(true)}
               >
-                일주일 숙제 이미지로 보기
+                일주일 숙제 이미지로보기
               </button>
 
               {weekHwImgOpen && (
                 <div className="weekly-hw-overlay" role="dialog" aria-modal="true">
-                  <div className="weekly-hw-card">
+                  <div className="weekly-hw-card"  onClick={(e) => e.stopPropagation()}>
                     <div className="weekly-hw-image-wrap">
                       <img
                         src={weekHwImgUrl}
@@ -2233,7 +2242,7 @@ const deleteSelectedTodos = async () => {
                         className="weekly-hw-image"
                       />
                     </div>
-                    <button type="button" onClick={() => setWeekHwImgOpen(false)}>
+                    <button type="button">
                       닫기
                     </button>
                   </div>

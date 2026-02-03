@@ -63,7 +63,8 @@ export default function HallOfFameCard({ hofLoading, hof, meId, cutName6 }) {
                 title={x.nickname ?? ""}
               >
                 <span className="hof-medal" aria-hidden="true">
-                  {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "🏅"}
+                  {/* {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "🏅"} */}
+                  {idx === 0 ? "🏅" : idx === 1 ? "🏅" : idx === 2 ? "🏅" : "🏅"}
                 </span>
 
                 {(() => {

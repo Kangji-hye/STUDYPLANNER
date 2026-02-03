@@ -572,17 +572,6 @@
   .todo-bar-actions{ flex-wrap: nowrap !important; }
 }
 
-/* 주간 숙제 모달 배경 */
-.weekly-hw-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-
 /* 카드(모달 박스) */
 .weekly-hw-card {
   background: #fff;
@@ -622,10 +611,12 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
-  align-items: center;
+  align-items: end;
+  padding-bottom: 20px;
   justify-content: center;
   z-index: 2000;
 }
+
 
 /* 카드 */
 .weekly-hw-card {
