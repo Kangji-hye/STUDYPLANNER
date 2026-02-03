@@ -36,8 +36,6 @@
   cursor: pointer;
   white-space: nowrap;
 }
-
-/* ✅ 오른쪽 영역: 다시하기 + 햄버거 */
 .gugu-head-right{
   display: flex;
   align-items: center;
@@ -131,7 +129,6 @@
   font-weight: 900;
 }
 
-/* ✅ 모든 난이도 공통 타이머 */
 .gugu-timer{
   padding: 6px 10px;
   border-radius: 999px;
@@ -168,7 +165,6 @@
   min-height: 24px;
 }
 
-/* ✅ 선택지 영역: 난이도별 3/4/5개 자동 배치 */
 .gugu-choices{
   margin-top: 10px;
   display: grid;
@@ -234,7 +230,6 @@
   flex-wrap: wrap;
 }
 
-/* 모바일에서 5개 선택지가 너무 작아지면 2열로 */
 @media (max-width: 420px){
   .gugu-choices-3{ grid-template-columns: repeat(2, 1fr); }
   .gugu-choices-4{ grid-template-columns: repeat(2, 1fr); }

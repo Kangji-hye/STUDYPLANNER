@@ -116,7 +116,6 @@ export default function GugudanGame() {
   const goNext = () => {
     const nextIdx = idx + 1;
 
-    // 마지막 문제면 종료
     if (nextIdx >= totalQuestions) {
       setFinished(true);
       stopTimer();
@@ -125,12 +124,11 @@ export default function GugudanGame() {
     }
 
     setIdx(nextIdx);
-    makeQuestion(); // 타이머도 함께 리셋됨
+    makeQuestion();
   };
 
   const applyRight = () => {
-    // 연속 정답 보너스(너무 과하지 않게)
-    const bonus = Math.min(10, streak * 2); // 0,2,4,6...
+    const bonus = Math.min(10, streak * 2); 
     setScore((s) => s + rules.rightBase + bonus);
     setStreak((st) => st + 1);
     setMsg(streak >= 2 ? "연속 정답! 🔥" : "정답! 👍");

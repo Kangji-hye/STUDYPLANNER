@@ -40,7 +40,6 @@
   margin-bottom: 10px;
 }
 
-/* ✅ 버튼 글씨를 정확히 가운데로 정렬 */
 .share-btn {
   width: 100%;
   height: 44px;
@@ -50,16 +49,13 @@
   cursor: pointer;
   font-size: 1rem;
 
-  /* ✅ 핵심: 중앙 정렬 */
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  /* ✅ 글씨가 아래로 쏠리는 느낌 방지 */
-  padding: 0;          /* 버튼 기본 padding 제거 */
-  line-height: 1;      /* 글줄 높이 과하게 커지는 것 방지 */
+  padding: 0;       
+  line-height: 1;    
 }
-
 
 .share-btn:active {
   transform: translateY(1px);

@@ -178,7 +178,7 @@ const Login = () => {
           <input
             type="checkbox"
             checked={rememberEmail}
-            onChange={(e) => onToggleRemember(e.target.checked)} // ✅ 즉시 삭제 로직 포함
+            onChange={(e) => onToggleRemember(e.target.checked)} 
           />
           <span>아이디 저장</span>
         </label>

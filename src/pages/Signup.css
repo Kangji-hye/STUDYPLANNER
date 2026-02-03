@@ -40,7 +40,6 @@
   color: #e11d48;
 }
 
-/* ✅ 이메일=아이디 안내 문구 */
 .email-id-hint {
   margin-top: -6px;              /* input과 간격을 자연스럽게 */
   padding: 10px 12px;

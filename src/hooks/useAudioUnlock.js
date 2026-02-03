@@ -1,7 +1,6 @@
 // src/hooks/useAudioUnlock.js
 import { useEffect } from "react";
 
-// finishAudioRef를 "사용자 제스처" 타이밍에 무음 재생으로 언락
 export const useAudioUnlock = (finishAudioRef, src) => {
   useEffect(() => {
     const unlock = async () => {
@@ -20,7 +19,9 @@ export const useAudioUnlock = (finishAudioRef, src) => {
         a.muted = false;
 
         a.__unlocked = true;
-      } catch {}
+      } catch {
+        //
+      }
     };
 
     window.addEventListener("pointerdown", unlock, { once: true });

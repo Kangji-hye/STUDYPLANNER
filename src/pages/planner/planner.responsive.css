@@ -20,7 +20,6 @@
   }
 }
 
-/* ✅ iPhone(모바일)에서는 버튼을 크게 */
 @media (max-width: 480px) {
   .todo-bar-inputs {
     flex-direction: column;
@@ -62,7 +61,6 @@
     padding: 0 9px;
   }
 
-  /* StudyTools 버튼 터치 친화 */
   .tool-actions {
     gap: 10px;
     flex-wrap: wrap;
@@ -181,7 +179,6 @@
   }
 }
 
-/* 버튼 영역 한 줄 유지(중간 폭) */
 @media (max-width: 430px) and (min-width: 361px) {
   .tool-actions {
     flex-wrap: nowrap;
@@ -197,7 +194,6 @@
   }
 }
 
-/* 버튼 영역 가로 스크롤 허용(선택) */
 @media (max-width: 390px) and (min-width: 361px) {
   .tool-actions {
     overflow-x: auto;

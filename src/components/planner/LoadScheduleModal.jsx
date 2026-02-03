@@ -6,34 +6,23 @@ import supabase from "../../supabaseClient";
 export default function LoadScheduleModal({
   open,
   onClose,
-
-  // 선택
   loadChoice,
   setLoadChoice,
   hasMyList,
-
-  // 교체(체크박스)
   sampleModeReplace,
   setSampleModeReplace,
   loadReplace,
   setLoadReplace,
-
-  // 로딩 상태
   importingSample,
   busyMyList,
-
-  // 실행 함수
   importMySingleList,
   importSampleTodos,
 
-  // ✅ 미리보기용 유저 id
   userId,
 }) {
-  // ✅ Hook은 무조건 최상단(early return 위)
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewItems, setPreviewItems] = useState([]); // string[] (title만)
+  const [previewItems, setPreviewItems] = useState([]); 
 
-  // 샘플 테이블 매핑(Planner.jsx와 동일)
   const SAMPLE_TABLE_BY_KEY = useMemo(
     () => ({
       vacation: "todo_templates_vacation",
@@ -45,7 +34,6 @@ export default function LoadScheduleModal({
 
   const disabledAll = importingSample || busyMyList;
 
-  // ✅ 체크박스는 UI 하나지만 로직은 둘 다 씀 → 동기화
   const isReplaceChecked = loadChoice === "my" ? loadReplace : sampleModeReplace;
 
   const setReplaceChecked = (v) => {
@@ -53,12 +41,9 @@ export default function LoadScheduleModal({
     setLoadReplace(v);
   };
 
-  // ✅ 미리보기 불러오기 (useCallback으로 의존성 안전하게)
   const fetchPreview = useCallback(async () => {
-    // 모달 닫혀있으면 아무것도 안 함
     if (!open) return;
 
-    // 1) 내가 만든 목록 미리보기
     if (loadChoice === "my") {
       if (!userId || !hasMyList) {
         setPreviewItems([]);
@@ -67,7 +52,6 @@ export default function LoadScheduleModal({
 
       setPreviewLoading(true);
       try {
-        // 내 목록 set_id 찾기
         const { data: setRow, error: setErr } = await supabase
           .from("todo_sets")
           .select("id")
@@ -82,7 +66,6 @@ export default function LoadScheduleModal({
           return;
         }
 
-        // 내 목록 아이템 읽기
         const { data: items, error: itemsErr } = await supabase
           .from("todo_set_items")
           .select("title, sort_order")
@@ -106,7 +89,6 @@ export default function LoadScheduleModal({
       return;
     }
 
-    // 2) 샘플(방학/평일/주말) 미리보기
     const tableName = SAMPLE_TABLE_BY_KEY[loadChoice];
     if (!tableName) {
       setPreviewItems([]);
@@ -135,16 +117,13 @@ export default function LoadScheduleModal({
     }
   }, [open, loadChoice, userId, hasMyList, SAMPLE_TABLE_BY_KEY]);
 
-  // ✅ 모달 열릴 때 + 라디오 선택 바뀔 때 미리보기 새로고침
   useEffect(() => {
     if (!open) return;
     fetchPreview();
   }, [open, fetchPreview]);
 
-  // ✅ 여기서부터 early return (Hook 아래로 내려야 규칙 통과)
   if (!open) return null;
 
-  // 버튼 문구 자동 변경
   const actionLabel =
     disabledAll
       ? "불러오는 중..."
@@ -220,7 +199,6 @@ export default function LoadScheduleModal({
 
           <div className="load-divider" />
 
-          {/* ✅ 미리보기 */}
           <div
             className="load-preview"
             style={{

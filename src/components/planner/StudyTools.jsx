@@ -1,17 +1,12 @@
 // src/components/planner/StudyTools.jsx
-// 스탑워치/타이머/하가다
 import React from "react";
-
 export default function StudyTools({
-  // 스탑워치
   formatTime,
   elapsedMs,
   isRunning,
   startStopwatch,
   stopStopwatch,
   resetStopwatch,
-
-  // 타이머
   TIMER_PRESETS,
   timerMin,
   setTimerMin,
@@ -21,19 +16,14 @@ export default function StudyTools({
   startTimer,
   pauseTimer,
   resetTimer,
-
-  // 타이머 사운드 토글
   timerSoundOn,
   setTimerSoundOn,
-
-  // 하가다
   hagadaCount,
   increaseHagada,
   resetHagada,
 }) {
   return (
     <div className="study-tools">
-      {/* 1) 스탑워치 */}
       <div className="tool-row">
         <div className="tool-title">스탑워치</div>
         <div className="tool-display">{formatTime(elapsedMs)}</div>
@@ -44,7 +34,6 @@ export default function StudyTools({
         </div>
       </div>
 
-      {/* 2) 타이머 */}
       <div className="tool-row">
         <div className="tool-title tool-title-with-toggle">
           <span>타이머</span>
@@ -82,7 +71,6 @@ export default function StudyTools({
         </div>
       </div>
 
-      {/* 3) 하가다 */}
       <div className="tool-row">
         <div className="tool-title">하가다</div>
         <div className="tool-display">{hagadaCount}</div>

@@ -214,7 +214,6 @@
   background: rgba(239, 68, 68, 0.08);
 }
 
-/* ✅ 관리자: 요일 표시 */
 .admin-weekday{
   font-weight: 900;
   font-size: 1rem;
@@ -223,7 +222,6 @@
   opacity: 0.9;
 }
 
-/* ✅ 월 이동 */
 .admin-month-nav{
   display: flex;
   align-items: center;
@@ -231,8 +229,6 @@
 }
 
 .admin-mini-nav{
-  /* width: 38px;
-  height: 38px; */
   border-radius: 12px;
   border: 1px solid var(--line);
   background: #fff;
@@ -246,7 +242,6 @@
   font-size: 1rem;
 }
 
-/* ✅ 인라인 달력 */
 .admin-inline-cal{
   margin-top: 12px;
   padding: 12px;
@@ -276,13 +271,12 @@
 }
 
 .admin-inline-cal-cell{
-  /* height: 42px; */
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #fff;
   box-shadow: none;
   font-weight: 900;
-  font-size: 1rem; /* ✅ 숫자(날짜) 크게 */
+  font-size: 1rem; 
   cursor: pointer;
 }
 
@@ -302,17 +296,11 @@
 }
 
 .admin-hamburger-menu {
-  position: fixed;       /* 화면 기준으로 고정 */
-  right: 16px;           /* 오른쪽 여백 */
-  bottom: 16px;          /* 아래쪽 여백 */
-  z-index: 1000;         /* 다른 요소 위로 */
+  position: fixed;      
+  right: 16px;           
+  bottom: 16px;        
+  z-index: 1000;        
 }
-
-/* src/pages/Admin.css */
-
-/* =========================
-   관리자 페이지 공통 폰트
-   ========================= */
 
 .admin {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -378,7 +366,6 @@
 .admin-row select,
 .admin-row input[type="date"]{
   flex: 1;
-  /* height: 44px; */
   border-radius: 14px;
   border: 2px solid var(--line);
   padding: 0 12px;
@@ -438,16 +425,11 @@
   color: var(--text);
 }
 
-/* 관리자 페이지 학년 셀렉트 글씨 키우기 */
 .admin select {
-  font-size: 1rem;        /* 글씨 크기 */
-  padding: 8px 10px;      /* 클릭 영역 넓게 */
+  font-size: 1rem;       
+  padding: 8px 10px;      
   line-height: 1.4;
 }
-
-/* =========================
-   달력 버튼 크기 키우기
-========================= */
 
 .cal-btn {
   padding: 10px 14px;
@@ -472,9 +454,6 @@
   }
 }
 
-
-/* 저장된 말씀 미리보기 */
-/* 저장된 말씀 미리보기 */
 .admin-verse-preview {
   padding: 12px 0;
   border-top: 1px dashed rgba(0,0,0,0.10);
@@ -500,11 +479,9 @@
 .admin-verse-line {
   font-weight: 400;
 }
-/* 목록 카드 아래 수정/삭제 버튼 */
 .admin-verse-actions{
   display: flex;
   gap: 10px;
-  /* margin-top: 10px; */
   flex-wrap: wrap;
 }
 
@@ -524,7 +501,6 @@
   background: rgba(239, 68, 68, 0.08);
 }
 
-/* ✅ 관리자: 요일 표시 */
 .admin-weekday{
   font-weight: 900;
   font-size: 1rem;
@@ -533,7 +509,6 @@
   opacity: 0.9;
 }
 
-/* ✅ 월 이동 */
 .admin-month-nav{
   display: flex;
   align-items: center;
@@ -541,8 +516,6 @@
 }
 
 .admin-mini-nav{
-  /* width: 38px;
-  height: 38px; */
   border-radius: 12px;
   border: 1px solid var(--line);
   background: #fff;
@@ -556,7 +529,6 @@
   font-size: 1rem;
 }
 
-/* ✅ 인라인 달력 */
 .admin-inline-cal{
   margin-top: 12px;
   padding: 12px;
@@ -586,13 +558,12 @@
 }
 
 .admin-inline-cal-cell{
-  /* height: 42px; */
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #fff;
   box-shadow: none;
   font-weight: 900;
-  font-size: 1rem; /* ✅ 숫자(날짜) 크게 */
+  font-size: 1rem; 
   cursor: pointer;
 }
 
@@ -612,9 +583,9 @@
 }
 
 .admin-hamburger-menu {
-  position: fixed;       /* 화면 기준으로 고정 */
-  right: 16px;           /* 오른쪽 여백 */
-  bottom: 16px;          /* 아래쪽 여백 */
-  z-index: 1000;         /* 다른 요소 위로 */
+  position: fixed;      
+  right: 16px;          
+  bottom: 16px;       
+  z-index: 1000;         
 }
 

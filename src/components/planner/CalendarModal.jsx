@@ -111,18 +111,13 @@ export default function CalendarModal({
                 disabled={!d}
                 onClick={() => {
                   if (!d) return;
-                  // setSelectedDate(d);
-                  // onClose();
-                  // ✅ 선택한 날짜를 정오로 고정해서 안정화
                   setSelectedDate(normalizeNoon(d));
 
-                  // ✅ 닫기는 한 프레임 뒤 (iOS에서 클릭/닫힘 타이밍 충돌 방지)
                   requestAnimationFrame(() => onClose());
                   
                 }}
               >
                 {d ? d.getDate() : ""}
-                {/* ✅ 완료한 날이면 "참 잘했어요" 도장 */}
                 {isDone && (
                   <span className="cal-stamp" aria-label="참 잘했어요" title="참 잘했어요">
                     <span className="stamp-line1">참</span>
@@ -135,30 +130,14 @@ export default function CalendarModal({
         </div>
 
         <div className="cal-actions">
-          {/* <button
-            type="button"
-            className="cal-today-btn"
-            onClick={() => {
-              const d = new Date();
-              setSelectedDate(d);
-              setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
-              onClose();
-            }}
-          >
-            오늘로 가기
-          </button> */}
-
           <button
             type="button"
             className="cal-today-btn"
             onClick={(e) => {
-              // ✅ 바깥(backdrop) 클릭으로 닫히는 이벤트와 섞이지 않게 안전장치
               e.preventDefault();
               e.stopPropagation();
 
               const now = new Date();
-
-              // ✅ "오늘"을 시간 포함(Date.now())으로 넣지 말고, 날짜만 뽑아서 정오로 고정
               const todayNoon = new Date(
                 now.getFullYear(),
                 now.getMonth(),
@@ -169,7 +148,6 @@ export default function CalendarModal({
               setSelectedDate(todayNoon);
               setCalMonth({ y: todayNoon.getFullYear(), m: todayNoon.getMonth() });
 
-              // ✅ 닫기는 한 프레임 뒤 (상태 반영 안정화)
               requestAnimationFrame(() => onClose());
             }}
           >

@@ -5,7 +5,6 @@
   color:var(--text);
 }
 
-/* ✅ 상단 헤더 */
 .omok-head{
   display:flex;
   align-items:center;
@@ -59,7 +58,6 @@
   border:1px solid rgba(0,0,0,0.02);
 }
 
-/* ✅ 정보 카드 */
 .omok-card{
   background:var(--card);
   border:1px solid var(--line);
@@ -115,7 +113,6 @@
   min-height:22px;
 }
 
-/* ✅ 오목판: "진짜 나무판" */
 .omok-board{
   display:grid;
   gap:4px;
@@ -135,7 +132,6 @@
   gap:4px;
 }
 
-/* ✅ 칸(돌을 놓는 곳): 흰색 덮개 제거 → 나무판이 보이게 */
 .omok-cell{
   width:28px;
   height:28px;

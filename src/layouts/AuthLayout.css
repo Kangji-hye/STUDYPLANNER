@@ -23,19 +23,3 @@
   justify-content: center;
   overflow: hidden;
 }
-/* 
-.auth-card{
-  width: min(520px, 92vw);
-
-  max-height: calc(100dvh - 132px);
-  overflow: auto;
-
-  background: rgba(255,255,255,0.78);
-  backdrop-filter: blur(6px);
-  border: 2px solid rgba(255,255,255,0.6);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  padding: 22px 18px;
-}
- */
-

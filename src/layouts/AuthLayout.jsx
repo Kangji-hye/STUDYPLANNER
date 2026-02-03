@@ -11,9 +11,7 @@ const AuthLayout = () => {
 
   return (
     <div className="auth-wrap">
-      {/* <div className="auth-card"> */}
         <Outlet />
-      {/* </div> */}
     </div>
   );
 };

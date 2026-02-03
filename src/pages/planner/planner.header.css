@@ -70,7 +70,6 @@
   font-weight: 800;
 }
 
-/* ✅ 풀스크린 스플래시(아이패드에서 체감 개선) */
 .app-splash {
   position: fixed;
   inset: 0;

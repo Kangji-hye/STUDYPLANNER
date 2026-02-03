@@ -225,7 +225,6 @@
   top: -3px;
 }
 
-/* ✅ 모바일에서도 "참/잘했어요" 유지(‘완’ 제거 버전) */
 @media (max-width: 480px) {
   .cal-stamp {
     width: 30px;

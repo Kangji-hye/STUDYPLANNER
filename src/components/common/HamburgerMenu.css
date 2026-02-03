@@ -1,13 +1,11 @@
 /* src/components/common/HamburgerMenu.css */
 
-/* ✅ 버튼 + 메뉴판을 한 덩어리로 */
 .hamburger {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-/* ✅ 줄3개 버튼 */
 .hamburger-btn {
   width: 44px;
   height: 44px;
@@ -30,7 +28,6 @@
   transform: translateY(1px);
 }
 
-/* ✅ 메뉴판(오른쪽 위에 뜨게) */
 .hamburger-panel {
   position: absolute;
   top: 52px;
@@ -46,7 +43,6 @@
   z-index: 9999;
 }
 
-/* ✅ 메뉴 항목 */
 .hamburger-item {
   width: 100%;
   text-align: left;

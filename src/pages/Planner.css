@@ -419,51 +419,38 @@
   gap: 8px;
 }
 
-/* =========================
-   ✅ 관리자 버튼: 모바일에서 찌그러짐 방지
-   - 핵심: flex-shrink: 0 / white-space: nowrap
-   - 버튼 내부 정렬: inline-flex로 가운데 정렬
-========================= */
-
-/* 헤더 오른쪽 묶음: 좁아지면 줄바꿈 허용 */
 .top-right{
   display: inline-flex;
   align-items: center;
   gap: 10px;
 
-  /* ✅ 화면이 좁아지면 "아래줄"로 내려가게 해서 찌그러짐 방지 */
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
-/* 관리자 버튼 자체는 절대 찌그러지지 않게 */
 .admin-link-btn{
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  /* ✅ 찌그러짐 방지 핵심 */
-  flex: 0 0 auto;      /* grow 0 / shrink 0 / auto */
+  flex: 0 0 auto;     
   flex-shrink: 0;
   white-space: nowrap;
 
-  /* 버튼 텍스트/높이 안정 */
   line-height: 1;
   min-height: 40px;
 
-  /* 혹시 상위에서 width가 잡히는 경우 방지 */
   width: auto;
 }
 
 
-/* ✅ 모바일에서는 날씨 영역 자체를 숨김(이중 안전장치) */
 @media (max-width: 600px){
   .weather{
     display: none !important;
   }
 
   .today-row{
-    gap: 8px; /* 필요하면 6~10px 사이로 조절 */
+    gap: 8px; 
   }
   .preset-btn, .todo-add-btn{
     padding: 12px 10px 12px 6px; 
@@ -476,23 +463,16 @@
   }
 
   .admin-link-btn{
-    min-height: 34px;     /* 모바일에서 조금 낮게 */
+    min-height: 34px;     
     padding: 0 10px;
     border-radius: 12px;
-    font-size: 0.95rem;   /* 글씨가 눌려 보이면 여기만 살짝 낮추는 게 가장 안전 */
+    font-size: 0.95rem;  
   }
 
-  /* 날씨 박스가 너무 커서 버튼을 밀면, padding만 줄여 공간 확보 */
   .weather{
     padding: 6px 8px;
   }
-
-  
 }
-
-/* =========================
-   오늘 숙제 전용 스타일
-   ========================= */
 
 .homework-box {
   margin-top: 12px;
@@ -521,20 +501,17 @@
   color: #000;
 }
 
-/* 날짜 줄에 들어가는 날씨는 작고 가볍게 */
 .weather.weather-inline{
   padding: 0;                 
   background: transparent;   
   border-radius: 0;
 }
 
-/* 아이콘이 날짜 줄에서 가운데 정렬되게 */
 .today-row .weather{
   display: inline-flex;
   align-items: center;
 }
 
-/* 버튼 두개 나란히 */
 .todo-bar-actions{
   display: flex;
   align-items: center;
@@ -572,7 +549,6 @@
   .todo-bar-actions{ flex-wrap: nowrap !important; }
 }
 
-/* 카드(모달 박스) */
 .weekly-hw-card {
   background: #fff;
   border-radius: 16px;
@@ -585,7 +561,6 @@
   gap: 12px;
 }
 
-/* 이미지 크기 제어 */
 .weekly-hw-image {
   width: 100%;         
   max-height: 65vh;     
@@ -594,7 +569,6 @@
   background: #fafafa;
 }
 
-/* 닫기 버튼 */
 .weekly-hw-close {
   align-self: center;
   padding: 8px 16px;
@@ -605,7 +579,6 @@
   cursor: pointer;
 }
 
-/* 모달 배경 */
 .weekly-hw-overlay {
   position: fixed;
   inset: 0;
@@ -618,7 +591,6 @@
 }
 
 
-/* 카드 */
 .weekly-hw-card {
   background: #fff;
   border-radius: 16px;
@@ -649,7 +621,6 @@
   -webkit-user-drag: none;
 }
 
-/* 닫기 버튼 */
 .weekly-hw-close {
   align-self: center;
   padding: 8px 16px;
