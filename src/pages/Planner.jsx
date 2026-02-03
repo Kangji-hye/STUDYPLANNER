@@ -222,6 +222,25 @@ function Planner() {
     finishEnabled, // 기존 useSoundSettings()의 finishEnabled 그대로 사용
   });
 
+  // 사운드 안전핀: "첫 사용자 입력" 전에는 절대 재생하지 않기
+  const soundArmedRef = useRef(false);
+
+  useEffect(() => {
+    // 사용자가 화면을 한번이라도 누르거나(터치/클릭), 키를 누르면 그때부터만 사운드 허용
+    const arm = () => {
+      soundArmedRef.current = true;
+    };
+
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("keydown", arm, { once: true });
+
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
+
+
   const todosRef = useRef([]);
   useEffect(() => {
     todosRef.current = todos;
@@ -1250,12 +1269,12 @@ useEffect(() => {
   const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
   if (!item.completed) {
-    playTodoDone();
+    if (soundArmedRef.current) playTodoDone();
   }
 
   if (!wasAllCompleted && willAllCompleted) {
     fireConfetti();
-    playAllDone(profile?.finish_sound);
+    if (soundArmedRef.current) playAllDone(profile?.finish_sound);
   }
 
   setTodos(nextTodos);
@@ -1641,7 +1660,7 @@ const deleteSelectedTodos = async () => {
 
       if (!timerSoundOn) return;
 
-      playTimerEnd();
+      if (soundArmedRef.current) playTimerEnd();
     }
 
     if (remainingSec > 0) timerEndedRef.current = false;
