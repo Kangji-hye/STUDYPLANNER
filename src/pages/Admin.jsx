@@ -69,6 +69,17 @@ function parseDayKeyToDate(dayKey) {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
+function getWeekStartDayKey(dayKey) {
+  const d = parseDayKeyToDate(dayKey); // 이미 파일에 있는 함수 재사용
+  const day = d.getDay(); // 0(일)~6(토)
+
+  // 월요일(1)을 한 주 시작으로 맞추기
+  const diffToMon = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diffToMon);
+
+  return dateToDayKey(d); // 이미 파일에 있는 함수 재사용
+}
+
 function dateToDayKey(dateObj) {
   const y = dateObj.getFullYear();
   const m = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -147,6 +158,96 @@ export default function Admin() {
 
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
 
+    // =========================
+  // ✅ 주간 숙제 사진 업로드(2학년용)
+  // =========================
+  const [weekImgFile, setWeekImgFile] = useState(null);
+  const [weekImgUrl, setWeekImgUrl] = useState("");     // 관리자 미리보기용
+  const [weekImgUploading, setWeekImgUploading] = useState(false);
+
+  // 선택된 dayKey 기준 "그 주의 월요일"
+  const weekStartDayKey = useMemo(() => getWeekStartDayKey(dayKey), [dayKey]);
+
+  // ✅ 이번 주 이미지 불러오기(관리자에서 미리 보기)
+  const loadWeekImage = async () => {
+    const { data, error } = await supabase
+      .from("weekly_homework_images")
+      .select("image_url")
+      .eq("week_start_day", weekStartDayKey)
+      .eq("grade_code", Number(gradeCode))
+      .maybeSingle();
+
+    if (error) {
+      console.error("loadWeekImage error:", error);
+      setWeekImgUrl("");
+      return;
+    }
+
+    setWeekImgUrl(String(data?.image_url ?? ""));
+  };
+
+  // 이미지 업로드 + DB 저장(week_start_day + grade_code로 upsert)
+  const uploadWeekImage = async () => {
+    if (!weekImgFile) {
+      alert("올릴 사진을 먼저 선택해 주세요.");
+      return;
+    }
+
+    setWeekImgUploading(true);
+
+    try {
+      const file = weekImgFile;
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const safeExt = ext.length <= 5 ? ext : "jpg";
+
+      // storage 경로: weekly-homework/{grade}/{weekStart}/xxxxx.jpg
+      const path = `${Number(gradeCode)}/${weekStartDayKey}/${Date.now()}.${safeExt}`;
+
+      const bucket = supabase.storage.from("weekly-homework");
+
+      // 1) Storage 업로드
+      const { error: upErr } = await bucket.upload(path, file, {
+        upsert: true,
+        contentType: file.type || "image/jpeg",
+      });
+
+      if (upErr) throw upErr;
+
+      // 2) Public URL 얻기(버킷을 Public로 해둔 경우)
+      const { data: pub } = bucket.getPublicUrl(path);
+      const publicUrl = String(pub?.publicUrl ?? "").trim();
+      if (!publicUrl) throw new Error("publicUrl 생성 실패");
+
+      // 3) DB에 upsert (이번 주 + 학년으로 한 장만 유지)
+      const { error: dbErr } = await supabase
+        .from("weekly_homework_images")
+        .upsert(
+          {
+            week_start_day: weekStartDayKey,
+            grade_code: Number(gradeCode),
+            image_path: path,
+            image_url: publicUrl,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "week_start_day,grade_code" }
+        );
+
+      if (dbErr) throw dbErr;
+
+      alert(`주간 숙제 사진을 저장했어요! (주 시작: ${weekStartDayKey} / ${gradeLabel})`);
+
+      // 화면 정리 + 미리보기 갱신
+      setWeekImgFile(null);
+      await loadWeekImage();
+    } catch (err) {
+      console.error("uploadWeekImage error:", err);
+      alert("사진 업로드 중 오류가 났어요. (버킷/권한/RLS 확인)");
+    } finally {
+      setWeekImgUploading(false);
+    }
+  };
+
+
   // 알람 목록 불러오기
   const loadAlarmList = async () => {
     const { data, error } = await supabase
@@ -206,8 +307,9 @@ export default function Admin() {
         if (error) throw error;
 
         alert("알람을 수정했습니다!");
-        setEditingAlarmId(null); // 수정 모드 종료
+        setEditingAlarmId(null); 
         await loadAlarmList();
+        await loadWeekImage(); 
         return;
       }
 
@@ -220,11 +322,9 @@ export default function Admin() {
 
       alert("알람을 저장했습니다!");
       await loadAlarmList();
+      await loadWeekImage(); 
 
-      // 새로 추가 후 입력칸 정리(취향)
       setAlarmTitle("");
-      // setAlarmMessage("오늘의 할 일을 끝내보세요."); // 문구 기본값 유지하고 싶으면 주석 그대로
-      // 기간은 방학용으로 여러 개 입력할 때가 많아서 유지하는 편이 편합니다.
     } catch (err) {
       console.error("saveAlarm error:", err);
       alert("알람 저장 중 오류가 발생했습니다. (권한/RLS 또는 컬럼 확인)");
@@ -592,6 +692,7 @@ export default function Admin() {
     if (!isAdmin) return;
     loadVerse();
     loadHomework();
+    loadWeekImage(); 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, dayKey, gradeCode]);
 
@@ -859,7 +960,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* 오늘 숙제 편집 카드 */}
+      {/* 주간 숙제 사진 업로드 */}
       <div className="admin-card">
         <div className="admin-title" style={{ marginBottom: 8 }}>
           오늘 숙제 입력
@@ -937,7 +1038,64 @@ export default function Admin() {
         </div>
       </div>
 
-      
+      {/* 숙제 이미지로 올리기 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          일주일 숙제 사진 업로드
+        </div>
+
+        <div className="admin-help">
+          “이번 주 월요일 기준(주 시작일)”로 1장만 저장됩니다. 같은 주에 다시 올리면 사진이 교체돼요.
+          (주 시작일: {weekStartDayKey})
+        </div>
+
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (!f) return;
+            setWeekImgFile(f);
+
+            try {
+              const url = URL.createObjectURL(f);
+              setWeekImgUrl(url);
+            } catch {
+            }
+          }}
+        />
+
+        {weekImgUrl ? (
+          <div style={{ marginTop: 10 }}>
+            <img
+              src={weekImgUrl}
+              alt="주간 숙제 사진 미리보기"
+              style={{
+                width: "100%",
+                maxHeight: 420,
+                objectFit: "contain",
+                borderRadius: 14,
+                border: "1px solid rgba(0,0,0,0.08)",
+                background: "#fff",
+              }}
+            />
+          </div>
+        ) : (
+          <div className="admin-help">아직 주간 숙제 사진이 없어요.</div>
+        )}
+
+        <div className="admin-actions">
+          <button className="admin-btn" type="button" onClick={uploadWeekImage} disabled={weekImgUploading}>
+            {weekImgUploading ? "업로드 중..." : "사진 저장"}
+          </button>
+
+          <button className="admin-btn ghost" type="button" onClick={loadWeekImage}>
+            사진 새로고침
+          </button>
+        </div>
+      </div>
+
 
       {/* 저장된 말씀 목록 */}
       <div className="admin-card">

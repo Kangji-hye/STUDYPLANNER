@@ -109,9 +109,10 @@ function Planner() {
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
   const [verseLines, setVerseLines] = useState([]); 
   const [verseRef, setVerseRef] = useState("");
-  const [homeworkItems, setHomeworkItems] = useState([]); // [{subject:"수학", content:"30페이지"}...]
+  const [homeworkItems, setHomeworkItems] = useState([]); 
+  const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
+  const [weekHwImgOpen, setWeekHwImgOpen] = useState(false);
 
-  
   // 부트 스플래시 제거(한 번만)
   useBootSplash(loading);
 
@@ -729,6 +730,30 @@ useEffect(() => {
       setAfterStudyText("");
     }
   }, [me?.id, selectedDayKey]);
+
+  // "YYYY-MM-DD" -> Date
+  function dayKeyToDate(dayKey) {
+    const [y, m, d] = String(dayKey).split("-").map((x) => Number(x));
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+
+  // Date -> "YYYY-MM-DD"
+  function dateToDayKey(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  }
+
+  // 선택된 날짜가 속한 "그 주 월요일" 키
+  function getWeekStartDayKeyFromSelected(dayKey) {
+    const d = dayKeyToDate(dayKey);
+    const day = d.getDay(); // 0(일)~6(토)
+    const diffToMon = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diffToMon);
+    return dateToDayKey(d);
+  }
+
 
   // =======================
   // 샘플/내목록 불러오기 공통
@@ -1684,6 +1709,8 @@ const deleteSelectedTodos = async () => {
     const isSecondGrade = (myGrade === 2);
     if (!isSecondGrade) {
       setHomeworkItems([]);
+      setWeekHwImgUrl("");     
+      setWeekHwImgOpen(false); 
       return;
     }
     const run = async () => {
@@ -1706,9 +1733,26 @@ const deleteSelectedTodos = async () => {
           .filter((x) => x.subject.length > 0 && x.content.length > 0);
 
         setHomeworkItems(normalized);
+        const weekStart = getWeekStartDayKeyFromSelected(selectedDayKey);
+
+        const { data: imgRow, error: imgErr } = await supabase
+          .from("weekly_homework_images")
+          .select("image_url")
+          .eq("week_start_day", weekStart)
+          .eq("grade_code", 2)
+          .maybeSingle();
+
+        if (imgErr) {
+          console.error("load weekly_homework_images error:", imgErr);
+          setWeekHwImgUrl("");
+        } else {
+          setWeekHwImgUrl(String(imgRow?.image_url ?? ""));
+        }
+
       } catch (err) {
         console.error("load daily_homeworks error:", err);
         setHomeworkItems([]);
+        setWeekHwImgUrl("");
       }
     };
 
@@ -2147,21 +2191,49 @@ const deleteSelectedTodos = async () => {
       />
 
       {/* 오늘 숙제 (2학년만) */}
-      {Number(profile?.grade_code) === 2 && homeworkItems.length > 0 && (
+      {Number(profile?.grade_code) === 2 && (
         <div className="homework-box" aria-label="오늘 숙제">
           <div className="homework-title">오늘 숙제</div>
 
           <div className="homework-text">
-            {homeworkItems.map((it, idx) => (
-              <div
-                key={`${selectedDayKey}-hw-${idx}`}
-                className="homework-line"
-              >
-                {/* 한 줄에 "과목: 내용" */}
-                🔹{it.subject}: {it.content}
+            {homeworkItems.length === 0 ? (
+              <div className="homework-line" style={{ opacity: 0.7 }}>
+                오늘 글 숙제는 아직 없어요 🙂
               </div>
-            ))}
+            ) : (
+              homeworkItems.map((it, idx) => (
+                <div key={`${selectedDayKey}-hw-${idx}`} className="homework-line">
+                  🔹{it.subject}: {it.content}
+                </div>
+              ))
+            )}
           </div>
+
+          {/* 일주일 숙제 보기(이미지) */}
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => {
+                if (!weekHwImgUrl) {
+                  alert("이번 주 숙제 사진이 아직 없어요 🙂 (관리자가 사진을 올려야 보여요)");
+                  return;
+                }
+                setWeekHwImgOpen(true);
+              }}
+              style={{
+                padding: 0,
+                background: "transparent",
+                border: "none",
+                color: "#2563eb",
+                fontWeight: 700,
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              📸 일주일 숙제 보기
+            </button>
+          </div>
+
         </div>
       )}
 
@@ -2254,6 +2326,48 @@ const deleteSelectedTodos = async () => {
         </div>
       )}
 
+       {/* 주간 숙제 이미지 모달 */}
+      {weekHwImgOpen && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="일주일 숙제 사진"
+          onClick={() => setWeekHwImgOpen(false)}
+        >
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="modal-title">일주일 숙제</div>
+              <button className="modal-close" type="button" onClick={() => setWeekHwImgOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <img
+                src={weekHwImgUrl}
+                alt="일주일 숙제 사진"
+                style={{
+                  width: "100%",
+                  maxHeight: "70vh",
+                  objectFit: "contain",
+                  borderRadius: 14,
+                  background: "#fff",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                }}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button className="modal-primary" type="button" onClick={() => setWeekHwImgOpen(false)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       <footer className="planner-footer-simple">
         <div className="footer-links">
           <a className="footer-link-primary" onClick={() => navigate("/mypage")}>
@@ -2296,6 +2410,7 @@ const deleteSelectedTodos = async () => {
         </div>
         <div className="footer-copy">© {new Date().getFullYear()} Study Planner</div>
       </footer>
+      
     </div>
   );
 }
