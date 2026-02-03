@@ -137,6 +137,19 @@ export default function HamburgerMenu() {
             ✖️ 구구단 놀이
           </button>
 
+          <button
+            className="hamburger-item" type="button" onClick={() => navigate("/wordchain")}>
+            🎲 한글끝말잇기
+          </button>
+
+          <button className="hamburger-item" type="button" onClick={() => navigate("/english-word-game")}>
+            🔠 영어 놀이
+          </button>
+
+          <button className="hamburger-item" type="button" onClick={() => navigate("/hanja")} >
+            🈶 한자 놀이
+          </button>
+
           <button className="hamburger-item" type="button" onClick={() => navigate("/omok")}>
             ⚫ 오목
           </button>

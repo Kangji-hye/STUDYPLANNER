@@ -1,0 +1,225 @@
+/* src/pages/EnglishWordGame.css */
+
+.english-game {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 14px 14px 40px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  position: sticky;
+  top: 0;
+  z-index: 50;
+
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.english-scoreboard {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fff;
+}
+
+.english-score-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 14px;
+}
+
+.english-reset-btn {
+  border: 1px solid rgba(0,0,0,0.18);
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.english-reset-btn:active {
+  transform: translateY(1px);
+}
+
+.english-levels {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.english-levels button {
+  flex: 1;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 0;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.english-levels button.active {
+  border-color: rgba(0,0,0,0.35);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.english-word {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.english-speaker {
+  border: 1px solid rgba(0,0,0,0.14);
+  background: #fff;
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+
+.english-speaker:active {
+  transform: translateY(1px);
+}
+
+.english-choices {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.english-choices button {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+}
+
+.english-choices button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.english-result {
+  margin-top: 12px;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.english-answer {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(0,0,0,0.22);
+  display: inline-block;
+  background: rgba(0,0,0,0.02);
+}
+
+.english-progress {
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+@media (max-width: 420px) {
+  .english-word {
+    font-size: 28px;
+  }
+
+  .english-choices button {
+    font-size: 15px;
+    padding: 11px 12px;
+  }
+}
+/* =========================
+   영어 단어 크게 + 가운데 정렬
+   스피커(🔊) 버튼 이모지 틀어짐 수정
+   ========================= */
+
+/* 단어 영역 전체를 가운데로 */
+.english-play{
+  text-align: center;
+}
+
+/* 단어 + 스피커 버튼을 한 줄로, 가운데 정렬 */
+.english-word-row{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  /* 위/아래 여백 */
+  margin: 12px 0 14px;
+}
+
+/* 단어를 큼직하게 */
+.english-word-text{
+  font-size: 2.6rem;     /* 큼직하게 */
+  font-weight: 900;
+  line-height: 1;        /* 기준선 흔들림 방지 */
+  letter-spacing: 0.5px; /* 살짝 또렷하게 */
+}
+
+/* 🔊 버튼(이모지)이 버튼 안에서 안 틀어지게 “정사각형 + 중앙 정렬” */
+.english-speaker{
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 1.35rem; /* 이모지 크기 */
+  line-height: 1;     /* 이모지 위로 뜨는 현상 방지 */
+}
+
+/* 선택적으로: 눌렀을 때 느낌 */
+.english-speaker:active{
+  transform: scale(0.96);
+}
+
+/* 모바일에서 조금만 줄이기 */
+@media (max-width: 420px){
+  .english-word-text{ font-size: 2.2rem; }
+  .english-speaker{ width: 36px; height: 36px; font-size: 1.25rem; }
+}

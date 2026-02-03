@@ -1,0 +1,241 @@
+/* src/pages/HanjaGame.css */
+
+.hanja-page{
+  padding: 0 14px 24px;
+}
+
+.hanja-card{
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid rgba(241, 215, 230, 0.95);
+  border-radius: 18px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.08);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.hanja-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hanja-label{
+  width: 64px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.hanja-select{
+  flex: 1;
+  height: 44px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  padding: 0 12px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.hanja-score{
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.hanja-mini{
+  margin-left: 8px;
+  font-size: 0.92rem;
+  color: var(--muted);
+  opacity: 0.9;
+}
+
+.hanja-word-box{
+  border-radius: 16px;
+  border: 2px dashed rgba(255, 122, 162, 0.35);
+  background: rgba(255, 122, 162, 0.06);
+  padding: 14px;
+  text-align: center;
+}
+
+.hanja-word{
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.hanja-hint{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.hanja-choices{
+  display: grid;
+  gap: 10px;
+}
+
+.hanja-choice{
+  width: 100%;
+  border-radius: 16px;
+  border: 2px solid rgba(241, 215, 230, 0.95);
+  background: #fff;
+  padding: 12px 14px;
+  box-shadow: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.hanja-choice:hover{
+  background: rgba(255, 122, 162, 0.06);
+  border-color: rgba(255, 122, 162, 0.35);
+}
+
+.hanja-choice.picked{
+  border-color: rgba(79, 140, 255, 0.55);
+  box-shadow: 0 0 0 6px rgba(79, 140, 255, 0.12);
+}
+
+.hanja-choice.correct{
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.10);
+}
+
+.hanja-choice.wrong{
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.hanja-result{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: rgba(255,255,255,0.7);
+  color: #111;
+  line-height: 1.3;
+}
+
+.hanja-actions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hanja-btn{
+  flex: 1;
+  min-width: 140px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  box-shadow: none;
+}
+
+.hanja-btn.ghost{
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+/* ✅ 오목 느낌의 게임 헤더(고정, 가운데 타이틀, 오른쪽 햄버거) */
+.game-header{
+  position: sticky; /* 오목이 fixed면 fixed로 바꿔도 됩니다 */
+  top: 0;
+  z-index: 50;
+
+  height: 56px;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+
+  padding: 0 10px;
+  background: #fff; /* 오목 헤더 배경색이 따로 있으면 그 색으로 바꾸면 "완전 동일" */
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.game-back{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.game-title{
+  text-align: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+}
+
+.game-hamburger{
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.hanja-page{
+  padding-top: 8px;
+}
+
+/* ✅ 구구단 게임 헤더와 완전 동일한 스타일(그대로 복사) */
+
+.gugu-page{
+  padding: 16px;
+  color: var(--text);
+}
+
+.gugu-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 12px;
+  margin-bottom: 14px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.gugu-title{
+  font-family: "Poor Story", system-ui, -apple-system, "Noto Sans KR", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+  flex: 1;
+}
+
+.gugu-back{
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.gugu-head-right{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gugu-menu{
+  display: flex;
+  align-items: center;
+}
+
+.gugu-restart{
+  border: 1px solid rgba(0,0,0,0.02);
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}

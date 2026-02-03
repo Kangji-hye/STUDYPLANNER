@@ -1,0 +1,145 @@
+/* src/pages/WordChain.css */
+
+.wc-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--text);
+}
+
+/* 플래너/랭킹처럼 카드 한 장 */
+.wc-card {
+  margin-top: 10px;
+  background: var(--card);
+  border: 2px solid rgba(241, 215, 230, 0.65);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 12px;
+}
+
+.wc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.wc-label {
+  font-weight: 800;
+  font-family: "Poor Story";
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.wc-level-buttons {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wc-pill {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: none;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.wc-pill.on {
+  border-color: rgba(255, 122, 162, 0.7);
+  box-shadow: 0 0 0 5px rgba(255, 122, 162, 0.12);
+}
+
+.wc-msg {
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 122, 162, 0.06);
+  border: 1px solid rgba(255, 122, 162, 0.22);
+  line-height: 1.35;
+}
+
+.wc-hint {
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+
+.wc-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.wc-input-row input {
+  flex: 1;
+}
+
+.wc-submit {
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(255, 122, 162, 0.25);
+}
+
+.wc-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.wc-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 16px;
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.wc-btn.ghost {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.wc-history {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.10);
+}
+
+.wc-history-title {
+  font-weight: 900;
+  font-family: "Poor Story";
+  margin-bottom: 6px;
+}
+
+.wc-history-list {
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  color: #111;
+}
+
+@media (max-width: 480px) {
+  .wc-page {
+    padding: 12px;
+  }
+
+  .wc-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wc-submit {
+    width: 100%;
+  }
+}

@@ -3,25 +3,25 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { useEffect } from "react";
 import AuthLayout from "./layouts/AuthLayout";
 import AppLayout from "./layouts/AppLayout";
-
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Admin from "./pages/Admin";
 import Find from "./pages/Find";
 import ResetPassword from "./pages/ResetPassword";
-
 import MyPage from "./pages/MyPage";
 import Ranking from "./pages/Ranking";
 import Planner from "./pages/Planner";
 import AuthCallback from "./pages/AuthCallback";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 import { SoundSettingsProvider } from "./context/SoundSettingsContext";
-
 import Share from "./pages/Share";
+import GameGuard from "./components/GameGuard";
 import GugudanGame from "./pages/GugudanGame";
 import OmokGame from "./pages/OmokGame";
 import BadukGame from "./pages/BadukGame";
+import EnglishWordGame from "./pages/EnglishWordGame";
+import WordChain from './pages/WordChain';
+import HanjaGame from "./pages/HanjaGame";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -108,9 +108,12 @@ const App = () => {
               }
             />
 
-            <Route path="/gugudan" element={<ProtectedRoute><GugudanGame /></ProtectedRoute>} />
-            <Route path="/omok" element={<ProtectedRoute><OmokGame /></ProtectedRoute>} />
-            <Route path="/baduk" element={<ProtectedRoute><BadukGame /></ProtectedRoute>} />
+            <Route path="/wordchain" element={<ProtectedRoute><GameGuard><WordChain /></GameGuard></ProtectedRoute>} />
+            <Route path="/english-word-game" element={<ProtectedRoute><GameGuard><EnglishWordGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/gugudan" element={<ProtectedRoute><GameGuard><GugudanGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/hanja" element={<ProtectedRoute><GameGuard><HanjaGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/omok" element={<ProtectedRoute><GameGuard><OmokGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/baduk" element={<ProtectedRoute><GameGuard><BadukGame /></GameGuard></ProtectedRoute>} />
             
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
