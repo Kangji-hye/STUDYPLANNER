@@ -21,6 +21,7 @@ import { SoundSettingsProvider } from "./context/SoundSettingsContext";
 import Share from "./pages/Share";
 import GugudanGame from "./pages/GugudanGame";
 import OmokGame from "./pages/OmokGame";
+import BadukGame from "./pages/BadukGame";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -107,32 +108,11 @@ const App = () => {
               }
             />
 
-            <Route
-              path="/gugudan"
-              element={
-                <ProtectedRoute>
-                  <GugudanGame />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/omok"
-              element={
-                <ProtectedRoute>
-                  <OmokGame />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/gugudan" element={<ProtectedRoute><GugudanGame /></ProtectedRoute>} />
+            <Route path="/omok" element={<ProtectedRoute><OmokGame /></ProtectedRoute>} />
+            <Route path="/baduk" element={<ProtectedRoute><BadukGame /></ProtectedRoute>} />
+            
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
 
           <Route path="/" element={<Navigate to="/planner" replace />} />
