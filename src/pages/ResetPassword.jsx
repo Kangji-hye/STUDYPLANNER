@@ -4,9 +4,6 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Login.css";
 
-
-
-// ✅ 세션이 늦게 들어오는 iOS Safari 대응: 잠깐 기다리는 헬퍼
 async function waitForRecoverySession({ timeoutMs = 5000 } = {}) {
   const { data: s1 } = await supabase.auth.getSession();
   if (s1?.session) return s1.session;
@@ -26,8 +23,6 @@ async function waitForRecoverySession({ timeoutMs = 5000 } = {}) {
   });
 }
 
-
-
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [pw1, setPw1] = useState("");
@@ -36,18 +31,8 @@ const ResetPassword = () => {
 
   useEffect(() => {
      let mounted = true;
-  //   const check = async () => {
-  //     const { data } = await supabase.auth.getSession();
-  //     if (!data?.session) {
-  //       alert("재설정 링크가 만료되었거나 유효하지 않습니다. 다시 시도해 주세요.");
-  //       navigate("/find");
-  //     }
-  //   };
-  //   check();
-  // }, [navigate]);
 
   const check = async () => {
-      // ✅ iOS에서 세션이 늦게 세팅되는 경우를 고려해 잠깐 기다림
       const session = await waitForRecoverySession({ timeoutMs: 6000 });
 
       if (!mounted) return;
@@ -57,7 +42,6 @@ const ResetPassword = () => {
         navigate("/find", { replace: true });
         return;
       }
-      // 세션이 있으면 그대로 비번 변경 폼 사용 가능
     };
 
     check();
@@ -86,19 +70,10 @@ const ResetPassword = () => {
       if (error) throw error;
 
       alert("비밀번호가 변경되었습니다. 로그인해 주세요.");
-      // 세션 정리 후 로그인 화면으로 보내면 깔끔
       await supabase.auth.signOut();
-      
-
-
-      // navigate("/login");
       navigate("/login", { replace: true });
 
-
-
-
     } catch (err) {
-      // 여기서도 "노출된 비밀번호"면 다시 차단될 수 있음 → 다른 비번으로
       alert(err?.message ?? "비밀번호 변경 중 오류가 발생했습니다.");
       console.error("updateUser error:", err);
     } finally {

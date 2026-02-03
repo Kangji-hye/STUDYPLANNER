@@ -26,9 +26,6 @@ import { calcLevelFromStamps } from "../utils/leveling";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import { useAppSounds } from "../hooks/useAppSounds";
 
-// =======================
-// 이모지 풀
-// =======================
 const EMOJI_POOL = [
   "👍", "😀", "😄", "😁", "😆", "🙂", "😊", "🥰", "😍", "🤩", "🤗", "😎", "🥳",
   "😺", "🐶", "🐰", "🐻", "🐼", "🐯", "🦁", "🐣", "🦅", "🦄",
@@ -48,6 +45,7 @@ const cutName6 = (name) => {
   return chars.slice(0, 6).join(""); 
 };
 
+// 생년월일에서 학년 코드 계산
 function calcGradeCodeFromBirthdate(birthdateStr) {
   const s = String(birthdateStr ?? "").trim();
   if (!s) return null;
@@ -66,9 +64,7 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
 
-// =======================
 // 세션 대기 (Auth 세션이 늦게 잡히는 기기 대비)
-// =======================
 async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   const { data: s1 } = await supabase.auth.getSession();
   if (s1?.session) return s1.session;
@@ -88,15 +84,13 @@ async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   });
 }
 
-
+// 메인 플래너 페이지
 function Planner() {
   const navigate = useNavigate();
   const { finishEnabled } = useSoundSettings();
-  const DEFAULT_FINISH_SOUND = "/finish1.mp3";
+  const DEFAULT_FINISH_SOUND = "/finish5.mp3";
 
-  // =======================
   // 기본 상태
-  // =======================
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
   const [todo, setTodo] = useState("");
@@ -114,54 +108,46 @@ function Planner() {
   const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
   const [weekHwImgOpen, setWeekHwImgOpen] = useState(false);
 
-  // 부트 스플래시 제거(한 번만)
+  // 부트 스플래시 제거
   useBootSplash(loading);
 
-  // =======================
   // 데일리: 선택 날짜
-  // =======================
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   // 탭 복원 대비: "날이 바뀐 복원 상황"에서만 오늘로 복귀
   useRestoreToToday(setSelectedDate);
-
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
-
-  const todayDayKey = toKstDayKey(new Date());     // 오늘(한국시간) 키
-  const isPastSelected = selectedDayKey < todayDayKey;   // 과거(지난 날짜)
+  const todayDayKey = toKstDayKey(new Date());     
+  const isPastSelected = selectedDayKey < todayDayKey;   
 
   // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
   useEffect(() => {
     selectedDayKeyRef.current = selectedDayKey;
   }, [selectedDayKey]);
-
   const fetchTodosSeqRef = useRef(0);
 
-  // =======================
   // 달력 모달
-  // =======================
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calMonth, setCalMonth] = useState(() => {
     const d = new Date();
     return { y: d.getFullYear(), m: d.getMonth() };
   });
 
-  // 달력 도장(완료한 날짜 Set)
+  // 달력 도장
   const doneDayKeys = useDoneDaysForMonth({
     open: showCalendarModal,
     userId: me?.id,
     calMonth,
   });
 
-    const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
-
-    function pickStableColor(seedText) {
-      const s = String(seedText ?? "");
-      let sum = 0;
-      for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
-      return VERSE_COLORS[sum % VERSE_COLORS.length];
-    }
+  const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
+  function pickStableColor(seedText) {
+    const s = String(seedText ?? "");
+    let sum = 0;
+    for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+    return VERSE_COLORS[sum % VERSE_COLORS.length];
+  }
 
   const SAMPLE_VERSES = [
     {
@@ -197,9 +183,7 @@ function Planner() {
   const openHelp = () => setShowHelpModal(true);
   const closeHelp = () => setShowHelpModal(false);
 
-  // =======================
   // 프로필(캐시)
-  // =======================
   const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
   const [profile, setProfile] = useState(() => {
     try {
@@ -214,47 +198,34 @@ function Planner() {
   const weatherCode = useWeatherYongin();
 
   // 완료 사운드(재사용)
-
   const { playTodoDone, playTimerEnd, playAllDone } = useAppSounds({
     todoDoneSrc: "/done.mp3",
     timerEndSrc: "/time1.mp3",
     allDoneDefaultSrc: DEFAULT_FINISH_SOUND, // "/finish1.mp3"
-    finishEnabled, // 기존 useSoundSettings()의 finishEnabled 그대로 사용
+    finishEnabled, 
   });
 
-  // 사운드 안전핀: "첫 사용자 입력" 전에는 절대 재생하지 않기
   const soundArmedRef = useRef(false);
 
   useEffect(() => {
-    // 사용자가 화면을 한번이라도 누르거나(터치/클릭), 키를 누르면 그때부터만 사운드 허용
     const arm = () => {
       soundArmedRef.current = true;
     };
-
     window.addEventListener("pointerdown", arm, { once: true });
     window.addEventListener("keydown", arm, { once: true });
-
     return () => {
       window.removeEventListener("pointerdown", arm);
       window.removeEventListener("keydown", arm);
     };
   }, []);
 
-
   const todosRef = useRef([]);
   useEffect(() => {
     todosRef.current = todos;
   }, [todos]);
 
-  // =======================
-  // 목록 불러오기 모달
-  // =======================
   const [showLoadModal, setShowLoadModal] = useState(false);
-
-  // "my" | "vacation" | "weekday" | "weekend"
   const [loadChoice, setLoadChoice] = useState("vacation");
-
-  // 샘플(테이블 3개)
   const [sampleModeReplace, setSampleModeReplace] = useState(false); // true면 교체
   const [importingSample, setImportingSample] = useState(false);
 
@@ -271,8 +242,6 @@ function Planner() {
   };
 
   const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
-
-  // 내 목록 모달(저장만 유지)
   const [showMyListModal, setShowMyListModal] = useState(false);
   const [_myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
   const [loadReplace, setLoadReplace] = useState(false);
@@ -291,23 +260,15 @@ function Planner() {
     setShowLoadModal(false);
   };
   
-  // 레벨업(트로피) 모달
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
   const closeLevelUp = () => setLevelUpOpen(false);
-
-    // 내 도장(참 잘했어요) 총 개수
   const [stampCount, setStampCount] = useState(0);
-
-  // 닉네임 옆에 보여줄 내 레벨 정보
   const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
 
-  // =======================
   // 명예의 전당
-  // =======================
   const [hof, setHof] = useState([]);
   const [hofLoading, setHofLoading] = useState(false);
-  
 
   const shuffleArray = (arr) => {
     const a = [...arr];
@@ -327,15 +288,11 @@ function Planner() {
         .eq("day_key", dayKey);
 
       if (error) throw error;
-
       const rows = data ?? [];
       const myId = me?.id;
-
       const mine = myId ? rows.find((r) => r.user_id === myId) : null;
-
       const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
       const mixedOthers = shuffleArray(others);
-
       setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
     } catch (err) {
       console.error("fetchHallOfFame error:", err);
@@ -344,7 +301,7 @@ function Planner() {
       setHofLoading(false);
     }
   };
-
+  
   const recordCompletionForDay = async (dayKey) => {
     if (!me?.id) return;
     const nickname = profile?.nickname ?? "익명";
@@ -364,7 +321,6 @@ function Planner() {
     }
   };
 
-  // 내 도장(=hall_of_fame 기록) 개수만 숫자로 가져오기
   const fetchMyStampCountNumber = async (userId) => {
     const { count, error } = await supabase
       .from("hall_of_fame")
@@ -392,9 +348,6 @@ function Planner() {
     }
   };
 
-  // =======================
-  // UI: 날짜 표시
-  // =======================
   const formatSelectedKorean = () => {
     const d = selectedDate;
     const days = ["일", "월", "화", "수", "목", "금", "토"];
@@ -405,9 +358,6 @@ function Planner() {
     return `${y}-${m}-${dd} (${day})`;
   };
 
-  // =======================
-  // 랜덤 이모지
-  // =======================
   const getRandomEmoji = () => {
     const available = EMOJI_POOL.filter((emoji) => !usedEmojis.includes(emoji));
     const pool = available.length > 0 ? available : EMOJI_POOL;
@@ -416,9 +366,6 @@ function Planner() {
     return selected;
   };
 
-  // =======================
-  // 폭죽 & 사운드
-  // =======================
   const fireConfetti = () => {
     confetti({
       particleCount: 140,
@@ -430,7 +377,6 @@ function Planner() {
 
   const fetchTodos = async (userId, dayKey) => {
     const mySeq = ++fetchTodosSeqRef.current;
-
     const { data, error } = await supabase
       .from("todos")
       .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
@@ -444,18 +390,13 @@ function Planner() {
       alert(error.message);
       return [];
     }
-
     const rows = data ?? [];
-
     if (mySeq === fetchTodosSeqRef.current && dayKey === selectedDayKeyRef.current) {
       setTodos(rows);
     }
     return rows;
   };
 
-  // =======================
-  // 첫 진입 샘플 자동 주입
-  // =======================
   const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
     const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
 
@@ -466,7 +407,6 @@ function Planner() {
       if (alreadySeeded) return;
 
       localStorage.setItem(seededKey, "true");
-
       const samples = [
         "오늘의 할 일을 추가해 보세요",
         "완료 버튼을 눌러 보세요",
@@ -482,7 +422,6 @@ function Planner() {
       }));
 
       const rowsWithOrder = rows.map((r, idx) => ({ ...r, sort_order: idx + 1 }));
-
       const { error } = await supabase.from("todos").insert(rowsWithOrder);
       if (error) throw error;
     } catch (err) {
@@ -494,7 +433,6 @@ function Planner() {
     }
   };
 
-  // 내 목록 존재 여부
   const fetchMySingleListInfo = async (userId) => {
     const { data, error } = await supabase
       .from("todo_sets")
@@ -514,7 +452,6 @@ function Planner() {
   };
 
   async function fetchTodayAlarm(kind, todayKey) {
-    // todayKey는 "YYYY-MM-DD"
     const { data, error } = await supabase
       .from("alarm_settings")
       .select("id, kind, title, message, time_hhmm, start_day, end_day, is_active, updated_at")
@@ -571,9 +508,7 @@ function Planner() {
     }
   }
 
-  // =======================
   // 초기 로딩
-  // =======================
   useEffect(() => {
     let mounted = true;
 
@@ -668,7 +603,6 @@ function Planner() {
 
       const loaded = await fetchTodos(user.id, selectedDayKey);
 
-      // 내 목록 상태 확인(1회)
       const { id: myListId } = await fetchMySingleListInfo(user.id);
 
       if (myListId && loaded.length === 0) {
@@ -760,8 +694,6 @@ useEffect(() => {
     }
   }, [me?.id, selectedDayKey]);
 
-  
-
   // "YYYY-MM-DD" -> Date
   function dayKeyToDate(dayKey) {
     const [y, m, d] = String(dayKey).split("-").map((x) => Number(x));
@@ -785,11 +717,7 @@ useEffect(() => {
     return dateToDayKey(d);
   }
 
-
-
-  // =======================
   // 샘플/내목록 불러오기 공통
-  // =======================
   const makeImportBatchId = () => {
     try {
       return crypto.randomUUID();
@@ -802,7 +730,6 @@ useEffect(() => {
     if (!me?.id) return;
     if (importingSample) return;
 
-    // 과거(지난 날짜)만 금지, 오늘+미래(내일)는 미리 셋팅 허용
     if (isPastSelected) {
       alert("지난 날짜에는 샘플 숙제 불러오기를 사용할 수 없습니다.\n(내일 날짜는 미리 셋팅할 수 있어요!)");
       return;
@@ -814,12 +741,9 @@ useEffect(() => {
       alert("샘플 테이블 설정이 올바르지 않습니다.");
       return;
     }
-
     setSelectedSampleKey(useKey);
-
     try {
       setImportingSample(true);
-
       if (sampleModeReplace) {
         const { error: delErr } = await supabase
           .from("todos")
@@ -835,7 +759,6 @@ useEffect(() => {
         .from(tableName)
         .select("item_key, title, sort_order")
         .order("sort_order", { ascending: true });
-
       if (tplErr) throw tplErr;
 
       const maxSort = (todosRef.current ?? [])
@@ -886,7 +809,6 @@ useEffect(() => {
     }
   };
 
-  // 내 목록 저장 모달
   const openMyListSaveModal = () => {
     setMyListMode("save");
     setShowMyListModal(true);
@@ -1106,10 +1028,7 @@ useEffect(() => {
     }
   };
 
-
-  // =======================
   // 정렬
-  // =======================
   const ensureSortOrderForDay = async () => {
     if (!me?.id) return;
 
@@ -1134,10 +1053,8 @@ useEffect(() => {
 
   const swapTodoOrder = async (a, b) => {
     if (!me?.id) return;
-
     const aOrder = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : 0;
     const bOrder = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0;
-
     const current = todosRef.current ?? [];
     setTodos(
       current.map((x) => {
@@ -1186,9 +1103,7 @@ useEffect(() => {
     await swapTodoOrder(list[idx], list[idx + 1]);
   };
 
-  // =======================
   // todos CRUD
-  // =======================
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
@@ -1253,7 +1168,6 @@ useEffect(() => {
   };
 
   const onToggle = async (item) => {
-    //  지난 날짜는 완료/취소 금지
     if (isPastSelected) {
       alert("지난 날짜에는 완료 체크를 바꿀 수 없습니다.");
       return;
@@ -1315,7 +1229,6 @@ useEffect(() => {
   const doneCount = todos.filter((t) => t.completed).length;
   const notDoneCount = todos.filter((t) => !t.completed).length;
 
-//삭제 관련
 const toggleSelectForDelete = (todoId) => {
   setSelectedDeleteIds((prev) => {
     const next = new Set(prev);
@@ -1325,7 +1238,6 @@ const toggleSelectForDelete = (todoId) => {
   });
 };
 
-// 모두 선택 / 모두 해제
 const selectAllForDelete = () => {
   const ids = (filteredTodos ?? []).map((t) => t.id);
   setSelectedDeleteIds(new Set(ids));
@@ -1351,7 +1263,6 @@ const toggleSelectAllForDelete = () => {
   }
 };
 
-// 선택 삭제(다중 삭제) 
 const deleteSelectedTodos = async () => {
   if (!me?.id) return;
 
@@ -1360,7 +1271,6 @@ const deleteSelectedTodos = async () => {
     alert("삭제할 항목을 선택해 주세요.");
     return;
   }
-
   try {
     const { error } = await supabase
       .from("todos")
@@ -1384,22 +1294,14 @@ const deleteSelectedTodos = async () => {
   }
 };
 
-  // =======================
   // 스탑워치/타이머/하가다/
-  // =======================
   const [timerSoundOn, setTimerSoundOn] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
   const timerRef = useRef(null);
-
-    // =======================
-  //  첫 방문 말풍선 단계 안내(온보딩 투어)
-  // =======================
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
-
-  // 말풍선이 "가리킬" 대상들 (ref = 여기! 라고 찍어주는 표지판)
   const refCalendarBtn = useRef(null);
   const refInput = useRef(null);
   const refAddBtn = useRef(null);
@@ -1415,16 +1317,14 @@ const deleteSelectedTodos = async () => {
   const closeTour = () => {
     setTourOpen(false);
 
-    // "봤다" 표시 저장 (다음부터 자동 오픈 안 하게)
     try {
       const uid = me?.id ?? "anon";
       localStorage.setItem(`planner_tour_seen_v1:${uid}`, "1");
     } catch {
-      // localStorage 실패해도 앱은 계속 동작해야 함
+      // 
     }
   };
 
-  // 말풍선 단계들(무슨 말을 할지)
   const tourSteps = useMemo(
     () => [
       {
@@ -1491,7 +1391,6 @@ const deleteSelectedTodos = async () => {
     []
   );
 
-  // 오늘 알람 예약(사용자가 플래너를 열었을 때 그날 한 번 예약)
   useEffect(() => {
     if (!me?.id) return;         
     if (loading) return;        
@@ -1530,7 +1429,7 @@ const deleteSelectedTodos = async () => {
     };
   }, [me?.id, loading]);
 
-  // 첫 방문이면 자동으로 투어 시작
+  // 첫 방문 투어 시작
   useEffect(() => {
     if (loading) return;
 
@@ -1666,7 +1565,6 @@ const deleteSelectedTodos = async () => {
     if (remainingSec > 0) timerEndedRef.current = false;
   }, [remainingSec, timerSoundOn]);
 
-  // 하가다
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
@@ -1791,16 +1689,10 @@ const deleteSelectedTodos = async () => {
     run();
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
-  // =======================
-  // 아이콘/닉네임
-  // =======================
   const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
 
-  // =======================
-  // 로그아웃
-  // =======================
   const handleLogout = async () => {
     await supabase.auth.signOut({ scope: "local" });
     try {
@@ -1812,9 +1704,6 @@ const deleteSelectedTodos = async () => {
     navigate("/login");
   };
 
-  // =======================
-  // 달력 모달 열기/닫기
-  // =======================
   const openCalendar = () => {
     const d = selectedDate;
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
@@ -1823,9 +1712,7 @@ const deleteSelectedTodos = async () => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
-  // =======================
   // 푸터
-  // =======================
   const openGrapeSeed = () => {
     const ua = navigator.userAgent.toLowerCase();
     const studentWeb = "https://students.grapeseed.com"; // 공식 학생 웹(일반적으로 이쪽이 기본)
@@ -1845,9 +1732,7 @@ const deleteSelectedTodos = async () => {
     }, 1500);
   };
 
-  // =======================
   // 렌더
-  // =======================
   return (
     <div className="planner notranslate">
       <header className="top-header">
@@ -1862,7 +1747,6 @@ const deleteSelectedTodos = async () => {
 
         {/* 관리자버튼 */}
           <div className="top-right">
-            {/* 관리자만 보이는 버튼 */}
             {(me?.email === "kara@kara.com" || profile?.is_admin === true) && (
               <button
                 type="button"
@@ -1890,7 +1774,6 @@ const deleteSelectedTodos = async () => {
             <img src={kidIconSrc} alt={kidAlt} />
             {kidName}
 
-            {/* 닉네임 옆 레벨 표시 */}
             <span className="level-badge" title="내 레벨(도장 기반)">
               Lev.{myLevelInfo.level}
             </span>
@@ -1928,7 +1811,6 @@ const deleteSelectedTodos = async () => {
         </div>
       </header>
 
-      {/* 버튼 */}
       <div className="todo-bar todo-bar-grid">
         <div className="todo-bar-actions">
           <button
@@ -1969,7 +1851,6 @@ const deleteSelectedTodos = async () => {
         </div>
       </div>
 
-      {/* 필터 + 정렬 */}
       <div className="filter-bar filter-bar-split">
         <div className="filter-group-left">
           {reorderMode ? (
@@ -2012,7 +1893,6 @@ const deleteSelectedTodos = async () => {
         
       </div>
 
-      {/* 리스트 영역: ul은 하나만 쓰기 */}
       <div ref={refTodoList}>
         {(filteredTodos ?? []).length === 0 ? (
           <div className="empty-todo">오늘 일정이 없습니다.</div>
@@ -2038,7 +1918,6 @@ const deleteSelectedTodos = async () => {
           </ul>
         )}
 
-        {/* 아래 한 줄: 왼쪽 삭제 / 오른쪽 순서변경 */}
         <div className="todo-bottom-row">
           {/* ===== 왼쪽: 삭제 영역 ===== */}
           <div className="todo-bottom-left">

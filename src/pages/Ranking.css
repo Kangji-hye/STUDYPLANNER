@@ -316,7 +316,6 @@
   opacity: 0.95;
 }
 
-/* ✅ “작은 회색 아이콘 느낌”을 점으로 살짝만 */
 .ranking-grade::before{
   content: "●";
   font-size: 0.55rem;

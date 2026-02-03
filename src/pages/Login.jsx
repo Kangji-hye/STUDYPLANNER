@@ -6,13 +6,6 @@ import "./Login.css";
 
 const REMEMBER_EMAIL_KEY = "remember_email_v1";
 
-/**
- * Supabase/Auth 에러 메시지를 사용자 친화적인 한글로 변환
- * - Supabase는 상황에 따라 message가 조금씩 달라질 수 있어서
- *   "포함 여부"로 매칭하는 방식이 안전합니다.
- * - 너무 기술적인 메시지는 사용자에게 그대로 보여주지 않는 게 좋아서
- *   매칭이 안 되면 일반 문구로 안내합니다.
- */
 function toKoreanAuthError(err) {
   const raw = String(err?.message ?? "").trim();
   const msg = raw.toLowerCase();
@@ -45,12 +38,10 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // ✅ 아이디 저장 기본값: ON
   const [rememberEmail, setRememberEmail] = useState(true);
 
   const [loading, setLoading] = useState(false);
 
-  // 구글 로그인
   const getRedirectTo = () => {
     const base = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
     return `${base}/planner`;
@@ -71,12 +62,10 @@ const Login = () => {
     }
   };
 
-  // 카카오 로그인
   const getBaseUrl = () => {
     return import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
   };
 
-  // OAuth는 콜백 라우트로 보내는 걸 추천
   const getOAuthRedirectTo = () => {
     const base = getBaseUrl();
     return `${base}/auth/callback?next=/planner`;
@@ -130,7 +119,6 @@ const Login = () => {
 
     const safeEmail = email.trim();
 
-    // ✅ 아이디 저장 체크돼 있으면 저장, 아니면 삭제
     try {
       if (rememberEmail) localStorage.setItem(REMEMBER_EMAIL_KEY, safeEmail);
       else localStorage.removeItem(REMEMBER_EMAIL_KEY);

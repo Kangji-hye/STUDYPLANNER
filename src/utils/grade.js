@@ -13,8 +13,8 @@ export function calcGradeCodeFromBirthdate(birthdateStr) {
 
   const code = currentYear - y - 6;
 
-  if (code < -1) return null; // 너무 어림(예: 2022년생)
-  if (code > 6) return null;  // 너무 많음(예: 1988년생)
+  if (code < -1) return null; 
+  if (code > 6) return null;  
 
   return code;
 }

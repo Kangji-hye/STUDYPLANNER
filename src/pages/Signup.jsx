@@ -15,7 +15,7 @@ const Signup = () => {
   const [birthD, setBirthD] = useState(""); 
   const [nickname, setNickname] = useState("");
   const [isMale, setIsMale] = useState(true);
-  const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿀 거예요
+  // const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿀 거예요
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -85,12 +85,12 @@ const Signup = () => {
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
 
-    const safeGradeCode = Number(gradeCode);
-    if (!Number.isFinite(safeGradeCode)) {
-      alert("학년을 선택해 주세요.");
-      setLoading(false);
-      return;
-    }
+    // const safeGradeCode = Number(gradeCode);
+    // if (!Number.isFinite(safeGradeCode)) {
+    //   alert("학년을 선택해 주세요.");
+    //   setLoading(false);
+    //   return;
+    // }
 
 
     // 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
@@ -120,7 +120,7 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
-            grade_code: safeGradeCode, 
+            // grade_code: safeGradeCode, 
             grade_manual: true,        
           },
         },
@@ -144,7 +144,7 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate, 
             is_male: isMale,
-            grade_code: safeGradeCode,
+            // grade_code: safeGradeCode,
             grade_manual: true,       
           },
           { onConflict: "id" }
@@ -301,7 +301,7 @@ const Signup = () => {
           {loading ? "가입 중..." : "가입하기"}
         </button>
 
-        <div className="grade-wrap">
+        {/* <div className="grade-wrap">
           <select
             value={gradeCode}
             onChange={(e) => setGradeCode(e.target.value)}
@@ -315,7 +315,7 @@ const Signup = () => {
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
 
       </form>
 

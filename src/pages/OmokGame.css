@@ -180,7 +180,6 @@
     0 2px 6px rgba(0,0,0,0.20);
 }
 
-/* ✅ 흰돌: 테두리도 흰색(검정 테두리 제거) */
 .stone.white{
   background:#ffffff;
   border:2px solid #ffffff;
@@ -212,7 +211,6 @@
   flex-wrap:wrap;
 }
 
-/* 모바일 조금 더 촘촘하게 */
 @media (max-width:420px){
   .omok-cell{ width:26px; height:26px; }
   .stone{ width:16px; height:16px; }

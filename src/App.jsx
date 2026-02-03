@@ -40,20 +40,15 @@ function BootSplashKiller() {
   return null;
 }
 
-
-// 라우트가 바뀔 때마다 화면 맨 위로 올려주는 컴포넌트
 function ScrollToTopOnRouteChange() {
   const location = useLocation();
 
   useEffect(() => {
-    // 1) 일반 브라우저용
     window.scrollTo(0, 0);
 
-    // 2) iOS/PWA에서 가끔 window만으로 안 먹을 때 대비
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
 
-    // 3) 혹시 #root가 스크롤 컨테이너처럼 동작하는 경우까지 대비
     const root = document.getElementById("root");
     if (root) root.scrollTop = 0;
   }, [location.pathname]);
@@ -72,7 +67,6 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            {/* 비번 재설정 */}
             <Route path="/find" element={<Find />} />
             <Route path="/reset" element={<ResetPassword />} />
           </Route>

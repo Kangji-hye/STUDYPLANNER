@@ -10,10 +10,8 @@ import { useAppSounds } from "../hooks/useAppSounds";
 
 const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
 
-/* 모두 완료 기본 효과음 */
 const DEFAULT_FINISH_SOUND = "/finish1.mp3";
 
-// 음악 리스트(옵션)
 const FINISH_SOUNDS = [
   { label: "🎺웅장한 빵빠레", value: "/finish1.mp3" },
   { label: "👏환호성과 박수", value: "/finish2.mp3" },
@@ -26,15 +24,12 @@ const FINISH_SOUNDS = [
   { label: "🏆웅장한 축하", value: "/finish9.mp3" },
 ];
 
-// value로 label 찾기(현재 선택 표시용)
 function getSoundLabelByValue(value) {
   const v = String(value || "").trim();
   const found = FINISH_SOUNDS.find((s) => s.value === v);
   return found?.label ?? "요란한 축하";
 }
 
-// 생년월일로 학년 코드 자동 계산
-// -1: 6세, 0: 7세, 1~6: 1~6학년
 function calcGradeCodeFromBirthdate(birthdateStr) {
   const s = String(birthdateStr ?? "").trim();
   if (!s) return null;
@@ -45,30 +40,10 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
   const currentYear = new Date().getFullYear();
   const code = currentYear - y - 6;
 
-  // 자동 범위
   if (code >= -1 && code <= 6) return code;
 
-  // 범위 밖은 "기타"
   return GRADE_OTHER; // 99
 }
-
-// 알림 토글 저장 키 (유저별로 저장)
-// const alarmKeyOf = (userId) => `planner_alarm_enabled_v1:${userId ?? "anon"}`;
-
-// 알림 권한 요청: "허용(true) / 거절(false)"로 결과를 돌려줌
-// const requestAlarmPermission = async () => {
-//   if (!("Notification" in window)) {
-//     alert("이 기기는 웹 알림을 지원하지 않아요.");
-//     return false;
-//   }
-
-//   // 이미 허용된 경우는 바로 true
-//   if (Notification.permission === "granted") return true;
-
-//   const p = await Notification.requestPermission();
-//   return p === "granted";
-// };
-
 
 const MyPage = () => {
   const navigate = useNavigate();
@@ -78,16 +53,11 @@ const MyPage = () => {
   const [userEmail, setUserEmail] = useState("");
   const [profile, setProfile] = useState(null);
 
-  // const previewAudioRef = useRef(null);
-
-  // 내 도장(참 잘했어요) 총 개수 (훅은 컴포넌트 안!)
   const [stampCount, setStampCount] = useState(0);
 
-  // 레벨 계산도 컴포넌트 안에서 useMemo로!
   const levelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
   const levelRatio = useMemo(() => levelToRatio(levelInfo.level), [levelInfo.level]);
 
-  // 실제로 저장/적용되는 값
   const [form, setForm] = useState({
     nickname: "",
     birthdate: "",
@@ -97,15 +67,10 @@ const MyPage = () => {
     grade_manual: false,       
   });
 
-  // 효과음 셀렉트 UI 전용 상태
   const [soundPickerValue, setSoundPickerValue] = useState("");
-  // 알림 토글 상태 (UI에서 켜짐/꺼짐이 바로 보이게)
   const [alarmEnabled, setAlarmEnabled] = useState(false);
   const [alarmPermission, setAlarmPermission] = useState("default"); // "default" | "granted" | "denied"
 
-  // =========================
-  // 프로필 로딩
-  // =========================
   const loadMyProfile = async () => {
     setLoading(true);
 
@@ -119,7 +84,6 @@ const MyPage = () => {
 
     const user = userData.user;
 
-    // 알림 토글: 로컬 저장값 + 현재 권한 상태로 초기화
     try {
       const saved = localStorage.getItem(`planner_alarm_enabled_v1:${user.id}`);
       setAlarmEnabled(saved === "1");
@@ -133,7 +97,6 @@ const MyPage = () => {
       setAlarmPermission("default");
     }
 
-    // 내 도장 개수 불러오기 (여기서는 setState만 하고, 훅(useMemo)은 절대 쓰지 않기)
     try {
       const { count, error } = await supabase
         .from("hall_of_fame")
@@ -154,7 +117,6 @@ const MyPage = () => {
       .eq("id", user.id)
       .single();
 
-    // 프로필이 없거나 오류면 기본값
     const baseProfile = profileError
       ? {
           id: user.id,
@@ -173,7 +135,6 @@ const MyPage = () => {
           grade_manual: Boolean(profileData?.grade_manual),
         };
 
-    // 자동 학년 계산(단, 수동이면 존중)
     const autoCode = calcGradeCodeFromBirthdate(baseProfile.birthdate);
     const finalGradeCode = baseProfile.grade_manual ? baseProfile.grade_code : autoCode;
 
@@ -194,7 +155,6 @@ const MyPage = () => {
       grade_manual: Boolean(nextProfile.grade_manual),
     });
 
-    // 효과음 셀렉트는 플레이스홀더부터
     setSoundPickerValue("");
 
     setLoading(false);
@@ -205,7 +165,6 @@ const MyPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 생년월일이 바뀌면 자동 학년 업데이트 (수동 모드면 건드리지 않음)
   useEffect(() => {
     if (loading) return;
 
@@ -227,7 +186,6 @@ const MyPage = () => {
   }
 };
 
-  // "켜짐" 선택 시에만 권한 요청
   const turnAlarmOn = async () => {
     if (!("Notification" in window)) {
       alert("이 기기는 웹 알림을 지원하지 않아요.");
@@ -235,7 +193,6 @@ const MyPage = () => {
       return;
     }
 
-    // 이미 허용이면 그대로 ON
     if (Notification.permission === "granted") {
       setAlarmEnabled(true);
       persistAlarmEnabled(profile?.id, true);
@@ -263,50 +220,7 @@ const MyPage = () => {
     if (profile?.id) persistAlarmEnabled(profile.id, false);
   };
 
-
-
-//   // 알림을 켜기/끄기 (켜기=권한 요청 포함)
-//   const setAlarmOnOff = async (nextOn) => {
-//   const { data } = await supabase.auth.getUser();
-//   const user = data?.user;
-//   const userId = user?.id;
-
-//   // 유저 id가 없으면(로그인 풀림 등) UI만 바꾸지 않음
-//   if (!userId) return;
-
-//   if (!nextOn) {
-//     // ✅ 끄기: 그냥 저장하고 끝
-//     setAlarmEnabled(false);
-//     persistAlarmEnabled(userId, false);
-//     return;
-//   }
-
-//   // ✅ 켜기: 권한 요청
-//   const ok = await requestAlarmPermission();
-
-//   // 현재 권한 상태 저장
-//   try {
-//     if ("Notification" in window) setAlarmPermission(Notification.permission);
-//   } catch {
-//     //
-//   }
-
-//   if (ok) {
-//     setAlarmEnabled(true);
-//     persistAlarmEnabled(userId, true);
-//     alert("알림이 켜졌어요! (허용됨)");
-//   } else {
-//     // 허용이 안 되면 켜짐으로 둘 수 없으니 다시 OFF
-//     setAlarmEnabled(false);
-//     persistAlarmEnabled(userId, false);
-//     alert("알림이 차단되어 있어요. 브라우저/기기 설정에서 알림을 허용해 주세요.");
-//   }
-// };
-
-
-  // =========================
   // 로그아웃
-  // =========================
   const logout = async () => {
     const ok = window.confirm("로그아웃 하시겠습니까?");
     if (!ok) return;
@@ -325,29 +239,6 @@ const MyPage = () => {
 
     navigate("/login");
   };
-
-  // =========================
-  // 효과음 미리듣기
-  // =========================
-  // const previewSound = async () => {
-  //   try {
-  //     const src = form.finish_sound || DEFAULT_FINISH_SOUND;
-
-  //     if (!previewAudioRef.current) {
-  //       previewAudioRef.current = new Audio(src);
-  //     } else {
-  //       previewAudioRef.current.pause();
-  //       previewAudioRef.current.currentTime = 0;
-  //       previewAudioRef.current.src = src;
-  //     }
-
-  //     previewAudioRef.current.volume = 0.9;
-  //     await previewAudioRef.current.play();
-  //   } catch (err) {
-  //     console.warn("미리듣기 재생 실패", err);
-  //     alert("효과음을 선택한 뒤 ▶ 미리듣기 버튼을 다시 눌러주세요.");
-  //   }
-  // };
   
   const { previewAllDone } = useAppSounds({
     allDoneDefaultSrc: DEFAULT_FINISH_SOUND,
@@ -364,10 +255,7 @@ const MyPage = () => {
     }
   };
 
-
-  // =========================
   // 저장
-  // =========================
   const onSave = async () => {
     if (!profile?.id) return;
 
@@ -438,9 +326,7 @@ const MyPage = () => {
     alert("저장되었습니다.");
   };
 
-  // =========================
   // 비밀번호 변경
-  // =========================
   const changePassword = async () => {
     const newPassword = prompt("새 비밀번호를 입력해 주세요 (8자 이상)");
     if (!newPassword) return;
@@ -485,7 +371,6 @@ const MyPage = () => {
     <div className="mypage">
       <header className="top-header">
         <div className="top-row">
-          {/* 왼쪽: 타이틀(다른 페이지랑 완전 동일한 톤) */}
           <h1
             className="app-title app-title-link"
             onClick={() => navigate("/planner")}
@@ -494,7 +379,6 @@ const MyPage = () => {
             마이페이지
           </h1>
 
-          {/* 오른쪽: 햄버거 메뉴(모든 페이지 공통 위치) */}
           <div className="header-right">
             <HamburgerMenu />
           </div>
@@ -535,7 +419,6 @@ const MyPage = () => {
           달력에 "참 잘했어요!" 도장이 현재 {stampCount}개, 다음 레벨까지 {levelInfo.stampsToNext}개 남았어요
         </div>
 
-        {/* 랭킹 페이지로 이동 */}
         <button
           type="button"
           className="ranking-btn"
@@ -585,7 +468,6 @@ const MyPage = () => {
                 setForm((p) => ({
                   ...p,
                   birthdate: e.target.value,
-                  // 생년월일 바꾸면 자동 모드로 돌아오게
                   grade_manual: false,
                 }))
               }
@@ -621,15 +503,12 @@ const MyPage = () => {
               <option value={5}>5학년</option>
               <option value={6}>6학년</option>
 
-              {/* ✅ 기타(99) */}
               <option value={GRADE_OTHER}>기타</option>
             </select>
 
           </span>
         </div>
 
-
-        {/* 성별 */}
         <div className="row gender">
           <span className="label">성별</span>
           <span className="value gender">
@@ -689,8 +568,6 @@ const MyPage = () => {
             )}
           </span>
         </div>
-
-
 
         {/* 완료 음악 선택 */}
         <div className="row">
