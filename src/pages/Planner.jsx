@@ -2131,8 +2131,16 @@ const deleteSelectedTodos = async () => {
               </button>
 
               {weekHwImgOpen && (
-                <div className="weekly-hw-overlay" role="dialog" aria-modal="true">
-                  <div className="weekly-hw-card"  onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="weekly-hw-overlay"
+                  role="dialog"
+                  aria-modal="true"
+                  onClick={() => setWeekHwImgOpen(false)} 
+                >
+                  <div
+                    className="weekly-hw-card"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="weekly-hw-image-wrap">
                       <img
                         src={weekHwImgUrl}
@@ -2140,12 +2148,18 @@ const deleteSelectedTodos = async () => {
                         className="weekly-hw-image"
                       />
                     </div>
-                    <button type="button">
+
+                    <button
+                      type="button"
+                      onClick={() => setWeekHwImgOpen(false)} 
+                      className="weekly-hw-close"
+                    >
                       닫기
                     </button>
                   </div>
                 </div>
               )}
+
             </>
           )}
 

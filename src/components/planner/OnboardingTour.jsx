@@ -160,7 +160,7 @@ const layer = (
         </div>
 
         <div className="tour-actions">
-          {stepIndex > 0 && (
+          {isFirst  > 0 && (
             <button
               type="button"
               className="tour-btn tour-btn-ghost"
@@ -170,7 +170,7 @@ const layer = (
             </button>
           )}
 
-          {stepIndex < (steps?.length ?? 1) - 1 ? (
+          {isLast  < (steps?.length ?? 1) - 1 ? (
             <button
               type="button"
               className="tour-btn tour-btn-primary"
