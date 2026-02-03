@@ -306,8 +306,7 @@ export default function GugudanGame() {
       </div>
 
       <div className="gugu-tip">
-        너무 쉽거나 어렵다면 “단 범위”를 좁히거나 넓혀보세요.
-        아이가 지치면 문제 수를 5개로 줄이는 게 제일 잘 먹힙니다 🙂
+         어렵게 느껴진다면 문제 수를 5개로 줄이는 게 좋아요 🙂
       </div>
     </div>
   );
