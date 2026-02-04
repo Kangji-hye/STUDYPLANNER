@@ -139,7 +139,7 @@ export default function HamburgerMenu() {
 
           <button
             className="hamburger-item" type="button" onClick={() => navigate("/wordchain")}>
-            🎲 한글끝말잇기
+            🎯 한글끝말잇기
           </button>
 
           <button className="hamburger-item" type="button" onClick={() => navigate("/english-word-game")}>
