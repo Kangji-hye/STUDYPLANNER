@@ -589,3 +589,79 @@
   z-index: 1000;         
 }
 
+.admin-date-line{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;     
+  min-width: 0;        
+}
+
+.admin-date-input{
+  flex: 0 0 auto;     
+  min-width: 150px;   
+  max-width: 100%;
+}
+
+.admin-weekday{
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-month-nav{
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px){
+
+  .admin-row-between{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .admin-date-line{
+    gap: 8px;
+  }
+
+  .admin-date-input{
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-month-nav{
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .admin-month-title{
+    font-size: 0.95rem;
+  }
+  .admin-inline-cal{
+    padding: 10px;
+  }
+
+  .admin-inline-cal-head,
+  .admin-inline-cal-grid{
+    gap: 5px;
+  }
+
+  .admin-inline-cal-cell{
+    aspect-ratio: 1 / 1;
+    font-size: 0.95rem;
+    padding: 0;          
+  }
+}
+
+@media (max-width: 360px){
+  .admin-month-title{ font-size: 0.9rem; }
+  .admin-inline-cal-w{ font-size: 0.9rem; }
+  .admin-inline-cal-cell{ font-size: 0.9rem; }
+}
+@media (max-width: 800px){
+  .admin-row input[type="date"]{
+    display: none;
+  }
+}

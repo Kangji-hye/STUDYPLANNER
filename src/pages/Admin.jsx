@@ -793,15 +793,19 @@ export default function Admin() {
       {/* 날짜/요일 + 항상 떠있는 달력 카드 */}
       <div className="admin-card">
         <div className="admin-row admin-row-between">
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span className="admin-label">날짜</span>
+          <div className="admin-date-line">
+            {/* <span className="admin-label">날짜</span> */}
 
-            <input type="date" value={dayKey} onChange={(e) => setDayKey(e.target.value)} aria-label="날짜 선택" />
+            <input
+              className="admin-date-input"
+              type="date"
+              value={dayKey}
+              onChange={(e) => setDayKey(e.target.value)}
+              aria-label="날짜 선택"
+            />
 
             <span className="admin-weekday">
-              {`${selectedDateObj.getMonth() + 1}월 ${selectedDateObj.getDate()}일 (${getKoreanWeekday(
-                selectedDateObj
-              )})`}
+              {`${selectedDateObj.getMonth() + 1}월 ${selectedDateObj.getDate()}일 (${getKoreanWeekday(selectedDateObj)})`}
             </span>
           </div>
 
