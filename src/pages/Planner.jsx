@@ -2108,9 +2108,7 @@ const deleteSelectedTodos = async () => {
 
           <div className="homework-text">
             {homeworkItems.length === 0 ? (
-              <div className="homework-line" style={{ opacity: 0.7 }}>
-                오늘 글 숙제는 아직 없어요 🙂
-              </div>
+              <div className="homework-line" style={{ opacity: 0.7 }}></div>
             ) : (
               homeworkItems.map((it, idx) => (
                 <div key={`${selectedDayKey}-hw-${idx}`} className="homework-line">
@@ -2127,7 +2125,7 @@ const deleteSelectedTodos = async () => {
                 className="weekly-hw-btn"
                 onClick={() => setWeekHwImgOpen(true)}
               >
-                일주일 숙제 이미지로보기
+                🖼️ 일주일 숙제 이미지로보기 
               </button>
 
               {weekHwImgOpen && (

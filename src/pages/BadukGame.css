@@ -227,5 +227,6 @@
   .baduk-cell{ border-radius:7px; }
 }
 
-
-.baduk-pass{display: none;}
+.baduk-pass{
+  display: none;
+}
