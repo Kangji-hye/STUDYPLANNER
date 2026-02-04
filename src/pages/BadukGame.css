@@ -226,3 +226,6 @@
 @media (max-width:420px){
   .baduk-cell{ border-radius:7px; }
 }
+
+
+.baduk-pass{display: none;}
