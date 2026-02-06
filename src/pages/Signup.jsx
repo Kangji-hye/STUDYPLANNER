@@ -38,6 +38,18 @@ const Signup = () => {
     setBirthD("");
   }, [birthM, birthY]);
 
+  useEffect(() => {
+  const canPickDay = birthY.length === 4 && birthM.length === 2;
+  if (!canPickDay) return;
+
+  // iOS에서 select 포커스는 타이밍이 민감해서 한 박자 늦춰주는 게 안전함
+  const t = setTimeout(() => {
+    refBirthD.current?.focus();
+  }, 50);
+
+  return () => clearTimeout(t);
+}, [birthY, birthM]);
+
   const monthOptions = Array.from({ length: 12 }, (_, i) =>
     String(i + 1).padStart(2, "0")
   );
@@ -239,8 +251,7 @@ const Signup = () => {
             ref={refBirthM}
             value={birthM}
             onChange={(e) => {
-              setBirthM(e.target.value);
-              refBirthD.current?.focus(); // 월 고르면 일로
+               setBirthM(e.target.value);
             }}
             required
           >
