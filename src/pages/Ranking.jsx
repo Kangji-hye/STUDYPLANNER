@@ -25,76 +25,84 @@ export default function Ranking() {
     return null;
   };
 
-  useEffect(() => {
-    const run = async () => {
-      setLoading(true);
+useEffect(() => {
+  const run = async () => {
+    setLoading(true);
 
-      try {
-        const { data, error } = await supabase.rpc("get_stamp_ranking", { limit_n: 11 });
-        if (error) throw error;
+    try {
+      const { data, error } = await supabase.rpc("get_stamp_ranking", { limit_n: 30 });
+      if (error) throw error;
 
-        const list = (data ?? [])
-          .map((r) => {
-            const stampCount = Number(r.stamp_count ?? 0);
-            const lv = calcLevelFromStamps(stampCount).level;
+      const list = (data ?? [])
+        .map((r) => {
+          const stampCount = Number(r.stamp_count ?? 0);
+          const lv = calcLevelFromStamps(stampCount).level;
 
-            const nickname = String(r.nickname ?? "").trim();
+          const nickname = String(r.nickname ?? "").trim();
 
-            return {
-              user_id: r.user_id,
-              nickname,
-              stamp_count: stampCount,
-              level: lv,
-            };
-          })
-          .filter((row) => {
-            const n = String(row.nickname ?? "").trim();
-            const compact = n.replace(/\s+/g, "");
+          return {
+            user_id: r.user_id,
+            nickname,
+            stamp_count: stampCount,
+            level: lv,
+          };
+        })
+        .filter((row) => {
+          const n = String(row.nickname ?? "").trim();
+          const compact = n.replace(/\s+/g, "");
 
-            if (!n) return false;
-            if (compact === "익명") return false;
-            if (compact.startsWith("익명")) return false;
-            if (compact === "닉네임") return false;
+          if (!n) return false;
+          if (compact === "익명") return false;
+          if (compact.startsWith("익명")) return false;
+          if (compact === "닉네임") return false;
 
-            return true;
-          });
-
-        const ids = list.map((x) => x.user_id).filter(Boolean);
-
-        const gradeMap = {}; 
-        if (ids.length > 0) {
-          const { data: profs, error: profErr } = await supabase
-            .from("profiles")
-            .select("id, grade_code")
-            .in("id", ids);
-
-          if (!profErr && Array.isArray(profs)) {
-            profs.forEach((p) => {
-              gradeMap[p.id] = p.grade_code;
-            });
-          }
-        }
-        const merged = list.map((it) => ({
-          ...it,
-          grade_code: gradeMap[it.user_id],
-        }));
-
-        merged.sort((a, b) => {
-          if (b.level !== a.level) return b.level - a.level;
-          return b.stamp_count - a.stamp_count;
+          return true;
         });
 
-        setRows(merged);
-      } catch (e) {
-        console.error("ranking load error:", e);
-        setRows([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const ids = list.map((x) => x.user_id).filter(Boolean);
 
-    run();
-  }, []);
+      const gradeMap = {};
+      const adminMap = {}; 
+
+      if (ids.length > 0) {
+        const { data: profs, error: profErr } = await supabase
+          .from("profiles")
+          .select("id, grade_code, is_admin")
+          .in("id", ids);
+
+        if (profErr) throw profErr;
+
+        (profs ?? []).forEach((p) => {
+          gradeMap[p.id] = p.grade_code;
+          adminMap[p.id] = Boolean(p.is_admin);
+        });
+      }
+
+      const merged = list
+        .map((it) => ({
+          ...it,
+          grade_code: gradeMap[it.user_id],
+          is_admin: adminMap[it.user_id] ?? false,
+        }))
+        .filter((it) => !it.is_admin); 
+
+        merged.sort((a, b) => {
+        if (b.level !== a.level) return b.level - a.level;
+        return b.stamp_count - a.stamp_count;
+      });
+
+      setRows(merged.slice(0, 10));
+    } catch (e) {
+      console.error("ranking load error:", e);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  run();
+}, []);
+
 
   return (
     <div className="ranking-page">
