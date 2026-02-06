@@ -3,45 +3,31 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./BadukGame.css";
-
-/*
-  초등용 "간단 바둑" 규칙
-  - 하/중: 9x9, 상: 13x13
-  - 흑(나) vs 백(AI)
-  - 놓은 뒤 상대 돌(그룹)의 자유도(숨구멍)가 0이면 잡아서 제거
-  - 자살수(내 그룹 자유도 0) 금지(단, 상대를 잡아서 살아나면 허용)
-  - 게임 종료: 판이 꽉 차거나, 연속 2번 패스하면 종료
-  - 승부: 잡은 돌 수가 더 많은 쪽 승리
-  - 집 계산/패 규칙은 생략
-*/
+import supabase from "../supabaseClient";
 
 export default function BadukGame() {
   const navigate = useNavigate();
 
-  // 오목과 동일한 난이도 값 이름 사용
-  const [level, setLevel] = useState("easy"); // easy | normal | hard
+  const [level, setLevel] = useState("easy");
 
-  // 상(hard)만 13x13으로 확장
   const boardSize = level === "hard" ? 13 : 9;
 
   const [board, setBoard] = useState(() => makeEmptyBoard(boardSize));
-  const [turn, setTurn] = useState("P"); // P: player(흑) / AI: 컴퓨터(백)
-  const [winner, setWinner] = useState(null); // "P" | "AI" | "DRAW"
+  const [turn, setTurn] = useState("P");
+  const [winner, setWinner] = useState(null);
   const [msg, setMsg] = useState("흑돌(나)부터 시작");
 
   const [lastMove, setLastMove] = useState(null);
 
-  // 잡은 돌 개수(점수)
-  const [capB, setCapB] = useState(0); // 내가 잡은 백돌 수
-  const [capW, setCapW] = useState(0); // 컴퓨터가 잡은 흑돌 수
+  const [capB, setCapB] = useState(0);
+  const [capW, setCapW] = useState(0);
 
-  // 연속 패스 횟수(2면 종료)
   const [passStreak, setPassStreak] = useState(0);
 
-  // 화면 표시용 돌 개수
   const stonesCount = useMemo(() => countStones(board), [board]);
 
-  // 판이 커지거나 작아지면(난이도 변경으로) 자동으로 리셋
+  const [saveMsg, setSaveMsg] = useState("");
+
   useEffect(() => {
     resetToFreshBoard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -56,13 +42,13 @@ export default function BadukGame() {
     setCapB(0);
     setCapW(0);
     setPassStreak(0);
+    setSaveMsg("");
   };
 
   const reset = () => {
     resetToFreshBoard();
   };
 
-  // 내(흑) 패스
   const passTurn = () => {
     if (winner) return;
     if (turn !== "P") return;
@@ -79,7 +65,6 @@ export default function BadukGame() {
     setMsg("컴퓨터 차례");
   };
 
-  // AI 차례 자동 진행
   useEffect(() => {
     if (winner) return;
     if (turn !== "AI") return;
@@ -87,7 +72,6 @@ export default function BadukGame() {
     const t = setTimeout(() => {
       const move = pickAiMove(board, level, boardSize);
 
-      // 둘 수가 없으면(합법 수 0) 종료 처리
       if (!move) {
         finishByCaptureScore(capB, capW);
         return;
@@ -95,7 +79,6 @@ export default function BadukGame() {
 
       const placed = tryPlaceAndCapture(board, move.r, move.c, "W");
       if (!placed.ok) {
-        // 아주 드물게 합법성이 깨지면 패스로 처리
         const nextStreak = passStreak + 1;
         setPassStreak(nextStreak);
 
@@ -114,15 +97,10 @@ export default function BadukGame() {
 
       if (placed.captured > 0) setCapW((v) => v + placed.captured);
 
-      // AI가 두면 패스 연속 끊김
       setPassStreak(0);
 
-      // 판이 꽉 찼으면 종료
       if (isFull(placed.board)) {
-        finishByCaptureScore(
-          capB,
-          capW + (placed.captured > 0 ? placed.captured : 0)
-        );
+        finishByCaptureScore(capB, capW + (placed.captured > 0 ? placed.captured : 0));
         return;
       }
 
@@ -133,7 +111,6 @@ export default function BadukGame() {
     return () => clearTimeout(t);
   }, [turn, winner, board, level, boardSize, capB, capW, passStreak]);
 
-  // 내가 클릭했을 때
   const onClickCell = (r, c) => {
     if (winner) return;
     if (turn !== "P") return;
@@ -150,15 +127,10 @@ export default function BadukGame() {
 
     if (placed.captured > 0) setCapB((v) => v + placed.captured);
 
-    // 내가 두면 패스 연속 끊김
     setPassStreak(0);
 
-    // 판이 꽉 찼으면 종료
     if (isFull(placed.board)) {
-      finishByCaptureScore(
-        capB + (placed.captured > 0 ? placed.captured : 0),
-        capW
-      );
+      finishByCaptureScore(capB + (placed.captured > 0 ? placed.captured : 0), capW);
       return;
     }
 
@@ -166,7 +138,6 @@ export default function BadukGame() {
     setMsg("컴퓨터 차례");
   };
 
-  // 잡은 돌 점수로 승부 결정
   const finishByCaptureScore = (b, w) => {
     if (b === w) {
       setWinner("DRAW");
@@ -182,19 +153,69 @@ export default function BadukGame() {
     setMsg("컴퓨터가 이겼어요");
   };
 
-  // 보드 크기에 따라 칸 크기 자동 조절(13x13일 때 너무 커지지 않게)
+  const calcBadukScore = () => {
+    const diff = capB - capW;
+    const base = Math.max(0, diff) * 10;
+    const bonus = winner === "P" ? 50 : winner === "DRAW" ? 25 : 0;
+    return base + bonus;
+  };
+
+  const saveRanking = async () => {
+    setSaveMsg("");
+
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr) throw authErr;
+
+      const me = authData?.user;
+      if (!me?.id) {
+        setSaveMsg("로그인이 필요해요.");
+        return;
+      }
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("nickname, is_admin")
+        .eq("id", me.id)
+        .maybeSingle();
+
+      if (Boolean(prof?.is_admin)) {
+        setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
+        return;
+      }
+
+      const nickname = String(prof?.nickname ?? "").trim() || "익명";
+      const score = calcBadukScore();
+
+      const { error } = await supabase.from("game_scores").insert([
+        {
+          user_id: me.id,
+          nickname,
+          game_key: "baduk",
+          level: String(level),
+          score,
+        },
+      ]);
+
+      if (error) throw error;
+
+      setSaveMsg("랭킹에 저장했어요.");
+    } catch (e) {
+      console.error("baduk save error:", e);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
   const cellPx = boardSize === 13 ? 24 : 30;
   const stonePx = boardSize === 13 ? 16 : 20;
+
+  const finalScore = winner ? calcBadukScore() : null;
 
   return (
     <div className="baduk-page">
       <div className="baduk-head">
-        <button
-          type="button"
-          className="baduk-back"
-          onClick={() => navigate("/planner")}
-        >
-          ← 플래너
+        <button type="button" className="baduk-back" onClick={() => navigate("/baduk-ranking")}>
+          바둑랭킹
         </button>
 
         <div className="baduk-title">⚫ 바둑</div>
@@ -226,9 +247,7 @@ export default function BadukGame() {
             </select>
 
             <div className="baduk-mini">
-              돌 {stonesCount}개 ·{" "}
-              {winner ? "게임 끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"}
-              {" · "}
+              돌 {stonesCount}개 · {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"} ·{" "}
               <span className="baduk-score">
                 내가 잡은 돌 {capB} · 컴퓨터 {capW}
               </span>
@@ -245,10 +264,7 @@ export default function BadukGame() {
         className="baduk-board"
         role="grid"
         aria-label="바둑판"
-        style={{
-            "--cell": `${cellPx}px`,
-            "--stone": `${stonePx}px`,
-            }}
+        style={{ "--cell": `${cellPx}px`, "--stone": `${stonePx}px` }}
       >
         {board.map((row, r) => (
           <div className="baduk-rowline" role="row" key={`r-${r}`}>
@@ -265,13 +281,9 @@ export default function BadukGame() {
                   aria-label={`${r + 1}행 ${c + 1}열`}
                 >
                   {cell === "B" ? (
-                    <span
-                      className={`stone black ${isLast ? "last-stone" : ""}`}
-                    />
+                    <span className={`stone black ${isLast ? "last-stone" : ""}`} />
                   ) : cell === "W" ? (
-                    <span
-                      className={`stone white ${isLast ? "last-stone" : ""}`}
-                    />
+                    <span className={`stone white ${isLast ? "last-stone" : ""}`} />
                   ) : null}
                 </button>
               );
@@ -283,15 +295,11 @@ export default function BadukGame() {
       {winner && (
         <div className="baduk-finish">
           <div className="baduk-finish-title">
-            {winner === "P"
-              ? "내가 이겼어요"
-              : winner === "AI"
-              ? "컴퓨터가 이겼어요"
-              : "비겼어요"}
+            {winner === "P" ? "내가 이겼어요" : winner === "AI" ? "컴퓨터가 이겼어요" : "비겼어요"}
           </div>
 
           <div className="baduk-finish-sub">
-            잡은 돌로 승부했어요 (내 {capB} : 컴퓨터 {capW})
+            잡은 돌 (내 {capB} : 컴퓨터 {capW}) · 점수 {finalScore}점
           </div>
 
           <div className="baduk-finish-actions">
@@ -299,26 +307,24 @@ export default function BadukGame() {
               한 판 더
             </button>
 
-            <button
-              type="button"
-              className="baduk-back"
-              onClick={() => navigate("/planner")}
-            >
-              플래너로
+            <button type="button" className="baduk-pass" onClick={saveRanking}>
+              랭킹 저장
+            </button>
+
+            <button type="button" className="baduk-back" onClick={() => navigate("/baduk-ranking")}>
+              바둑 랭킹
             </button>
           </div>
+
+          {saveMsg ? <div className="baduk-msg" style={{ marginTop: 10 }}>{saveMsg}</div> : null}
         </div>
       )}
     </div>
   );
 }
 
-/* 바둑 로직 */
-
 function makeEmptyBoard(size) {
-  return Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => null)
-  );
+  return Array.from({ length: size }, () => Array.from({ length: size }, () => null));
 }
 
 function countStones(board) {
@@ -421,8 +427,6 @@ function tryPlaceAndCapture(board, r, c, stone) {
   return { ok: true, board: next, captured };
 }
 
-/* AI */
-
 function listLegalMoves(board, stone) {
   const size = board.length;
   const out = [];
@@ -477,11 +481,7 @@ function pickAiMove(board, level, size) {
     let oppMaxCap = 0;
     for (const om of oppLegal) oppMaxCap = Math.max(oppMaxCap, om.captured);
 
-    const score =
-      myGain * 120 +
-      myLib * 2 +
-      centerWeight(m.r, m.c, size) * 0.9 -
-      oppMaxCap * 130;
+    const score = myGain * 120 + myLib * 2 + centerWeight(m.r, m.c, size) * 0.9 - oppMaxCap * 130;
 
     if (score > bestScore) {
       bestScore = score;

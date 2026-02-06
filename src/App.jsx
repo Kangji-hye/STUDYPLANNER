@@ -22,6 +22,9 @@ import BadukGame from "./pages/BadukGame";
 import EnglishWordGame from "./pages/EnglishWordGame";
 import WordChain from './pages/WordChain';
 import HanjaGame from "./pages/HanjaGame";
+import HanjaRanking from "./pages/HanjaRanking";
+import BadukRanking from "./pages/BadukRanking";
+import OmokRanking from "./pages/OmokRanking";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -114,7 +117,31 @@ const App = () => {
             <Route path="/hanja" element={<ProtectedRoute><GameGuard><HanjaGame /></GameGuard></ProtectedRoute>} />
             <Route path="/omok" element={<ProtectedRoute><GameGuard><OmokGame /></GameGuard></ProtectedRoute>} />
             <Route path="/baduk" element={<ProtectedRoute><GameGuard><BadukGame /></GameGuard></ProtectedRoute>} />
-            
+            <Route
+              path="/hanja-ranking"
+              element={
+                <ProtectedRoute>
+                  <HanjaRanking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/baduk-ranking"
+              element={
+                <ProtectedRoute>
+                  <BadukRanking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/omok-ranking"
+              element={
+                <ProtectedRoute>
+                  <OmokRanking />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/baduk-ranking" element={<BadukRanking />} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
 

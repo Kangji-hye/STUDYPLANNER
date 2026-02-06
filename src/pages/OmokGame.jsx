@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./OmokGame.css";
+import supabase from "../supabaseClient";
 
 export default function OmokGame() {
   const navigate = useNavigate();
@@ -10,15 +11,17 @@ export default function OmokGame() {
   const SIZE = 11;
   const WIN = 5;
 
-  const [level, setLevel] = useState("easy"); 
+  const [level, setLevel] = useState("easy");
   const [board, setBoard] = useState(() => makeEmptyBoard(SIZE));
-  const [turn, setTurn] = useState("P"); 
-  const [winner, setWinner] = useState(null); 
+  const [turn, setTurn] = useState("P");
+  const [winner, setWinner] = useState(null);
   const [msg, setMsg] = useState("검은돌(나)부터 시작 🙂");
 
-  const [lastMove, setLastMove] = useState(null); 
+  const [lastMove, setLastMove] = useState(null);
 
   const stonesCount = useMemo(() => countStones(board), [board]);
+
+  const [saveMsg, setSaveMsg] = useState("");
 
   const reset = () => {
     setBoard(makeEmptyBoard(SIZE));
@@ -26,6 +29,7 @@ export default function OmokGame() {
     setWinner(null);
     setMsg("검은돌(나)부터 시작 🙂");
     setLastMove(null);
+    setSaveMsg("");
   };
 
   useEffect(() => {
@@ -45,7 +49,6 @@ export default function OmokGame() {
       const win = checkWinner(next, WIN);
 
       setBoard(next);
-
       setLastMove({ r: move.r, c: move.c, stone: "W" });
 
       if (win === "W") {
@@ -76,7 +79,6 @@ export default function OmokGame() {
     const win = checkWinner(next, WIN);
 
     setBoard(next);
-
     setLastMove({ r, c, stone: "B" });
 
     if (win === "B") {
@@ -95,15 +97,72 @@ export default function OmokGame() {
     setMsg("컴퓨터 차례… 🤖");
   };
 
+  const calcOmokScore = () => {
+    if (!winner) return 0;
+
+    const myStone = countStoneOf(board, "B");
+    const fastBonus = Math.max(0, 70 - myStone) * 2;
+
+    const diff = winner === "P" ? 200 : winner === "DRAW" ? 60 : 0;
+
+    const levelBonus = level === "hard" ? 60 : level === "normal" ? 30 : 0;
+
+    return Math.max(0, diff + levelBonus + fastBonus);
+  };
+
+  const saveRanking = async () => {
+    setSaveMsg("");
+
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr) throw authErr;
+
+      const me = authData?.user;
+      if (!me?.id) {
+        setSaveMsg("로그인이 필요해요.");
+        return;
+      }
+
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("nickname, is_admin")
+        .eq("id", me.id)
+        .maybeSingle();
+
+      if (Boolean(prof?.is_admin)) {
+        setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
+        return;
+      }
+
+      const nickname = String(prof?.nickname ?? "").trim() || "익명";
+      const score = calcOmokScore();
+
+      const { error } = await supabase.from("game_scores").insert([
+        {
+          user_id: me.id,
+          nickname,
+          game_key: "omok",
+          level: String(level),
+          score,
+        },
+      ]);
+
+      if (error) throw error;
+
+      setSaveMsg("랭킹에 저장했어요.");
+    } catch (e) {
+      console.error("omok save error:", e);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  };
+
+  const finalScore = winner ? calcOmokScore() : null;
+
   return (
     <div className="omok-page">
       <div className="omok-head">
-        <button
-          type="button"
-          className="omok-back"
-          onClick={() => navigate("/planner")}
-        >
-          ← 플래너
+        <button type="button" className="omok-back" onClick={() => navigate("/omok-ranking")}>
+          오목랭킹
         </button>
 
         <div className="omok-title">⚫ 오목</div>
@@ -130,8 +189,7 @@ export default function OmokGame() {
             </select>
 
             <div className="omok-mini">
-              돌 {stonesCount}개 ·{" "}
-              {winner ? "게임 끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"}
+              돌 {stonesCount}개 · {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"}
             </div>
           </div>
         </div>
@@ -171,24 +229,28 @@ export default function OmokGame() {
       {winner && (
         <div className="omok-finish">
           <div className="omok-finish-title">
-            {winner === "P"
-              ? "내가 이겼어요! 🎉"
-              : winner === "AI"
-              ? "컴퓨터가 이겼어요 🙂"
-              : "비겼어요 🙂"}
+            {winner === "P" ? "내가 이겼어요! 🎉" : winner === "AI" ? "컴퓨터가 이겼어요 🙂" : "비겼어요 🙂"}
           </div>
+
+          <div className="omok-finish-sub" style={{ marginTop: 6, opacity: 0.95 }}>
+            점수 {finalScore}점
+          </div>
+
           <div className="omok-finish-actions">
             <button type="button" className="omok-restart" onClick={reset}>
               한 판 더!
             </button>
-            <button
-              type="button"
-              className="omok-back"
-              onClick={() => navigate("/planner")}
-            >
-              플래너로
+
+            <button type="button" className="omok-restart" onClick={saveRanking}>
+              랭킹 저장
+            </button>
+
+            <button type="button" className="omok-back" onClick={() => navigate("/omok-ranking")}>
+              오목 랭킹
             </button>
           </div>
+
+          {saveMsg ? <div className="omok-msg" style={{ marginTop: 10 }}>{saveMsg}</div> : null}
         </div>
       )}
     </div>
@@ -196,9 +258,7 @@ export default function OmokGame() {
 }
 
 function makeEmptyBoard(size) {
-  return Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => null)
-  );
+  return Array.from({ length: size }, () => Array.from({ length: size }, () => null));
 }
 
 function place(board, r, c, stone) {
@@ -215,6 +275,12 @@ function isFull(board) {
 function countStones(board) {
   let n = 0;
   for (const row of board) for (const v of row) if (v) n++;
+  return n;
+}
+
+function countStoneOf(board, stone) {
+  let n = 0;
+  for (const row of board) for (const v of row) if (v === stone) n++;
   return n;
 }
 
@@ -237,13 +303,7 @@ function checkWinner(board, need) {
         let rr = r + dr;
         let cc = c + dc;
 
-        while (
-          rr >= 0 &&
-          rr < size &&
-          cc >= 0 &&
-          cc < size &&
-          board[rr][cc] === s
-        ) {
+        while (rr >= 0 && rr < size && cc >= 0 && cc < size && board[rr][cc] === s) {
           cnt++;
           rr += dr;
           cc += dc;
@@ -288,8 +348,7 @@ function pickAiMove(board, level, size, need) {
 
 function getCandidateMoves(board, size, dist) {
   const stones = [];
-  for (let r = 0; r < size; r++)
-    for (let c = 0; c < size; c++) if (board[r][c]) stones.push([r, c]);
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (board[r][c]) stones.push([r, c]);
 
   if (stones.length === 0) {
     const mid = Math.floor(size / 2);
@@ -339,9 +398,7 @@ function heuristicScoreNormal(board, r, c, size) {
 }
 
 function pickFromTopKBy(board, moves, size, k, scoreFn) {
-  const scored = moves
-    .map((m) => ({ ...m, s: scoreFn(board, m.r, m.c, size) }))
-    .sort((a, b) => b.s - a.s);
+  const scored = moves.map((m) => ({ ...m, s: scoreFn(board, m.r, m.c, size) })).sort((a, b) => b.s - a.s);
 
   const top = scored.slice(0, Math.min(k, scored.length));
 
@@ -355,13 +412,9 @@ function pickFromTopKBy(board, moves, size, k, scoreFn) {
 }
 
 function topKByHeuristic(board, moves, size, k) {
-  const scored = moves
-    .map((m) => ({ ...m, s: heuristicScoreHard(board, m.r, m.c, size) }))
-    .sort((a, b) => b.s - a.s);
+  const scored = moves.map((m) => ({ ...m, s: heuristicScoreHard(board, m.r, m.c, size) })).sort((a, b) => b.s - a.s);
 
-  return scored
-    .slice(0, Math.min(k, scored.length))
-    .map(({ r, c }) => ({ r, c }));
+  return scored.slice(0, Math.min(k, scored.length)).map(({ r, c }) => ({ r, c }));
 }
 
 function heuristicScoreHard(board, r, c, size) {
@@ -434,47 +487,21 @@ function countLine(board, r, c, dr, dc, stone, size) {
 
   let rr = r + dr;
   let cc = c + dc;
-  while (
-    rr >= 0 &&
-    rr < size &&
-    cc >= 0 &&
-    cc < size &&
-    board[rr][cc] === stone
-  ) {
+  while (rr >= 0 && rr < size && cc >= 0 && cc < size && board[rr][cc] === stone) {
     len++;
     rr += dr;
     cc += dc;
   }
-  if (
-    rr >= 0 &&
-    rr < size &&
-    cc >= 0 &&
-    cc < size &&
-    board[rr][cc] === null
-  )
-    openEnds++;
+  if (rr >= 0 && rr < size && cc >= 0 && cc < size && board[rr][cc] === null) openEnds++;
 
   rr = r - dr;
   cc = c - dc;
-  while (
-    rr >= 0 &&
-    rr < size &&
-    cc >= 0 &&
-    cc < size &&
-    board[rr][cc] === stone
-  ) {
+  while (rr >= 0 && rr < size && cc >= 0 && cc < size && board[rr][cc] === stone) {
     len++;
     rr -= dr;
     cc -= dc;
   }
-  if (
-    rr >= 0 &&
-    rr < size &&
-    cc >= 0 &&
-    cc < size &&
-    board[rr][cc] === null
-  )
-    openEnds++;
+  if (rr >= 0 && rr < size && cc >= 0 && cc < size && board[rr][cc] === null) openEnds++;
 
   return { len, openEnds };
 }

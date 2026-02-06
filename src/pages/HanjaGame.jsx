@@ -1,8 +1,13 @@
 // src/pages/HanjaGame.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./HanjaGame.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import supabase from "../supabaseClient";
+
+const MAX_QUESTIONS = 15;
+const TIME_LIMIT = 15;
+const AUTO_NEXT_DELAY_MS = 450;
 
 const HANJA_LEVELS = [
   {
@@ -149,7 +154,6 @@ function getLevelByKey(levelKey) {
 function formatChoice(item) {
   const meaning = String(item?.meaning ?? "").trim();
   const hun = String(item?.hun ?? "").trim();
-
   if (!hun) return meaning;
   return `${meaning} (${hun})`;
 }
@@ -157,18 +161,15 @@ function formatChoice(item) {
 function makeChoices(levelItems, correctItem) {
   const labels = levelItems.map((it) => formatChoice(it));
   const correctLabel = formatChoice(correctItem);
-
   const wrongPool = labels.filter((s) => s !== correctLabel);
   const wrongs = shuffle(wrongPool).slice(0, 2);
-
   return shuffle([correctLabel, ...wrongs]);
 }
 
 function pickQuestion(items, usedIndexes) {
   if (!items || items.length === 0) return null;
 
-  const allUsed = usedIndexes.size >= items.length;
-  const used = allUsed ? new Set() : new Set(usedIndexes);
+  const used = new Set(usedIndexes);
 
   let idx = Math.floor(Math.random() * items.length);
   let guard = 0;
@@ -191,7 +192,6 @@ function pickQuestion(items, usedIndexes) {
       correctLabel,
       choices: makeChoices(items, item),
     },
-    wasReset: allUsed,
   };
 }
 
@@ -199,28 +199,113 @@ export default function HanjaGame() {
   const navigate = useNavigate();
 
   const [levelKey, setLevelKey] = useState("8");
+  const level = useMemo(() => getLevelByKey(levelKey), [levelKey]);
 
   const init = useMemo(() => {
-    const lv = getLevelByKey("8");
-    const q = pickQuestion(lv.items, new Set());
-    return q;
+    return pickQuestion(getLevelByKey("8").items, new Set());
   }, []);
 
   const [score, setScore] = useState(0);
+  const [questionNo, setQuestionNo] = useState(1);
   const [usedIndexes, setUsedIndexes] = useState(() => init?.nextUsedIndexes ?? new Set());
   const [current, setCurrent] = useState(() => init?.current ?? null);
+
   const [picked, setPicked] = useState(null);
+  const [locked, setLocked] = useState(false);
+  const [needNext, setNeedNext] = useState(false);
+
   const [resultMsg, setResultMsg] = useState("");
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [finished, setFinished] = useState(false);
 
-  const level = useMemo(() => getLevelByKey(levelKey), [levelKey]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
-  const startFreshForLevel = (nextKey, msg = "") => {
+  const timerRef = useRef(null);
+  const autoNextRef = useRef(null);
+
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const clearAutoNext = () => {
+    if (autoNextRef.current) {
+      clearTimeout(autoNextRef.current);
+      autoNextRef.current = null;
+    }
+  };
+
+  const startTimer = () => {
+    stopTimer();
+    setTimeLeft(TIME_LIMIT);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopTimer();
+      clearAutoNext();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (finished) return;
+    if (!current) return;
+
+    setPicked(null);
+    setLocked(false);
+    setNeedNext(false);
+    setResultMsg("");
+    clearAutoNext();
+    startTimer();
+  }, [current, finished]);
+
+  useEffect(() => {
+    if (finished) return;
+    if (!current) return;
+    if (locked) return;
+    if (timeLeft !== 0) return;
+
+    stopTimer();
+    setLocked(true);
+    setPicked("__TIMEOUT__");
+    setNeedNext(true);
+    setScore((s) => s - 5);
+    setResultMsg(`시간 초과예요. 정답은 "${current.correctLabel}" 이에요. -5점`);
+  }, [timeLeft, finished, current, locked]);
+
+  const startFreshForLevel = (nextKey) => {
     const lv = getLevelByKey(nextKey);
     const q = pickQuestion(lv.items, new Set());
 
+    stopTimer();
+    clearAutoNext();
+
     setScore(0);
+    setQuestionNo(1);
+    setFinished(false);
+
     setPicked(null);
-    setResultMsg(msg);
+    setLocked(false);
+    setNeedNext(false);
+    setResultMsg("");
+
+    setSaved(false);
+    setSaving(false);
+    setSaveMsg("");
 
     setUsedIndexes(q?.nextUsedIndexes ?? new Set());
     setCurrent(q?.current ?? null);
@@ -228,56 +313,152 @@ export default function HanjaGame() {
 
   const onChangeLevel = (nextKey) => {
     setLevelKey(nextKey);
-    startFreshForLevel(nextKey, "");
+    startFreshForLevel(nextKey);
   };
 
-  const pickNextQuestion = () => {
-    const q = pickQuestion(level.items, usedIndexes);
+  const goNext = () => {
+    if (finished) return;
+    if (!current) return;
 
+    if (questionNo >= MAX_QUESTIONS) {
+      stopTimer();
+      clearAutoNext();
+      setFinished(true);
+      return;
+    }
+
+    const q = pickQuestion(level.items, usedIndexes);
     if (!q || !q.current) {
       setResultMsg("문제가 비어 있어요. 급수 데이터를 확인해 주세요.");
       return;
     }
 
-    if (q.wasReset) {
-      setScore(0);
-      setResultMsg("문제를 다 풀어서 처음부터 다시 시작해요.");
-    } else {
-      setResultMsg("");
-    }
-
+    setQuestionNo((n) => n + 1);
     setUsedIndexes(q.nextUsedIndexes);
-    setPicked(null);
     setCurrent(q.current);
   };
 
   const onPickChoice = (choice) => {
     if (!current) return;
-    if (picked) return;
+    if (finished) return;
+    if (locked) return;
 
+    stopTimer();
+    setLocked(true);
     setPicked(choice);
 
     const isCorrect = choice === current.correctLabel;
 
     if (isCorrect) {
-      setScore((s) => s + 10);
-      setResultMsg("정답이에요. +10점");
+      const bonus = Math.max(0, timeLeft);
+      setScore((s) => s + 10 + bonus);
+      setResultMsg(`정답이에요. +10점 + 보너스 ${bonus}점`);
+
+      clearAutoNext();
+      autoNextRef.current = setTimeout(() => {
+        goNext();
+      }, AUTO_NEXT_DELAY_MS);
     } else {
       setScore((s) => s - 5);
-      setResultMsg(`아쉬워요. 정답은 "${current.correctLabel}" 이에요. -5점`);
+      setNeedNext(true);
+      setResultMsg(`틀렸어요. 정답은 "${current.correctLabel}" 이에요. -5점`);
     }
   };
 
   const onReset = () => {
-    startFreshForLevel(levelKey, "");
+    startFreshForLevel(levelKey);
+  };
+
+  const saveScore = async () => {
+    if (saving) return;
+    if (saved) return;
+
+    setSaving(true);
+    setSaveMsg("");
+
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr) throw authErr;
+
+      const me = authData?.user;
+      if (!me?.id) {
+        setSaveMsg("로그인이 필요해요.");
+        setSaving(false);
+        return;
+      }
+
+      const { data: prof, error: profErr } = await supabase
+        .from("profiles")
+        .select("nickname")
+        .eq("id", me.id)
+        .maybeSingle();
+
+      if (profErr) throw profErr;
+
+      const nickname = String(prof?.nickname ?? "").trim() || "익명";
+
+      const { data: existing, error: exErr } = await supabase
+        .from("game_scores")
+        .select("id, score")
+        .eq("user_id", me.id)
+        .eq("game_key", "hanja")
+        .eq("level", String(levelKey))
+        .order("score", { ascending: false })
+        .limit(1);
+
+      if (exErr) throw exErr;
+
+      const row = existing?.[0] ?? null;
+      const prevScore = Number(row?.score ?? -999999);
+
+      if (score <= prevScore) {
+        setSaved(true);
+        setSaveMsg("이미 더 높은 점수가 저장되어 있어요.");
+        setSaving(false);
+        return;
+      }
+
+      if (row?.id) {
+        const { error: upErr } = await supabase
+          .from("game_scores")
+          .update({ score, nickname, level: String(levelKey) })
+          .eq("id", row.id);
+
+        if (upErr) throw upErr;
+      } else {
+        const { error: insErr } = await supabase.from("game_scores").insert([
+          {
+            user_id: me.id,
+            nickname,
+            game_key: "hanja",
+            level: String(levelKey),
+            score,
+          },
+        ]);
+
+        if (insErr) throw insErr;
+      }
+
+      setSaved(true);
+      setSaveMsg("랭킹에 점수를 저장했어요.");
+    } catch (e) {
+      console.error("hanja score save error:", e);
+      const msg =
+        String(e?.message ?? "").trim() ||
+        String(e?.error_description ?? "").trim() ||
+        "저장에 실패했어요. 잠시 후 다시 시도해 주세요.";
+      setSaveMsg(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!current) {
     return (
       <div className="gugu-page notranslate">
         <div className="gugu-head">
-          <button type="button" className="gugu-back" onClick={() => navigate("/planner")}>
-            ← 플래너
+          <button type="button" className="gugu-back" onClick={() => navigate("/hanja-ranking")}>
+            한자랭킹
           </button>
 
           <div className="gugu-title">한자놀이</div>
@@ -302,8 +483,8 @@ export default function HanjaGame() {
   return (
     <div className="gugu-page notranslate">
       <div className="gugu-head">
-        <button type="button" className="gugu-back" onClick={() => navigate("/planner")}>
-          ← 플래너
+        <button type="button" className="gugu-back" onClick={() => navigate("/hanja-ranking")}>
+          한자랭킹
         </button>
 
         <div className="gugu-title">한자놀이</div>
@@ -323,7 +504,12 @@ export default function HanjaGame() {
         <div className="hanja-row">
           <div className="hanja-label">급수</div>
 
-          <select className="hanja-select" value={levelKey} onChange={(e) => onChangeLevel(e.target.value)}>
+          <select
+            className="hanja-select"
+            value={levelKey}
+            onChange={(e) => onChangeLevel(e.target.value)}
+            disabled={finished}
+          >
             {HANJA_LEVELS.map((lv) => (
               <option key={lv.key} value={lv.key}>
                 {lv.label}
@@ -335,47 +521,79 @@ export default function HanjaGame() {
         <div className="hanja-score">
           점수: <b>{score}</b>
           <span className="hanja-mini">
-            (푼 문제: {Math.min(usedIndexes.size, level.items.length)}/{level.items.length})
+            (문제: {Math.min(questionNo, MAX_QUESTIONS)}/{MAX_QUESTIONS} · 남은시간: {timeLeft}초)
           </span>
         </div>
 
-        <div className="hanja-word-box" aria-label="한자 단어">
-          <div className="hanja-word">{current.word}</div>
-          <div className="hanja-hint">뜻을 골라 주세요</div>
-        </div>
+        {!finished ? (
+          <>
+            <div className="hanja-word-box" aria-label="한자 단어">
+              <div className="hanja-word">{current.word}</div>
+              <div className="hanja-hint">뜻을 골라 주세요</div>
+            </div>
 
-        <div className="hanja-choices" aria-label="보기 3개">
-          {current.choices.map((c) => {
-            const isPicked = picked === c;
-            const isCorrect = c === current.correctLabel;
+            <div className="hanja-choices" aria-label="보기 3개">
+              {current.choices.map((c) => {
+                const isPicked = picked === c;
+                const isCorrect = c === current.correctLabel;
 
-            let cls = "hanja-choice";
-            if (picked) {
-              if (isCorrect) cls += " correct";
-              if (isPicked && !isCorrect) cls += " wrong";
-            } else if (isPicked) {
-              cls += " picked";
-            }
+                let cls = "hanja-choice";
+                if (picked) {
+                  if (isCorrect) cls += " correct";
+                  if (isPicked && !isCorrect) cls += " wrong";
+                } else if (isPicked) {
+                  cls += " picked";
+                }
 
-            return (
-              <button key={c} type="button" className={cls} onClick={() => onPickChoice(c)}>
-                {c}
+                return (
+                  <button key={c} type="button" className={cls} onClick={() => onPickChoice(c)}>
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+
+            {resultMsg && <div className="hanja-result">{resultMsg}</div>}
+
+            <div className="hanja-actions">
+              <button
+                type="button"
+                className="hanja-btn"
+                onClick={goNext}
+                disabled={!needNext || finished}
+              >
+                {questionNo >= MAX_QUESTIONS ? "끝내기" : "다음 문제"}
               </button>
-            );
-          })}
-        </div>
 
-        {resultMsg && <div className="hanja-result">{resultMsg}</div>}
+              <button type="button" className="hanja-btn ghost" onClick={onReset}>
+                처음부터
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="hanja-word-box" aria-label="게임 종료">
+              <div className="hanja-word">끝!</div>
+              <div className="hanja-hint">최종 점수: {score}점</div>
+            </div>
 
-        <div className="hanja-actions">
-          <button type="button" className="hanja-btn" onClick={pickNextQuestion}>
-            다음 문제
-          </button>
+            {saveMsg && <div className="hanja-result">{saveMsg}</div>}
 
-          <button type="button" className="hanja-btn ghost" onClick={onReset}>
-            처음부터
-          </button>
-        </div>
+            <div className="hanja-actions">
+              <button type="button" className="hanja-btn" onClick={saveScore} disabled={saving || saved}>
+                {saved ? "저장 완료" : saving ? "저장 중..." : "랭킹에 저장"}
+              </button>
+
+              <button type="button" className="hanja-btn ghost" onClick={() => navigate("/hanja-ranking")}>
+                랭킹 보기
+              </button>
+
+              <button type="button" className="hanja-btn ghost" onClick={onReset}>
+                다시하기
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
