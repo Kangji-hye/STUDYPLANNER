@@ -179,7 +179,7 @@ export default function BadukGame() {
         .eq("id", me.id)
         .maybeSingle();
 
-      if (Boolean(prof?.is_admin)) {
+      if (prof?.is_admin) {
         setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
         return;
       }

@@ -630,3 +630,21 @@
   font-size: 0.95rem;
   cursor: pointer;
 }
+
+.weekly-hw-image-wrap{
+  height: min(72vh, 560px); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(0,0,0,0.03);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.weekly-hw-image{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}

@@ -1,5 +1,5 @@
 // src/pages/HanjaGame.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./HanjaGame.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
@@ -225,21 +225,21 @@ export default function HanjaGame() {
   const timerRef = useRef(null);
   const autoNextRef = useRef(null);
 
-  const stopTimer = () => {
+  const stopTimer = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-  };
+  }, []);
 
-  const clearAutoNext = () => {
+  const clearAutoNext = useCallback(() => {
     if (autoNextRef.current) {
       clearTimeout(autoNextRef.current);
       autoNextRef.current = null;
     }
-  };
+  }, []);
 
-  const startTimer = () => {
+  const startTimer = useCallback(() => {
     stopTimer();
     setTimeLeft(TIME_LIMIT);
     timerRef.current = setInterval(() => {
@@ -252,14 +252,14 @@ export default function HanjaGame() {
         return t - 1;
       });
     }, 1000);
-  };
+  }, [stopTimer]);
 
   useEffect(() => {
     return () => {
       stopTimer();
       clearAutoNext();
     };
-  }, []);
+  }, [stopTimer, clearAutoNext]);
 
   useEffect(() => {
     if (finished) return;
@@ -271,7 +271,7 @@ export default function HanjaGame() {
     setResultMsg("");
     clearAutoNext();
     startTimer();
-  }, [current, finished]);
+}, [current, finished, clearAutoNext, startTimer]);
 
   useEffect(() => {
     if (finished) return;
@@ -285,7 +285,7 @@ export default function HanjaGame() {
     setNeedNext(true);
     setScore((s) => s - 5);
     setResultMsg(`시간 초과예요. 정답은 "${current.correctLabel}" 이에요. -5점`);
-  }, [timeLeft, finished, current, locked]);
+  }, [timeLeft, finished, current, locked, stopTimer]);
 
   const startFreshForLevel = (nextKey) => {
     const lv = getLevelByKey(nextKey);

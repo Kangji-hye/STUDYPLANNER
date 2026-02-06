@@ -226,6 +226,17 @@ export default function BadukRanking() {
       <div className="ranking-tip">
         점수는 높을수록 위에 보여요. 난이도를 바꿔서 다른 랭킹도 볼 수 있어요 🙂
       </div>
+
+      <div className="ranking-tip" style={{ marginTop: 10 }}>
+        <button
+          type="button"
+          className="hanja-btn ghost"
+          onClick={() => navigate("/planner")}
+          style={{ width: "100%" }}
+        >
+          플래너로 돌아가기
+        </button>
+      </div>
     </div>
   );
 }

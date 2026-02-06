@@ -4,7 +4,7 @@
   margin: 0 auto;
   padding: 16px;
 
-  background: var(--bg);
+  /* background: var(--bg); */
   color: var(--text);
 
   font-weight: 400;

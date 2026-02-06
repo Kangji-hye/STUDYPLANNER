@@ -92,7 +92,7 @@ export default function HanjaRanking() {
           });
           if (error) throw error;
           list = normalize(data);
-        } catch (e) {
+        } catch {
           list = [];
         }
 
