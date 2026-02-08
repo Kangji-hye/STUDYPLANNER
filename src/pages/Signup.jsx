@@ -295,7 +295,6 @@ const Signup = () => {
                 {x.label}
               </option>
             ))}
-          </select>
         </div> */}
 
         <button className="auth-submit" type="submit" disabled={loading || !isPasswordMatch}>

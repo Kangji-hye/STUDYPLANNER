@@ -148,7 +148,6 @@ export default function Admin() {
   const [editingAlarmId, setEditingAlarmId] = useState(null);
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
-  const [alarmOnUsers, setAlarmOnUsers] = useState([]);
   const [alarmPeriodMode, setAlarmPeriodMode] = useState("always"); // always | today
 
   // =========================

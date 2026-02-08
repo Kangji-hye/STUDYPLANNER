@@ -95,6 +95,8 @@
   font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.2px;
+
+  
 }
 
 .english-speaker {
@@ -118,6 +120,7 @@
   max-width: 520px;
   margin-left: auto;
   margin-right: auto;
+  
 }
 
 .english-choices button {
@@ -125,10 +128,13 @@
   background: #fff;
   border-radius: 14px;
   padding: 12px 14px;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 1rem;
+  font-weight: 400;
   cursor: pointer;
   text-align: center;
+   font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+
 }
 
 .english-choices button:disabled {
@@ -194,6 +200,9 @@
   font-weight: 900;
   line-height: 1;        /* 기준선 흔들림 방지 */
   letter-spacing: 0.5px; /* 살짝 또렷하게 */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+    padding:20px;
 }
 
 /* 🔊 버튼(이모지)이 버튼 안에서 안 틀어지게 “정사각형 + 중앙 정렬” */

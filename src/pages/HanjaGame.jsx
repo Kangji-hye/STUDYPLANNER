@@ -521,7 +521,7 @@ export default function HanjaGame() {
         {!finished ? (
           <>
             <div className="hanja-word-box" aria-label="한자 단어">
-              <div className="hanja-word">{current.word}</div>
+              <div className="hanja-word real">{current.word}</div>
               <div className="hanja-hint">뜻을 골라 주세요</div>
             </div>
 

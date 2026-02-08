@@ -240,13 +240,13 @@ const MyPage = () => {
     if (!profile?.id) return;
 
     if (!("Notification" in window)) {
-      alert("이 기기는 웹 알림을 지원하지 않아요.");
-      setAlarmEnabled(false);
-      persistAlarmEnabledLocal(profile.id, false);
-      await persistAlarmEnabledDb(profile.id, false);
+      alert(
+        "아이패드에서는 사파리 웹에서는 알림이 지원되지 않습니다.\n\n" +
+        "홈 화면에 추가한 뒤 앱처럼 실행하면 알림을 사용할 수 있어요."
+      );
       return;
     }
-
+    
     if (Notification.permission === "granted") {
       setAlarmEnabled(true);
       persistAlarmEnabledLocal(profile.id, true);
