@@ -146,8 +146,6 @@ export default function HamburgerMenu() {
             🔠 영어 놀이
           </button>
 
-           <div className="hamburger-divider" />
-
           <button className="hamburger-item" type="button" onClick={() => navigate("/hanja")} >
             🈶 한자 놀이
           </button>

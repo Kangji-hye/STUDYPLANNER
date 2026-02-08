@@ -4,9 +4,10 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
-import RankingMenu from "../components/common/RankingMenu"; 
+import RankingFilters from "../components/common/RankingFilters";
+import { bestByNickname } from "../utils/rankingBest";
 
-const OPTIONS = [{ label: "바둑", value: "baduk" }];
+const GAME_KEY = "baduk";
 
 const BADUK_LEVELS = [
   { label: "하 (쉬움) · 9×9", value: "easy" },
@@ -14,48 +15,23 @@ const BADUK_LEVELS = [
   { label: "상 (어려움) · 13×13", value: "hard" },
 ];
 
-const LEVELS_BY_KEY = { baduk: BADUK_LEVELS };
-
 export default function BadukRanking() {
   const navigate = useNavigate();
 
-  const [key, setKey] = useState("baduk");
-  const levels = useMemo(() => LEVELS_BY_KEY[key] ?? [], [key]);
-
+  // 지금은 바둑 전용 랭킹이지만,
+  // 나중에 통합랭킹 페이지로 바꾸기 쉬우라고 gameKey 상태는 유지해 둡니다.
+  const [gameKey, setGameKey] = useState(GAME_KEY);
   const [level, setLevel] = useState("easy");
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
 
   const [myInfo, setMyInfo] = useState({ is_admin: false, score: null, nickname: "" });
   const [emptyReason, setEmptyReason] = useState("");
 
-  useEffect(() => {
-    setLevel("easy");
-  }, []);
+  const levels = useMemo(() => BADUK_LEVELS, []);
 
   useEffect(() => {
-    const first = (LEVELS_BY_KEY[key] ?? [])[0]?.value;
-    if (first) setLevel(first);
-  }, [key]);
-
-  useEffect(() => {
-    const normalize = (data) =>
-      (data ?? [])
-        .map((r) => ({
-          user_id: r.user_id,
-          nickname: String(r.nickname ?? "").trim(),
-          score: Number(r.score ?? 0),
-        }))
-        .filter((row) => {
-          const n = row.nickname;
-          const compact = n.replace(/\s+/g, "");
-          if (!n) return false;
-          if (compact === "익명") return false;
-          if (compact.startsWith("익명")) return false;
-          if (compact === "닉네임") return false;
-          return true;
-        });
-
     const run = async () => {
       if (!level) return;
 
@@ -82,33 +58,35 @@ export default function BadukRanking() {
           myNickname = String(meProf?.nickname ?? "").trim();
         }
 
+        // 1) 점수 원본 가져오기
         let list = [];
 
+        // RPC가 있으면 RPC를 쓰고(없어도 괜찮게 fallback)
         try {
-          const { data, error } = await supabase.rpc("get_game_ranking", {
-            game_key: key,
+          const { data, error } = await supabase.rpc("get_game_ranking_best_by_nickname", {
+            game_key: String(gameKey),
             level: String(level),
-            limit_n: 50,
+            limit_n: 200,
           });
           if (error) throw error;
-          list = normalize(data);
+          list = data ?? [];
         } catch {
-          list = [];
-        }
-
-        if (list.length === 0) {
           const { data: direct, error: directErr } = await supabase
             .from("game_scores")
             .select("user_id, nickname, score")
-            .eq("game_key", key)
+            .eq("game_key", String(gameKey))
             .eq("level", String(level))
             .order("score", { ascending: false })
-            .limit(50);
+            .limit(500);
 
-          if (!directErr) list = normalize(direct);
+          if (!directErr) list = direct ?? [];
         }
 
-        const ids = list.map((x) => x.user_id).filter(Boolean);
+        // 2) 닉네임 최고점만 남기기(공통 규칙)
+        const bestList = bestByNickname(list);
+
+        // 3) 관리자 제외
+        const ids = bestList.map((x) => x.user_id).filter(Boolean);
         const adminMap = {};
 
         if (ids.length > 0) {
@@ -122,14 +100,15 @@ export default function BadukRanking() {
           });
         }
 
-        const filtered = list
+        const filtered = bestList
           .map((it) => ({ ...it, is_admin: adminMap[it.user_id] ?? false }))
           .filter((it) => !it.is_admin);
 
-        filtered.sort((a, b) => b.score - a.score);
+        // 4) TOP 10
         const top10 = filtered.slice(0, 10);
         setRows(top10);
 
+        // 5) 내 최고점(내 user_id 기준)
         let myBestScore = null;
 
         if (me?.id) {
@@ -137,7 +116,7 @@ export default function BadukRanking() {
             .from("game_scores")
             .select("score, nickname")
             .eq("user_id", me.id)
-            .eq("game_key", key)
+            .eq("game_key", String(gameKey))
             .eq("level", String(level))
             .order("score", { ascending: false })
             .limit(1);
@@ -170,7 +149,7 @@ export default function BadukRanking() {
     };
 
     run();
-  }, [key, level]);
+  }, [gameKey, level]);
 
   return (
     <div className="ranking-page">
@@ -183,13 +162,11 @@ export default function BadukRanking() {
         </div>
       </header>
 
-      <RankingMenu
-        gameKey={key}
-        onChangeGameKey={setKey}
+      <RankingFilters
+        levelLabel="난이도 선택"
         level={level}
         onChangeLevel={setLevel}
         levels={levels}
-        levelLabel="난이도 선택"
       />
 
       {loading ? (
@@ -207,7 +184,7 @@ export default function BadukRanking() {
         <div className="ranking-list">
           {rows.map((r, idx) => (
             <div
-              key={`${r.user_id ?? "u"}-${idx}`}
+              key={`${r.nickname}-${idx}`}
               className={`ranking-item ${idx === 0 ? "top1" : idx === 1 ? "top2" : idx === 2 ? "top3" : ""}`}
             >
               <div className="ranking-rank">
@@ -224,7 +201,7 @@ export default function BadukRanking() {
       )}
 
       <div className="ranking-tip">
-        점수는 높을수록 위에 보여요. 난이도를 바꿔서 다른 랭킹도 볼 수 있어요 🙂
+        같은 이름으로 점수가 여러 번 저장되어도, 랭킹에는 가장 높은 점수만 보여요.
       </div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>

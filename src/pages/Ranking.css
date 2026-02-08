@@ -354,3 +354,137 @@
     border-radius: 12px;
   }
 }
+
+/* =========================
+   RankingFilters (공통 셀렉트 UI)
+   - src/components/common/RankingFilters.jsx 전용 스타일
+   - Ranking.css 맨 아래에 붙여넣기
+========================= */
+
+.ranking-filters {
+  margin: 12px 0 14px;
+  padding: 12px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+
+  display: grid;
+  gap: 10px;
+}
+
+.ranking-filter-row {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-filter-label {
+  font-size: 0.92rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.ranking-filter-select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+
+  font-size: 0.98rem;
+  font-weight: 400;
+
+  outline: none;
+}
+
+.ranking-filter-select:focus {
+  box-shadow: 0 0 0 3px rgba(255, 122, 162, 0.18);
+  border-color: rgba(255, 122, 162, 0.55);
+}
+
+/* 모바일에서 라벨/셀렉트가 너무 꽉 끼면 2줄로 */
+@media (max-width: 420px) {
+  .ranking-filter-row {
+    grid-template-columns: 1fr;
+  }
+  .ranking-filter-label {
+    margin-bottom: 2px;
+  }
+}
+/* === 랭킹 셀렉트 텍스트 완전 고정 (iOS 포함) === */
+.ranking-filter-select {
+  background: #fff !important;
+  color: #222 !important;
+  -webkit-text-fill-color: #222 !important; /* iOS 핵심 */
+}
+
+/* 옵션 목록도 같이 보정 */
+.ranking-filter-select option {
+  color: #222;
+  background: #fff;
+}
+/* src/pages/Ranking.css 맨 아래에 "마지막으로" 추가 */
+
+.ranking-filters{
+  margin: 12px 0 14px;
+  padding: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+}
+
+.ranking-filter-row{
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-filter-label{
+  font-size: 0.92rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* 핵심: select가 "진짜 셀렉트"처럼 보이게 강제 */
+.ranking-filter-select{
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  border: 1px solid var(--line);
+
+  background: #fff;          /* var(--bg) 대신 확실한 색 */
+  color: #111;               /* var(--text) 대신 확실한 색 */
+
+  font-size: 0.98rem;
+  font-weight: 400;
+
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+
+  opacity: 1;
+}
+
+.ranking-filter-select:focus{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 122, 162, 0.18);
+  border-color: rgba(255, 122, 162, 0.55);
+}
+
+/* 모바일에서 라벨을 위로 */
+@media (max-width: 420px){
+  .ranking-filter-row{ grid-template-columns: 1fr; }
+  .ranking-filter-label{ margin-bottom: 2px; }
+}

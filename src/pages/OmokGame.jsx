@@ -110,6 +110,7 @@ export default function OmokGame() {
     return Math.max(0, diff + levelBonus + fastBonus);
   };
 
+  // ✅ 랭킹 저장: "누적"이 아니라 "내 최고점"만 남기기
   const saveRanking = async () => {
     setSaveMsg("");
 
@@ -123,11 +124,13 @@ export default function OmokGame() {
         return;
       }
 
-      const { data: prof } = await supabase
+      const { data: prof, error: profErr } = await supabase
         .from("profiles")
         .select("nickname, is_admin")
         .eq("id", me.id)
         .maybeSingle();
+
+      if (profErr) throw profErr;
 
       if (prof?.is_admin) {
         setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
@@ -137,7 +140,46 @@ export default function OmokGame() {
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
       const score = calcOmokScore();
 
-      const { error } = await supabase.from("game_scores").insert([
+      // 1) 내 기존 최고점 확인
+      const { data: existing, error: exErr } = await supabase
+        .from("game_scores")
+        .select("id, score")
+        .eq("user_id", me.id)
+        .eq("game_key", "omok")
+        .eq("level", String(level))
+        .order("score", { ascending: false })
+        .limit(1);
+
+      if (exErr) throw exErr;
+
+      const row = existing?.[0] ?? null;
+      const prevBest = Number(row?.score ?? 0);
+
+      // 2) 이번 점수가 더 낮으면 저장하지 않음
+      if (row?.id && score <= prevBest) {
+        setSaveMsg(`이미 더 높은 기록이 있어요. (내 최고점 ${prevBest}점)`);
+        return;
+      }
+
+      // 3) 더 높으면 업데이트, 없으면 추가
+      if (row?.id) {
+        const { error: upErr } = await supabase
+          .from("game_scores")
+          .update({
+            nickname,
+            score,
+            game_key: "omok",
+            level: String(level),
+          })
+          .eq("id", row.id);
+
+        if (upErr) throw upErr;
+
+        setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
+        return;
+      }
+
+      const { error: insErr } = await supabase.from("game_scores").insert([
         {
           user_id: me.id,
           nickname,
@@ -147,9 +189,9 @@ export default function OmokGame() {
         },
       ]);
 
-      if (error) throw error;
+      if (insErr) throw insErr;
 
-      setSaveMsg("랭킹에 저장했어요.");
+      setSaveMsg(`랭킹에 저장했어요. (이번 ${score}점)`);
     } catch (e) {
       console.error("omok save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");

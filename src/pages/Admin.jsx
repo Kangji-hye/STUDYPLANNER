@@ -146,13 +146,17 @@ export default function Admin() {
   const [alarmTitle, setAlarmTitle] = useState(""); // 예: 방학-저녁 알림
   const [alarmMessage, setAlarmMessage] = useState("오늘의 할 일을 끝내보세요.");
   const [alarmTime, setAlarmTime] = useState("19:30"); // "HH:MM"
-  const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"(선택)
-  const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(선택)
+  const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
+  const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
   const [editingAlarmId, setEditingAlarmId] = useState(null);
 
   // 추가: 평일/주말 옵션(전체/평일/주말)
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
+
+  // 추가: 오늘만(공지) / 항상(기본) 선택
+  // 기간 기능이 현재 불안정하니, "오늘만"은 확실히 동작하게 start_day/end_day를 오늘로 고정 저장합니다.
+  const [alarmPeriodMode, setAlarmPeriodMode] = useState("always"); // always | today
 
   // =========================
   // 주간 숙제 사진 업로드
@@ -280,13 +284,19 @@ export default function Admin() {
       return;
     }
 
+    // 오늘만 모드면 start/end를 오늘로 확정 저장
+    // 항상 모드면 기간을 null로 저장(항상 적용)
+    const todayKey = toDayKey(new Date());
+    const resolvedStartDay = alarmPeriodMode === "today" ? todayKey : null;
+    const resolvedEndDay = alarmPeriodMode === "today" ? todayKey : null;
+
     const payload = {
       kind: alarmKind,
       title: String(alarmTitle ?? "").trim() || `${alarmKind} 알람`,
       message: msg,
       time_hhmm: hhmm,
-      start_day: alarmStartDay ? alarmStartDay : null,
-      end_day: alarmEndDay ? alarmEndDay : null,
+      start_day: resolvedStartDay,
+      end_day: resolvedEndDay,
       day_type: alarmDayType, // all | weekday | weekend
       updated_at: new Date().toISOString(),
     };
@@ -343,6 +353,7 @@ export default function Admin() {
     setAlarmDayType("all");
     setAlarmStartDay("");
     setAlarmEndDay("");
+    setAlarmPeriodMode("always");
   };
 
   const editAlarmFromList = (row) => {
@@ -356,6 +367,14 @@ export default function Admin() {
     setAlarmStartDay(row.start_day ? String(row.start_day) : "");
     setAlarmEndDay(row.end_day ? String(row.end_day) : "");
     setAlarmDayType(String(row.day_type ?? "all"));
+
+    // 오늘만 모드 자동 감지: start_day와 end_day가 둘 다 오늘이면 "오늘만"으로 올려줍니다.
+    const todayKey = toDayKey(new Date());
+    if (row.start_day && row.end_day && String(row.start_day) === todayKey && String(row.end_day) === todayKey) {
+      setAlarmPeriodMode("today");
+    } else {
+      setAlarmPeriodMode("always");
+    }
 
     try {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -613,11 +632,7 @@ export default function Admin() {
       const email = user.email ?? "";
       if (mounted) setMyEmail(email);
 
-      const { data: p, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, is_admin")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: p, error: pErr } = await supabase.from("profiles").select("id, is_admin").eq("id", user.id).maybeSingle();
 
       if (pErr) {
         console.error(pErr);
@@ -687,9 +702,7 @@ export default function Admin() {
     const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(row.grade_code))?.label ?? "-";
 
     const ok = window.confirm(
-      `정말 삭제할까요?\n\n날짜: ${row.day_key}\n학년: ${gradeName}\n범위: ${
-        String(row.ref_text ?? "").trim() || "-"
-      }\n\n※ 삭제하면 되돌릴 수 없어요.`
+      `정말 삭제할까요?\n\n날짜: ${row.day_key}\n학년: ${gradeName}\n범위: ${String(row.ref_text ?? "").trim() || "-"}\n\n※ 삭제하면 되돌릴 수 없어요.`
     );
     if (!ok) return;
 
@@ -741,9 +754,7 @@ export default function Admin() {
   const deleteHomeworkFromList = async (row) => {
     const gradeName = GRADE_OPTIONS.find((g) => g.value === Number(row.grade_code))?.label ?? "-";
 
-    const ok = window.confirm(
-      `정말 삭제할까요?\n\n날짜: ${row.day_key}\n학년: ${gradeName}\n\n※ 삭제하면 되돌릴 수 없어요.`
-    );
+    const ok = window.confirm(`정말 삭제할까요?\n\n날짜: ${row.day_key}\n학년: ${gradeName}\n\n※ 삭제하면 되돌릴 수 없어요.`);
     if (!ok) return;
 
     const { error } = await supabase
@@ -794,8 +805,6 @@ export default function Admin() {
       <div className="admin-card">
         <div className="admin-row admin-row-between">
           <div className="admin-date-line">
-            {/* <span className="admin-label">날짜</span> */}
-
             <input
               className="admin-date-input"
               type="date"
@@ -899,12 +908,7 @@ export default function Admin() {
 
         <div className="admin-row">
           <span className="admin-label">말씀 범위</span>
-          <input
-            type="text"
-            value={verseRef}
-            onChange={(e) => setVerseRef(e.target.value)}
-            placeholder="예) 시편 23편 1절"
-          />
+          <input type="text" value={verseRef} onChange={(e) => setVerseRef(e.target.value)} placeholder="예) 시편 23편 1절" />
         </div>
 
         <textarea
@@ -1148,11 +1152,7 @@ export default function Admin() {
                 ) : (
                   <div className="admin-verse-text">
                     {normalized.map((it, i) => (
-                      <span
-                        key={i}
-                        className="admin-verse-line"
-                        style={{ color: pickStableColor(`${h.day_key}:hw:${i}`) }}
-                      >
+                      <span key={i} className="admin-verse-line" style={{ color: pickStableColor(`${h.day_key}:hw:${i}`) }}>
                         {it.subject}: {it.content}
                         {i < normalized.length - 1 ? " " : ""}
                       </span>
@@ -1195,8 +1195,8 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          방학/비방학은 “적용 기간”으로 구분하고, 같은 기간이라도 “평일만/주말만”을 골라서 더 똑똑하게 쓸 수 있어요.
-          기간을 비워두면 항상 적용됩니다.
+          지금은 기간 기능이 불안정해서, “항상”과 “오늘만”만 확실히 동작하도록 만들었어요. “오늘만”은 저장할 때 자동으로 오늘 날짜로
+          고정됩니다.
         </div>
 
         <div className="admin-row">
@@ -1236,12 +1236,50 @@ export default function Admin() {
           </select>
         </div>
 
-        <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
+        <div className="admin-row">
           <span className="admin-label">기간</span>
-          <input type="date" value={alarmStartDay} onChange={(e) => setAlarmStartDay(e.target.value)} aria-label="시작일" />
-          <span style={{ opacity: 0.6 }}>~</span>
-          <input type="date" value={alarmEndDay} onChange={(e) => setAlarmEndDay(e.target.value)} aria-label="종료일" />
+          <select
+            value={alarmPeriodMode}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAlarmPeriodMode(next);
+
+              // 기간 입력값은 현재 기능 미사용이라 혼란 방지를 위해 비워둡니다.
+              setAlarmStartDay("");
+              setAlarmEndDay("");
+            }}
+          >
+            <option value="always">항상</option>
+            <option value="today">오늘만</option>
+          </select>
         </div>
+
+        {alarmPeriodMode === "always" ? (
+          <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
+            <span className="admin-label" style={{ opacity: 0.6 }}>
+              기간(미사용)
+            </span>
+            <input
+              type="date"
+              value={alarmStartDay}
+              onChange={(e) => setAlarmStartDay(e.target.value)}
+              aria-label="시작일"
+              disabled
+              title="현재는 기간 기능이 꺼져 있어요"
+            />
+            <span style={{ opacity: 0.6 }}>~</span>
+            <input
+              type="date"
+              value={alarmEndDay}
+              onChange={(e) => setAlarmEndDay(e.target.value)}
+              aria-label="종료일"
+              disabled
+              title="현재는 기간 기능이 꺼져 있어요"
+            />
+          </div>
+        ) : (
+          <div className="admin-help">“오늘만”을 선택하면 이 알람은 오늘({toDayKey(new Date())}) 하루만 적용되도록 저장됩니다.</div>
+        )}
 
         <div className="admin-actions">
           <button className="admin-btn" onClick={saveAlarm}>
@@ -1264,46 +1302,47 @@ export default function Admin() {
             <div className="admin-help">저장된 알람이 없어요.</div>
           ) : (
             <div className="admin-help">
-              {alarmList.slice(0, 20).map((a) => (
-                <div key={a.id} style={{ marginBottom: 8 }}>
-                  • [{a.kind}] {a.title} / {a.time_hhmm} / {dayTypeLabel(a.day_type)} / {a.is_active ? "ON" : "OFF"}
-                  <br />
-                  {a.message}
-                  {a.start_day || a.end_day ? (
-                    <> (기간: {a.start_day ?? "-"} ~ {a.end_day ?? "-"})</>
-                  ) : (
-                    <> (기간: 항상)</>
-                  )}
-                  <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      className="admin-mini-btn"
-                      onClick={() => editAlarmFromList(a)}
-                      title="이 알람을 위 입력칸으로 올려서 수정합니다"
-                    >
-                      수정
-                    </button>
+              {alarmList.slice(0, 20).map((a) => {
+                const sameDay = a.start_day && a.end_day && String(a.start_day) === String(a.end_day);
 
-                    <button
-                      type="button"
-                      className="admin-mini-btn"
-                      onClick={() => toggleAlarmActive(a)}
-                      title="알람을 켜거나 끕니다"
-                    >
-                      {a.is_active ? "끄기" : "켜기"}
-                    </button>
+                return (
+                  <div key={a.id} style={{ marginBottom: 8 }}>
+                    • [{a.kind}] {a.title} / {a.time_hhmm} / {dayTypeLabel(a.day_type)} / {a.is_active ? "ON" : "OFF"}
+                    <br />
+                    {a.message}
+                    {sameDay ? (
+                      <> (기간: {a.start_day} 하루만)</>
+                    ) : a.start_day || a.end_day ? (
+                      <> (기간: {a.start_day ?? "-"} ~ {a.end_day ?? "-"})</>
+                    ) : (
+                      <> (기간: 항상)</>
+                    )}
+                    <div style={{ marginTop: 6, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button
+                        type="button"
+                        className="admin-mini-btn"
+                        onClick={() => editAlarmFromList(a)}
+                        title="이 알람을 위 입력칸으로 올려서 수정합니다"
+                      >
+                        수정
+                      </button>
 
-                    <button
-                      type="button"
-                      className="admin-mini-btn danger"
-                      onClick={() => deleteAlarmFromList(a)}
-                      title="이 알람을 삭제합니다"
-                    >
-                      삭제
-                    </button>
+                      <button type="button" className="admin-mini-btn" onClick={() => toggleAlarmActive(a)} title="알람을 켜거나 끕니다">
+                        {a.is_active ? "끄기" : "켜기"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="admin-mini-btn danger"
+                        onClick={() => deleteAlarmFromList(a)}
+                        title="이 알람을 삭제합니다"
+                      >
+                        삭제
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {alarmList.length > 20 ? <div style={{ opacity: 0.7 }}>… (너무 길면 20개까지만 보여요)</div> : null}
             </div>
           )}

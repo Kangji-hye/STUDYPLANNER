@@ -1,17 +1,6 @@
 // src/components/common/RankingFilters.jsx
 import React, { useEffect, useMemo } from "react";
 
-/*
-  이 컴포넌트 하나로 8개 게임 랭킹의 "게임 선택 + 레벨(난이도/급수) 선택"을 공통 처리합니다.
-
-  핵심 포인트
-  1) 게임 목록을 컴포넌트 내부에 기본값으로 가지고 있습니다.
-  2) 게임이 바뀌면, 그 게임의 첫 번째 레벨로 자동으로 맞춰 줍니다.
-  3) 레벨이 없는 게임(예: 끝말잇기처럼 단일 랭킹)을 위해 레벨 셀렉트를 숨길 수도 있습니다.
-  4) 나중에 게임/레벨이 추가되면 아래 DEFAULT_LEVELS_BY_GAME만 추가하면 됩니다.
-*/
-
-// 1) 모든 랭킹에서 공통으로 쓸 "게임 목록"
 export const DEFAULT_GAME_OPTIONS = [
   { label: "구구단 놀이", value: "gugudan" },
   { label: "한글 끝말잇기", value: "wordchain" },
@@ -22,12 +11,6 @@ export const DEFAULT_GAME_OPTIONS = [
   { label: "바둑", value: "baduk" },
 ];
 
-// 2) 게임별 "레벨(난이도/급수)" 기본 목록
-//    value는 DB game_scores.level에 들어가는 값과 맞춰야 합니다.
-//    - 한자: "8", "7", "6" 처럼 기존과 동일
-//    - 성경: BibleQuiz에서 levelKey = `${book}_${difficulty}`로 저장하니 그 값과 동일
-//    - 오목/바둑: 예시로 easy/normal/hard 사용(현재 프로젝트 값에 맞게 바꾸면 됨)
-//    - 레벨이 필요 없는 게임은 1개만 두거나, hideLevelSelectOnSingleLevel=true로 숨기면 됩니다.
 export const DEFAULT_LEVELS_BY_GAME = {
   gugudan: [
     { label: "하 (쉬움)", value: "low" },
@@ -35,7 +18,6 @@ export const DEFAULT_LEVELS_BY_GAME = {
     { label: "상 (어려움)", value: "high" },
   ],
   wordchain: [
-    // 레벨이 없다면 1개만 둬도 됩니다.
     { label: "기록", value: "default" },
   ],
   english: [
@@ -67,21 +49,14 @@ export const DEFAULT_LEVELS_BY_GAME = {
 };
 
 export default function RankingFilters({
-  // UI 라벨
   gameLabel = "선택",
   levelLabel = "난이도 선택",
-
-  // 현재 선택값(부모 컴포넌트 state)
   gameKey,
   onChangeGameKey,
   level,
   onChangeLevel,
-
-  // 옵션 주입(원하면 외부에서 덮어씌울 수 있게 열어둠)
   gameOptions = DEFAULT_GAME_OPTIONS,
   levelsByGame = DEFAULT_LEVELS_BY_GAME,
-
-  // 레벨이 1개뿐이면 레벨 셀렉트를 숨길지
   hideLevelSelectOnSingleLevel = true,
 
   disabled = false,

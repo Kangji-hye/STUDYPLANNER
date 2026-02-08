@@ -1,61 +1,30 @@
-// src/pages/OmokRanking.jsx
-import { useEffect, useMemo, useState } from "react";
+// src/pages/GugudanRanking.jsx
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import RankingFilters from "../components/common/RankingFilters";
+import { bestByNickname } from "../utils/rankingBest";
 
-const OPTIONS = [{ label: "오목", value: "omok" }];
+const GAME_KEY = "gugudan";
 
-const OMOK_LEVELS = [
+const LEVELS = [
   { label: "하 (쉬움)", value: "easy" },
   { label: "중 (보통)", value: "normal" },
   { label: "상 (어려움)", value: "hard" },
 ];
 
-const LEVELS_BY_KEY = { omok: OMOK_LEVELS };
-
-export default function OmokRanking() {
+export default function GugudanRanking() {
   const navigate = useNavigate();
-
-  const [key, setKey] = useState("omok");
-  const levels = useMemo(() => LEVELS_BY_KEY[key] ?? [], [key]);
 
   const [level, setLevel] = useState("easy");
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
-
   const [myInfo, setMyInfo] = useState({ is_admin: false, score: null, nickname: "" });
   const [emptyReason, setEmptyReason] = useState("");
 
   useEffect(() => {
-    setLevel("easy");
-  }, []);
-
-  useEffect(() => {
-    const first = (LEVELS_BY_KEY[key] ?? [])[0]?.value;
-    if (first) setLevel(first);
-  }, [key]);
-
-  useEffect(() => {
-    const normalize = (data) =>
-      (data ?? [])
-        .map((r) => ({
-          user_id: r.user_id,
-          nickname: String(r.nickname ?? "").trim(),
-          score: Number(r.score ?? 0),
-        }))
-        .filter((row) => {
-          const n = row.nickname;
-          const compact = n.replace(/\s+/g, "");
-          if (!n) return false;
-          if (compact === "익명") return false;
-          if (compact.startsWith("익명")) return false;
-          if (compact === "닉네임") return false;
-          return true;
-        });
-
     const run = async () => {
       if (!level) return;
 
@@ -85,30 +54,28 @@ export default function OmokRanking() {
         let list = [];
 
         try {
-          const { data, error } = await supabase.rpc("get_game_ranking", {
-            game_key: key,
-            level: String(level),
-            limit_n: 50,
+          const { data, error } = await supabase.rpc("get_game_ranking_best_by_nickname", {
+            game_key: GAME_KEY,
+            level,
+            limit_n: 300,
           });
           if (error) throw error;
-          list = normalize(data);
+          list = data ?? [];
         } catch {
-          list = [];
-        }
-
-        if (list.length === 0) {
-          const { data: direct, error: directErr } = await supabase
+          const { data } = await supabase
             .from("game_scores")
             .select("user_id, nickname, score")
-            .eq("game_key", key)
-            .eq("level", String(level))
+            .eq("game_key", GAME_KEY)
+            .eq("level", level)
             .order("score", { ascending: false })
-            .limit(50);
+            .limit(800);
 
-          if (!directErr) list = normalize(direct);
+          list = data ?? [];
         }
 
-        const ids = list.map((x) => x.user_id).filter(Boolean);
+        const bestList = bestByNickname(list);
+
+        const ids = bestList.map((x) => x.user_id).filter(Boolean);
         const adminMap = {};
 
         if (ids.length > 0) {
@@ -122,11 +89,10 @@ export default function OmokRanking() {
           });
         }
 
-        const filtered = list
+        const filtered = bestList
           .map((it) => ({ ...it, is_admin: adminMap[it.user_id] ?? false }))
           .filter((it) => !it.is_admin);
 
-        filtered.sort((a, b) => b.score - a.score);
         const top10 = filtered.slice(0, 10);
         setRows(top10);
 
@@ -137,8 +103,8 @@ export default function OmokRanking() {
             .from("game_scores")
             .select("score, nickname")
             .eq("user_id", me.id)
-            .eq("game_key", key)
-            .eq("level", String(level))
+            .eq("game_key", GAME_KEY)
+            .eq("level", level)
             .order("score", { ascending: false })
             .limit(1);
 
@@ -161,7 +127,7 @@ export default function OmokRanking() {
           }
         }
       } catch (e) {
-        console.error("omok ranking load error:", e);
+        console.error("gugudan ranking load error:", e);
         setRows([]);
         setEmptyReason("랭킹을 불러오지 못했어요.");
       } finally {
@@ -170,13 +136,18 @@ export default function OmokRanking() {
     };
 
     run();
-  }, [key, level]);
+  }, [level]);
 
   return (
     <div className="ranking-page">
       <header className="top-header">
         <div className="top-row">
-          <h1 className="app-title">오목 랭킹</h1>
+          <button type="button" className="ranking-nav-btn" onClick={() => navigate("/gugudan")}>
+            구구단으로
+          </button>
+
+          <h1 className="app-title">구구단 랭킹</h1>
+
           <div className="header-right">
             <HamburgerMenu />
           </div>
@@ -184,10 +155,10 @@ export default function OmokRanking() {
       </header>
 
       <RankingFilters
-        gameLabel="선택"
-        levelLabel="난이도 선택"
-        gameKey={key}
-        onChangeGameKey={setKey}
+        gameOptions={null}
+        gameKey="gugudan"
+        levelsByGame={{ gugudan: LEVELS }}
+        levelLabel="난이도"
         level={level}
         onChangeLevel={setLevel}
         hideLevelSelectOnSingleLevel={false}
@@ -197,7 +168,7 @@ export default function OmokRanking() {
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
       ) : rows.length === 0 ? (
         <div className="ranking-empty">
-          {emptyReason || "아직 랭킹 데이터가 없어요 🙂"}
+          {emptyReason || "아직 표시할 랭킹이 없어요."}
           {myInfo?.score !== null ? (
             <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}>
               내 점수: {myInfo.score}점{myInfo.is_admin ? " (관리자 계정)" : ""}
@@ -208,7 +179,7 @@ export default function OmokRanking() {
         <div className="ranking-list">
           {rows.map((r, idx) => (
             <div
-              key={`${r.user_id ?? "u"}-${idx}`}
+              key={`${r.nickname}-${idx}`}
               className={`ranking-item ${idx === 0 ? "top1" : idx === 1 ? "top2" : idx === 2 ? "top3" : ""}`}
             >
               <div className="ranking-rank">
@@ -225,7 +196,7 @@ export default function OmokRanking() {
       )}
 
       <div className="ranking-tip">
-        점수는 높을수록 위에 보여요. 난이도를 바꿔서 다른 랭킹도 볼 수 있어요 🙂
+        같은 이름으로 점수가 여러 번 저장되어도, 랭킹에는 가장 높은 점수만 보여요.
       </div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>

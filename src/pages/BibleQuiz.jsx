@@ -5,33 +5,30 @@ import HamburgerMenu from "../components/common/HamburgerMenu";
 import supabase from "../supabaseClient";
 import "./BibleQuiz.css";
 
-/*
-  이 파일은 "한자게임 상단 구조" 그대로 사용합니다.
-  - 좌측: 랭킹 버튼
-  - 가운데: 타이틀
-  - 우측: 다시하기 + 햄버거
-
-  변경 요청 반영:
-  - 쉬움(easy)  : 10문제
-  - 어려움(hard): 15문제
-
-  구성:
-  - 책(잠언/창세기/요한복음) => public.bible_quiz_questions 테이블 사용
-  - 성경인물                 => public.bible_person_quiz_questions 테이블 사용
-*/
-
 const QUESTION_COUNT_BY_DIFFICULTY = {
   easy: 10,
   hard: 15,
 };
 
 const TIME_LIMIT_EASY = 15;
-const TIME_LIMIT_HARD = 12; // 어려움은 살짝 압박 주기
+const TIME_LIMIT_HARD = 12;
 const AUTO_NEXT_DELAY_MS = 450;
 
 const GAME_KEY = "bible_quiz";
 const DEFAULT_BOOK = "proverbs";
-const DEFAULT_DIFFICULTY = "easy"; // 처음 화면은 쉬움
+const DEFAULT_DIFFICULTY = "easy";
+
+const BOOKS = [
+  { key: "proverbs", label: "잠언", enabled: true },
+  { key: "people", label: "인물", enabled: true },
+  { key: "genesis", label: "창세기", enabled: false },
+  { key: "john", label: "요한복음", enabled: false },
+];
+
+const DIFFICULTIES = [
+  { key: "easy", label: "쉬움" },
+  { key: "hard", label: "어려움" },
+];
 
 function shuffle(arr) {
   const a = [...arr];
@@ -42,12 +39,10 @@ function shuffle(arr) {
   return a;
 }
 
-// "__BLANK__"를 화면에 보이는 빈칸으로 바꾸기
 function renderTextWithBlank(text) {
   return String(text ?? "").split("__BLANK__").join("_______");
 }
 
-// DB에 저장된 "단어|뜻" 형태를 파싱
 function parseChoiceWithHint(s) {
   const raw = String(s ?? "").trim();
   const [word, hint] = raw.split("|").map((x) => String(x ?? "").trim());
@@ -60,18 +55,10 @@ function formatEasyChoice(word, hint) {
   return h ? `${w} (${h})` : `${w} (뜻을 생각해요)`;
 }
 
-// 어려움 보기: 괄호 뜻을 숨겨서 문맥으로 맞히게 만들기
 function formatHardChoice(word) {
   return String(word ?? "").trim();
 }
 
-/*
-  난이도에 따라 보기 만들기
-  - 말씀 퀴즈(row: bible_quiz_questions):
-      answer, answer_hint, wrong_choices(text[])
-  - 인물 퀴즈(row: bible_person_quiz_questions):
-      answer, answer_hint, wrong_choices(text[])
-*/
 function makeChoicesByDifficulty(row, difficulty) {
   const answer = String(row?.answer ?? "").trim();
   const answerHint = String(row?.answer_hint ?? "").trim();
@@ -79,14 +66,12 @@ function makeChoicesByDifficulty(row, difficulty) {
   const wrongParsed = (row?.wrong_choices ?? []).map(parseChoiceWithHint).filter((x) => x.word);
 
   if (difficulty === "hard") {
-    // 어려움: 보기 4개, 뜻 숨김(단어만)
     const correctLabel = formatHardChoice(answer);
     const wrongWordPool = wrongParsed.map((x) => x.word).filter((w) => w && w !== correctLabel);
     const wrongs = shuffle(wrongWordPool).slice(0, 3).map((w) => formatHardChoice(w));
     return { correctLabel, choices: shuffle([correctLabel, ...wrongs]) };
   }
 
-  // 쉬움: 보기 3개, 정답/오답 모두 괄호 뜻 보이게
   const correctLabel = formatEasyChoice(answer, answerHint);
 
   const wrongPool = wrongParsed
@@ -103,16 +88,10 @@ export default function BibleQuiz() {
   const [book, setBook] = useState(DEFAULT_BOOK);
   const [difficulty, setDifficulty] = useState(DEFAULT_DIFFICULTY);
 
-  // 쉬움 10문제 / 어려움 15문제
   const maxQuestions = QUESTION_COUNT_BY_DIFFICULTY[difficulty] ?? 15;
-
-  // 타이머도 난이도별로
   const timeLimit = difficulty === "hard" ? TIME_LIMIT_HARD : TIME_LIMIT_EASY;
-
-  // 보기 개수도 난이도별로 (쉬움 3개 / 어려움 4개)
   const choiceCount = difficulty === "hard" ? 4 : 3;
 
-  // 문제 풀(랜덤으로 뽑아 둔 maxQuestions개)
   const [pool, setPool] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -164,9 +143,25 @@ export default function BibleQuiz() {
     }, 1000);
   }, [stopTimer, timeLimit]);
 
-  // 책(잠언/창세기/요한복음) or 인물에 따라 다른 테이블에서 가져오기
+  const titleText = useMemo(() => {
+    if (book === "proverbs") return "성경퀴즈 (잠언)";
+    if (book === "genesis") return "성경퀴즈 (창세기)";
+    if (book === "john") return "성경퀴즈 (요한복음)";
+    if (book === "people") return "성경퀴즈 (성경인물)";
+    return "성경퀴즈";
+  }, [book]);
+
+  const refText = useMemo(() => {
+    if (!current) return "";
+    if (book === "people") return "성경인물";
+    const bookLabel =
+      book === "proverbs" ? "잠언" : book === "genesis" ? "창세기" : book === "john" ? "요한복음" : String(book);
+    return `${bookLabel} ${current.chapter}:${current.verse}`;
+  }, [book, current]);
+
   const fetchQuestions = useCallback(
     async (nextBook, nextDifficulty) => {
+      const b = nextBook ?? book;
       const d = nextDifficulty ?? difficulty;
       const mq = QUESTION_COUNT_BY_DIFFICULTY[d] ?? 15;
 
@@ -175,7 +170,6 @@ export default function BibleQuiz() {
         stopTimer();
         clearAutoNext();
 
-        // 공통 초기화
         setScore(0);
         setQuestionNo(1);
         setFinished(false);
@@ -189,8 +183,7 @@ export default function BibleQuiz() {
         setSaved(false);
         setSaveMsg("");
 
-        // 1) 성경인물 퀴즈
-        if (nextBook === "people") {
+        if (b === "people") {
           const { data, error } = await supabase
             .from("bible_person_quiz_questions")
             .select("id, prompt, answer, answer_hint, wrong_choices")
@@ -198,14 +191,10 @@ export default function BibleQuiz() {
 
           if (error) throw error;
 
-          // 인물도 maxQuestions만큼 랜덤
           const sliced = shuffle(data ?? []).slice(0, mq);
 
-          // current 형태를 말씀 퀴즈와 비슷하게 맞춰두면 UI가 편함
-          // 인물은 text_with_blank 대신 prompt를 보여주면 됩니다.
           const normalized = sliced.map((r) => ({
             ...r,
-            // UI에서 헷갈리지 않게 필드 하나 맞춰두기
             text_with_blank: String(r?.prompt ?? ""),
             chapter: null,
             verse: null,
@@ -217,11 +206,10 @@ export default function BibleQuiz() {
           return;
         }
 
-        // 2) 잠언/창세기/요한복음 퀴즈
         const { data, error } = await supabase
           .from("bible_quiz_questions")
           .select("id, book, chapter, verse, text_with_blank, answer, answer_hint, wrong_choices")
-          .eq("book", nextBook)
+          .eq("book", b)
           .eq("active", true);
 
         if (error) throw error;
@@ -238,25 +226,21 @@ export default function BibleQuiz() {
         setLoading(false);
       }
     },
-    [stopTimer, clearAutoNext, difficulty]
+    [stopTimer, clearAutoNext, book, difficulty]
   );
 
-  // 첫 진입: 기본(book/difficulty)로 한 판 세팅
   useEffect(() => {
     fetchQuestions(book, difficulty);
     return () => {
       stopTimer();
       clearAutoNext();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 난이도 바뀌면 timeLimit도 바뀌니까, timeLeft 초기값도 맞춰주기
   useEffect(() => {
     setTimeLeft(timeLimit);
   }, [timeLimit]);
 
-  // current 바뀌면 타이머/상태 리셋
   useEffect(() => {
     if (finished) return;
     if (!current) return;
@@ -270,7 +254,6 @@ export default function BibleQuiz() {
     startTimer();
   }, [current, finished, clearAutoNext, startTimer]);
 
-  // 시간 초과 처리
   useEffect(() => {
     if (finished) return;
     if (!current) return;
@@ -292,12 +275,19 @@ export default function BibleQuiz() {
     fetchQuestions(book, difficulty);
   };
 
-  const onChangeBook = (nextBook) => {
+  const onPickBook = (nextBook) => {
+    const info = BOOKS.find((x) => x.key === nextBook);
+    if (!info?.enabled) {
+      setResultMsg("아직 준비 중이에요.");
+      return;
+    }
+    setResultMsg("");
     setBook(nextBook);
     fetchQuestions(nextBook, difficulty);
   };
 
-  const onChangeDifficulty = (nextDifficulty) => {
+  const onPickDifficulty = (nextDifficulty) => {
+    setResultMsg("");
     setDifficulty(nextDifficulty);
     fetchQuestions(book, nextDifficulty);
   };
@@ -306,7 +296,6 @@ export default function BibleQuiz() {
     if (finished) return;
     if (!current) return;
 
-    // 쉬움이면 10에서 끝, 어려움이면 15에서 끝
     if (questionNo >= maxQuestions) {
       stopTimer();
       clearAutoNext();
@@ -314,7 +303,6 @@ export default function BibleQuiz() {
       return;
     }
 
-    // 다음 문제는 pool에서 순서대로 꺼내기
     const next = pool?.[questionNo] ?? null;
     if (!next) {
       stopTimer();
@@ -384,17 +372,14 @@ export default function BibleQuiz() {
       if (profErr) throw profErr;
 
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
-
-      // 누적 점수: 책+난이도 별로 따로 쌓기
-      // 예: proverbs_easy / genesis_hard / people_easy ...
-      const levelKey = `${book}_${difficulty}`;
+      const levelKey2 = `${book}_${difficulty}`;
 
       const { data: existing, error: exErr } = await supabase
         .from("game_scores")
         .select("id, score")
         .eq("user_id", me.id)
         .eq("game_key", GAME_KEY)
-        .eq("level", levelKey)
+        .eq("level", levelKey2)
         .limit(1);
 
       if (exErr) throw exErr;
@@ -409,7 +394,7 @@ export default function BibleQuiz() {
           .update({
             score: nextTotal,
             nickname,
-            level: levelKey,
+            level: levelKey2,
           })
           .eq("id", row.id);
 
@@ -420,7 +405,7 @@ export default function BibleQuiz() {
             user_id: me.id,
             nickname,
             game_key: GAME_KEY,
-            level: levelKey,
+            level: levelKey2,
             score: nextTotal,
           },
         ]);
@@ -442,34 +427,23 @@ export default function BibleQuiz() {
     }
   }, [saving, saved, score, book, difficulty]);
 
-  // 현재 문제의 보기/정답 만들기
   const ui = useMemo(() => {
     if (!current) return null;
     return makeChoicesByDifficulty(current, difficulty);
   }, [current, difficulty]);
 
-  // 상단에 표시할 제목(선택한 책에 맞춰서)
-  const titleText = useMemo(() => {
-    if (book === "proverbs") return "성경퀴즈 (잠언)";
-    if (book === "genesis") return "성경퀴즈 (창세기)";
-    if (book === "john") return "성경퀴즈 (요한복음)";
-    if (book === "people") return "성경퀴즈 (성경인물)";
-    return "성경퀴즈";
-  }, [book]);
-
-  // 레퍼런스(몇 장 몇 절) 또는 "성경인물"
-  const refText = useMemo(() => {
+  const mainText = useMemo(() => {
     if (!current) return "";
-    if (book === "people") return "성경인물";
-    const bookLabel =
-      book === "proverbs" ? "잠언" : book === "genesis" ? "창세기" : book === "john" ? "요한복음" : String(book);
-    return `${bookLabel} ${current.chapter}:${current.verse}`;
+    if (book === "people") return String(current.text_with_blank ?? "");
+    return renderTextWithBlank(current.text_with_blank);
   }, [book, current]);
+
+  const bookButtons = useMemo(() => BOOKS, []);
+  const diffButtons = useMemo(() => DIFFICULTIES, []);
 
   if (loading) {
     return (
-      <div className={`gugu-page notranslate bible-page ${book === "people" ? "people-mode" : ""}`}>
-
+      <div className="gugu-page notranslate bible-page">
         <div className="gugu-head">
           <button type="button" className="gugu-back" onClick={() => navigate("/bible-ranking")}>
             성경랭킹
@@ -515,33 +489,13 @@ export default function BibleQuiz() {
         </div>
 
         <div className="hanja-card">
-          <div className="hanja-loading">
-            문제가 없어요. 해당 카테고리에 문제를 먼저 등록해 주세요.
-          </div>
+          <div className="hanja-loading">문제가 없어요. 해당 카테고리에 문제를 먼저 등록해 주세요.</div>
         </div>
 
-        <div className="bible-copyright">
-          저작권 문제로 개역한글 성경을 사용하였습니다.
-        </div>
+        <div className="bible-copyright">저작권 문제로 개역한글 성경을 사용하였습니다.</div>
       </div>
     );
   }
-
-  // 화면에서 보기 텍스트는 난이도에 따라 다르게 보여줘야 함
-  // 쉬움: "단어 (뜻)" / 어려움: "단어"
-  const renderChoiceText = (choiceLabel) => {
-    if (difficulty === "hard") return choiceLabel;
-
-    // 쉬움은 "단어 (뜻)" 라벨 그대로 보여주면 됨
-    // (이미 makeChoicesByDifficulty에서 괄호 붙여서 만든 값이 들어옴)
-    return choiceLabel;
-  };
-
-  // 사람(인물) 퀴즈는 구절을 renderTextWithBlank로 처리할 필요는 없지만,
-  // 같은 박스 UI를 쓰기 위해 current.text_with_blank로 통일해 둠.
-  const mainText = book === "people"
-    ? String(current.text_with_blank ?? "")
-    : renderTextWithBlank(current.text_with_blank);
 
   return (
     <div className="gugu-page notranslate bible-page">
@@ -564,32 +518,42 @@ export default function BibleQuiz() {
       </div>
 
       <div className="hanja-card">
-        <div className="hanja-row">
+        <div className="hanja-row" style={{ alignItems: "flex-start" }}>
           <div className="hanja-label">종류</div>
-          <select
-            className="hanja-select"
-            value={book}
-            onChange={(e) => onChangeBook(e.target.value)}
-            disabled={finished}
-          >
-            <option value="proverbs">잠언</option>
-            {/* <option value="genesis">창세기</option> */}
-            {/* <option value="john">요한복음</option> */}
-            <option value="people">성경인물</option>
-          </select>
+
+          <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+            {bookButtons.map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                className={`wc-pill ${book === b.key ? "on" : ""}`}
+                onClick={() => onPickBook(b.key)}
+                disabled={!b.enabled || finished}
+                title={b.enabled ? b.label : "준비 중"}
+                style={!b.enabled ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="hanja-row">
+        <div className="hanja-row" style={{ alignItems: "flex-start", marginTop: 10 }}>
           <div className="hanja-label">난이도</div>
-          <select
-            className="hanja-select"
-            value={difficulty}
-            onChange={(e) => onChangeDifficulty(e.target.value)}
-            disabled={finished}
-          >
-            <option value="easy">쉬움</option>
-            <option value="hard">어려움</option>
-          </select>
+
+          <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+            {diffButtons.map((d) => (
+              <button
+                key={d.key}
+                type="button"
+                className={`wc-pill ${difficulty === d.key ? "on" : ""}`}
+                onClick={() => onPickDifficulty(d.key)}
+                disabled={finished}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="hanja-score">
@@ -621,32 +585,32 @@ export default function BibleQuiz() {
 
                 return (
                   <button
-                    key={`${c}-${choiceCount}`} // 보기 수 바뀌면 키 충돌 방지
+                    key={`${c}-${choiceCount}`}
                     type="button"
                     className={cls}
                     onClick={() => onPickChoice(c)}
                   >
                     {book === "people" ? (
-                        (() => {
-                            const s = String(c ?? "");
-                            const open = s.indexOf("(");
-                            const close = s.lastIndexOf(")");
+                      (() => {
+                        const s = String(c ?? "");
+                        const open = s.indexOf("(");
+                        const close = s.lastIndexOf(")");
 
-                            if (open === -1 || close === -1 || close < open) return s;
+                        if (open === -1 || close === -1 || close < open) return s;
 
-                            const name = s.slice(0, open).trim();       // 이름
-                            const hint = s.slice(open, close + 1);      // (설명)
+                        const name = s.slice(0, open).trim();
+                        const hint = s.slice(open, close + 1);
 
-                            return (
-                            <>
-                                {name}
-                                <span className="choice-hint">{hint}</span>
-                            </>
-                            );
-                        })()
-                        ) : (
-                        c
-                        )}
+                        return (
+                          <>
+                            {name}
+                            <span className="choice-hint">{hint}</span>
+                          </>
+                        );
+                      })()
+                    ) : (
+                      c
+                    )}
                   </button>
                 );
               })}
@@ -655,12 +619,7 @@ export default function BibleQuiz() {
             {resultMsg && <div className="hanja-result">{resultMsg}</div>}
 
             <div className="hanja-actions">
-              <button
-                type="button"
-                className="hanja-btn"
-                onClick={goNext}
-                disabled={!needNext || finished}
-              >
+              <button type="button" className="hanja-btn" onClick={goNext} disabled={!needNext || finished}>
                 {questionNo >= maxQuestions ? "끝내기" : "다음 문제"}
               </button>
 
@@ -695,9 +654,7 @@ export default function BibleQuiz() {
         )}
       </div>
 
-      <div className="bible-copyright">
-        저작권 문제로 개역한글 성경을 사용하였습니다.
-      </div>
+      <div className="bible-copyright">저작권 문제로 개역한글 성경을 사용하였습니다.</div>
     </div>
   );
 }

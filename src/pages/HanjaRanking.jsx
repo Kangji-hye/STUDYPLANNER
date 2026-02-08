@@ -4,9 +4,8 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
-import RankingMenu from "../components/common/RankingMenu";
 
-const OPTIONS = [{ label: "한자 놀이", value: "hanja" }];
+const GAME_KEY = "hanja";
 
 const HANJA_LEVELS = [
   { label: "8급", value: "8" },
@@ -14,15 +13,12 @@ const HANJA_LEVELS = [
   { label: "6급", value: "6" },
 ];
 
-const LEVELS_BY_KEY = { hanja: HANJA_LEVELS };
-
 export default function HanjaRanking() {
   const navigate = useNavigate();
 
-  const [key, setKey] = useState("hanja");
-  const levels = useMemo(() => LEVELS_BY_KEY[key] ?? [], [key]);
-
   const [level, setLevel] = useState("8");
+  const levels = useMemo(() => HANJA_LEVELS, []);
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
 
@@ -32,11 +28,6 @@ export default function HanjaRanking() {
   useEffect(() => {
     setLevel("8");
   }, []);
-
-  useEffect(() => {
-    const first = (LEVELS_BY_KEY[key] ?? [])[0]?.value;
-    if (first) setLevel(first);
-  }, [key]);
 
   useEffect(() => {
     const normalize = (data) =>
@@ -86,7 +77,7 @@ export default function HanjaRanking() {
 
         try {
           const { data, error } = await supabase.rpc("get_game_ranking", {
-            game_key: key,
+            game_key: GAME_KEY,
             level: String(level),
             limit_n: 50,
           });
@@ -100,7 +91,7 @@ export default function HanjaRanking() {
           const { data: direct, error: directErr } = await supabase
             .from("game_scores")
             .select("user_id, nickname, score")
-            .eq("game_key", key)
+            .eq("game_key", GAME_KEY)
             .eq("level", String(level))
             .order("score", { ascending: false })
             .limit(50);
@@ -112,11 +103,7 @@ export default function HanjaRanking() {
         const adminMap = {};
 
         if (ids.length > 0) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("id, is_admin")
-            .in("id", ids);
-
+          const { data: profs } = await supabase.from("profiles").select("id, is_admin").in("id", ids);
           (profs ?? []).forEach((p) => {
             adminMap[p.id] = Boolean(p.is_admin);
           });
@@ -128,7 +115,6 @@ export default function HanjaRanking() {
 
         filtered.sort((a, b) => b.score - a.score);
         const top10 = filtered.slice(0, 10);
-
         setRows(top10);
 
         let myBestScore = null;
@@ -137,7 +123,7 @@ export default function HanjaRanking() {
             .from("game_scores")
             .select("score, nickname")
             .eq("user_id", me.id)
-            .eq("game_key", key)
+            .eq("game_key", GAME_KEY)
             .eq("level", String(level))
             .order("score", { ascending: false })
             .limit(1);
@@ -147,11 +133,7 @@ export default function HanjaRanking() {
           if (!myNickname) myNickname = String(mine?.[0]?.nickname ?? "").trim();
         }
 
-        setMyInfo({
-          is_admin: myIsAdmin,
-          score: myBestScore,
-          nickname: myNickname,
-        });
+        setMyInfo({ is_admin: myIsAdmin, score: myBestScore, nickname: myNickname });
 
         if (top10.length === 0) {
           if (myBestScore !== null && myIsAdmin) {
@@ -174,28 +156,45 @@ export default function HanjaRanking() {
     };
 
     run();
-  }, [key, level]);
+  }, [level]);
 
   return (
     <div className="ranking-page">
       <header className="top-header">
         <div className="top-row">
+          <button type="button" className="ranking-nav-btn" onClick={() => navigate("/hanja")}>
+            한자놀이로
+          </button>
+
           <h1 className="app-title">한자 놀이 랭킹</h1>
+
           <div className="header-right">
             <HamburgerMenu />
           </div>
         </div>
       </header>
 
-      <RankingMenu
-        gameKey={key}
-        onChangeGameKey={setKey}
-        level={level}
-        onChangeLevel={setLevel}
-        levels={levels}
-        levelLabel="급수 선택"
-      />
-      
+      <div className="ranking-filters" style={{ marginTop: 10 }}>
+        <div className="ranking-filter-row" style={{ alignItems: "flex-start" }}>
+          <div className="ranking-filter-label">급수</div>
+
+          <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+            {levels.map((lv) => (
+              <button
+                key={lv.value}
+                type="button"
+                className={`wc-pill ${String(level) === String(lv.value) ? "on" : ""}`}
+                onClick={() => setLevel(String(lv.value))}
+                disabled={loading}
+                title={lv.label}
+              >
+                {lv.value}급
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
       ) : rows.length === 0 ? (
@@ -227,9 +226,7 @@ export default function HanjaRanking() {
         </div>
       )}
 
-      <div className="ranking-tip">
-        점수는 높을수록 위에 보여요. 급수를 바꿔서 다른 랭킹도 볼 수 있어요 🙂
-      </div>
+      <div className="ranking-tip">점수는 높을수록 위에 보여요. 급수를 눌러서 바로 바꿔볼 수 있어요 🙂</div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>
         <button

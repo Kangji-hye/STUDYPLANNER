@@ -1,76 +1,47 @@
 // src/pages/GugudanGame.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./GugudanGame.css";
+import supabase from "../supabaseClient";
 
 export default function GugudanGame() {
   const navigate = useNavigate();
+
   const [level, setLevel] = useState("easy");
   const [danMin, setDanMin] = useState(2);
   const [danMax, setDanMax] = useState(9);
   const [mulMax, setMulMax] = useState(9);
   const [totalQuestions, setTotalQuestions] = useState(10);
+
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [finished, setFinished] = useState(false);
+
   const [a, setA] = useState(2);
   const [b, setB] = useState(1);
   const [choices, setChoices] = useState([]);
   const [msg, setMsg] = useState("시작해 볼까요? 🙂");
+
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+
   const correct = useMemo(() => a * b, [a, b]);
 
   const rules = useMemo(() => {
     if (level === "easy") {
-      return {
-        label: "하",
-        choiceCount: 3,
-        timePerQuestion: 12,
-        rightBase: 10,
-        wrongPenalty: 5,
-      };
+      return { label: "쉬움", choiceCount: 3, timePerQuestion: 12, rightBase: 10, wrongPenalty: 5 };
     }
     if (level === "normal") {
-      return {
-        label: "중",
-        choiceCount: 4,
-        timePerQuestion: 10,
-        rightBase: 12,
-        wrongPenalty: 7,
-      };
+      return { label: "보통", choiceCount: 4, timePerQuestion: 10, rightBase: 12, wrongPenalty: 7 };
     }
-    return {
-      label: "상",
-      choiceCount: 5,
-      timePerQuestion: 8,
-      rightBase: 15,
-      wrongPenalty: 10,
-    };
+    return { label: "어려움", choiceCount: 5, timePerQuestion: 8, rightBase: 15, wrongPenalty: 10 };
   }, [level]);
-
-  const makeQuestion = () => {
-    const nextA = randInt(danMin, danMax);
-    const nextB = randInt(1, mulMax);
-    const nextCorrect = nextA * nextB;
-
-    setA(nextA);
-    setB(nextB);
-
-    const wrongs = [];
-    while (wrongs.length < rules.choiceCount - 1) {
-      const w = makeWrong(nextCorrect, wrongs);
-      wrongs.push(w);
-    }
-    const arr = shuffle([nextCorrect, ...wrongs]);
-    setChoices(arr);
-
-    setTimeLeft(rules.timePerQuestion);
-
-    setMsg(`${rules.label} 난이도! 골라보자 🙂`);
-  };
 
   const stopTimer = () => {
     clearInterval(timerRef.current);
@@ -84,16 +55,37 @@ export default function GugudanGame() {
     }, 1000);
   };
 
-  const resetGame = () => {
+  const makeQuestion = useCallback(() => {
+    const nextA = randInt(danMin, danMax);
+    const nextB = randInt(1, mulMax);
+    const nextCorrect = nextA * nextB;
+
+    setA(nextA);
+    setB(nextB);
+
+    const wrongs = [];
+    while (wrongs.length < rules.choiceCount - 1) {
+      const w = makeWrong(nextCorrect, wrongs);
+      wrongs.push(w);
+    }
+
+    setChoices(shuffle([nextCorrect, ...wrongs]));
+    setTimeLeft(rules.timePerQuestion);
+    setMsg(`${rules.label} 난이도! 골라보자 🙂`);
+  }, [danMin, danMax, mulMax, rules.choiceCount, rules.timePerQuestion, rules.label]);
+
+  const resetGame = useCallback(() => {
     stopTimer();
     setIdx(0);
     setScore(0);
     setStreak(0);
     setFinished(false);
-
+    setSaving(false);
+    setSaved(false);
+    setSaveMsg("");
     makeQuestion();
     startTimer();
-  };
+  }, [makeQuestion]);
 
   useEffect(() => {
     resetGame();
@@ -108,7 +100,6 @@ export default function GugudanGame() {
   useEffect(() => {
     if (finished) return;
     if (timeLeft > 0) return;
-
     applyWrong("시간 끝! 😅");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, finished]);
@@ -128,7 +119,7 @@ export default function GugudanGame() {
   };
 
   const applyRight = () => {
-    const bonus = Math.min(10, streak * 2); 
+    const bonus = Math.min(10, streak * 2);
     setScore((s) => s + rules.rightBase + bonus);
     setStreak((st) => st + 1);
     setMsg(streak >= 2 ? "연속 정답! 🔥" : "정답! 👍");
@@ -136,7 +127,7 @@ export default function GugudanGame() {
   };
 
   const applyWrong = (prefix) => {
-    setScore((s) => Math.max(0, s - rules.wrongPenalty)); // 점수는 0 아래로 안 내려가게
+    setScore((s) => Math.max(0, s - rules.wrongPenalty));
     setStreak(0);
     setMsg(`${prefix} 정답은 ${correct} 🙂`);
     goNext();
@@ -144,22 +135,77 @@ export default function GugudanGame() {
 
   const onPick = (picked) => {
     if (finished) return;
-
     const userAnswer = Number(picked);
     if (userAnswer === correct) applyRight();
     else applyWrong("아깝다!");
   };
+
+  const saveRanking = useCallback(async () => {
+    if (!finished) return;
+    if (saving || saved) return;
+
+    setSaving(true);
+    setSaveMsg("");
+
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      if (authErr) throw authErr;
+
+      const me = authData?.user;
+      if (!me?.id) {
+        setSaveMsg("로그인이 필요해요.");
+        setSaving(false);
+        return;
+      }
+
+      const { data: prof, error: profErr } = await supabase
+        .from("profiles")
+        .select("nickname, is_admin")
+        .eq("id", me.id)
+        .maybeSingle();
+
+      if (profErr) throw profErr;
+
+      if (prof?.is_admin) {
+        setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
+        setSaving(false);
+        return;
+      }
+
+      const nickname = String(prof?.nickname ?? "").trim() || "익명";
+
+      const { error } = await supabase.from("game_scores").insert([
+        {
+          user_id: me.id,
+          nickname,
+          game_key: "gugudan",
+          level: String(level),
+          score: Number(score ?? 0),
+        },
+      ]);
+
+      if (error) throw error;
+
+      setSaved(true);
+      setSaveMsg("랭킹에 저장했어요.");
+    } catch (e) {
+      console.error("gugudan save error:", e);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSaving(false);
+    }
+  }, [finished, saving, saved, level, score]);
 
   const danOptions = [2, 3, 4, 5, 6, 7, 8, 9];
 
   return (
     <div className="gugu-page">
       <div className="gugu-head">
-        <button type="button" className="gugu-back" onClick={() => navigate("/planner")}>
-          ← 플래너
+        <button type="button" className="gugu-back" onClick={() => navigate("/gugudan-ranking")}>
+          구구단 랭킹
         </button>
 
-        <div className="gugu-title">✖️ 숫자놀이</div>
+        <div className="gugu-title">✖️ 구구단 놀이</div>
 
         <div className="gugu-head-right">
           <button type="button" className="gugu-restart" onClick={resetGame}>
@@ -175,10 +221,10 @@ export default function GugudanGame() {
         <div className="gugu-row">
           <div className="gugu-label">난이도</div>
           <div className="gugu-controls">
-            <select value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="easy">하 (선택지 3개)</option>
-              <option value="normal">중 (선택지 4개)</option>
-              <option value="hard">상 (선택지 5개)</option>
+            <select value={level} onChange={(e) => setLevel(e.target.value)} disabled={saving}>
+              <option value="easy">쉬움 (선택지 3개)</option>
+              <option value="normal">보통 (선택지 4개)</option>
+              <option value="hard">어려움 (선택지 5개)</option>
             </select>
           </div>
         </div>
@@ -186,7 +232,7 @@ export default function GugudanGame() {
         <div className="gugu-row">
           <div className="gugu-label">단 범위</div>
           <div className="gugu-controls">
-            <select value={danMin} onChange={(e) => setDanMin(Number(e.target.value))}>
+            <select value={danMin} onChange={(e) => setDanMin(Number(e.target.value))} disabled={saving}>
               {danOptions.map((v) => (
                 <option key={`min-${v}`} value={v}>
                   {v}단부터
@@ -196,7 +242,7 @@ export default function GugudanGame() {
 
             <span className="gugu-sep">~</span>
 
-            <select value={danMax} onChange={(e) => setDanMax(Number(e.target.value))}>
+            <select value={danMax} onChange={(e) => setDanMax(Number(e.target.value))} disabled={saving}>
               {danOptions.map((v) => (
                 <option key={`max-${v}`} value={v}>
                   {v}단까지
@@ -209,7 +255,7 @@ export default function GugudanGame() {
         <div className="gugu-row">
           <div className="gugu-label">곱 범위</div>
           <div className="gugu-controls">
-            <select value={mulMax} onChange={(e) => setMulMax(Number(e.target.value))}>
+            <select value={mulMax} onChange={(e) => setMulMax(Number(e.target.value))} disabled={saving}>
               <option value={9}>1~9</option>
               <option value={12}>1~12</option>
             </select>
@@ -219,7 +265,7 @@ export default function GugudanGame() {
         <div className="gugu-row">
           <div className="gugu-label">문제 수</div>
           <div className="gugu-controls">
-            <select value={totalQuestions} onChange={(e) => setTotalQuestions(Number(e.target.value))}>
+            <select value={totalQuestions} onChange={(e) => setTotalQuestions(Number(e.target.value))} disabled={saving}>
               <option value={5}>5문제</option>
               <option value={10}>10문제</option>
               <option value={15}>15문제</option>
@@ -267,16 +313,24 @@ export default function GugudanGame() {
         {finished && (
           <div className="gugu-finish">
             <div className="gugu-finish-title">오늘도 수고했어요 🎉</div>
+
             <div className="gugu-finish-sub">
               최종 점수는 <b>{score}</b>점 입니다.
             </div>
 
+            {saveMsg ? <div className="gugu-msg" style={{ marginTop: 8 }}>{saveMsg}</div> : null}
+
             <div className="gugu-finish-actions">
-              <button type="button" className="gugu-submit" onClick={resetGame}>
+              <button type="button" className="gugu-submit" onClick={resetGame} disabled={saving}>
                 한 판 더!
               </button>
-              <button type="button" className="gugu-choice" onClick={() => navigate("/planner")}>
-                플래너로
+
+              <button type="button" className="gugu-submit" onClick={saveRanking} disabled={saving || saved}>
+                {saved ? "저장 완료" : saving ? "저장 중..." : "랭킹에 저장"}
+              </button>
+
+              <button type="button" className="gugu-choice" onClick={() => navigate("/gugudan-ranking")} disabled={saving}>
+                랭킹 보기
               </button>
             </div>
           </div>
