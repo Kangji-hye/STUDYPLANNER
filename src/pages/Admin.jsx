@@ -5,10 +5,7 @@ import supabase from "../supabaseClient";
 import "./Admin.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 
-/**
- * 학년 규칙(숫자 저장):
- * -1 = 6세, 0 = 7세, 1~6 = 1~6학년
- */
+
 const GRADE_OPTIONS = [
   { label: "6세", value: -1 },
   { label: "7세", value: 0 },
@@ -149,13 +146,9 @@ export default function Admin() {
   const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
   const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
   const [editingAlarmId, setEditingAlarmId] = useState(null);
-
-  // 추가: 평일/주말 옵션(전체/평일/주말)
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
-
-  // 추가: 오늘만(공지) / 항상(기본) 선택
-  // 기간 기능이 현재 불안정하니, "오늘만"은 확실히 동작하게 start_day/end_day를 오늘로 고정 저장합니다.
+  const [alarmOnUsers, setAlarmOnUsers] = useState([]);
   const [alarmPeriodMode, setAlarmPeriodMode] = useState("always"); // always | today
 
   // =========================
@@ -284,8 +277,6 @@ export default function Admin() {
       return;
     }
 
-    // 오늘만 모드면 start/end를 오늘로 확정 저장
-    // 항상 모드면 기간을 null로 저장(항상 적용)
     const todayKey = toDayKey(new Date());
     const resolvedStartDay = alarmPeriodMode === "today" ? todayKey : null;
     const resolvedEndDay = alarmPeriodMode === "today" ? todayKey : null;
@@ -368,7 +359,6 @@ export default function Admin() {
     setAlarmEndDay(row.end_day ? String(row.end_day) : "");
     setAlarmDayType(String(row.day_type ?? "all"));
 
-    // 오늘만 모드 자동 감지: start_day와 end_day가 둘 다 오늘이면 "오늘만"으로 올려줍니다.
     const todayKey = toDayKey(new Date());
     if (row.start_day && row.end_day && String(row.start_day) === todayKey && String(row.end_day) === todayKey) {
       setAlarmPeriodMode("today");
@@ -398,6 +388,23 @@ export default function Admin() {
     }
 
     await loadAlarmList();
+    const users = await loadAlarmOnUsers();
+    setAlarmOnUsers(users);
+  };
+
+  const loadAlarmOnUsers = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nickname, alarm_enabled_at")
+      .eq("alarm_enabled", true)
+      .order("alarm_enabled_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      return [];
+    }
+
+    return data ?? [];
   };
 
   // =======================

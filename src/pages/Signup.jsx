@@ -4,18 +4,16 @@ import { Link, useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Signup.css";
 
-
-
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [birthY, setBirthY] = useState(""); 
-  const [birthM, setBirthM] = useState(""); 
-  const [birthD, setBirthD] = useState(""); 
+  const [birthY, setBirthY] = useState("");
+  const [birthM, setBirthM] = useState("");
+  const [birthD, setBirthD] = useState("");
   const [nickname, setNickname] = useState("");
   const [isMale, setIsMale] = useState(true);
-  // const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿀 거예요
+  const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿔요
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -38,22 +36,8 @@ const Signup = () => {
     setBirthD("");
   }, [birthM, birthY]);
 
-  useEffect(() => {
-  const canPickDay = birthY.length === 4 && birthM.length === 2;
-  if (!canPickDay) return;
+  const monthOptions = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
 
-  // iOS에서 select 포커스는 타이밍이 민감해서 한 박자 늦춰주는 게 안전함
-  const t = setTimeout(() => {
-    refBirthD.current?.focus();
-  }, 50);
-
-  return () => clearTimeout(t);
-}, [birthY, birthM]);
-
-  const monthOptions = Array.from({ length: 12 }, (_, i) =>
-    String(i + 1).padStart(2, "0")
-  );
-  
   const GRADE_OPTIONS = [
     { label: "5세 이하", value: -2 },
     { label: "6세", value: -1 },
@@ -70,9 +54,7 @@ const Signup = () => {
   const getDayOptions = (year, month) => {
     if (!year || !month) return [];
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
-    return Array.from({ length: lastDay }, (_, i) =>
-      String(i + 1).padStart(2, "0")
-    );
+    return Array.from({ length: lastDay }, (_, i) => String(i + 1).padStart(2, "0"));
   };
 
   const isPasswordMatch = useMemo(() => {
@@ -86,24 +68,24 @@ const Signup = () => {
 
     if (password !== passwordConfirm) {
       alert("비밀번호가 서로 다릅니다. 다시 확인해 주세요.");
-      return;}
+      return;
+    }
 
     if (password.length < 8) {
-    alert("비밀번호는 8자 이상 입력해 주세요.");
-    return;
+      alert("비밀번호는 8자 이상 입력해 주세요.");
+      return;
     }
 
     const safeEmail = email.trim();
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
 
-    // const safeGradeCode = Number(gradeCode);
-    // if (!Number.isFinite(safeGradeCode)) {
-    //   alert("학년을 선택해 주세요.");
-    //   setLoading(false);
-    //   return;
-    // }
-
+    const safeGradeCode = Number(gradeCode);
+    if (!Number.isFinite(safeGradeCode)) {
+      alert("학년을 선택해 주세요.");
+      setLoading(false);
+      return;
+    }
 
     // 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
     if (!safeBirthdate) {
@@ -130,10 +112,14 @@ const Signup = () => {
         options: {
           data: {
             nickname: safeNickname,
-            birthdate: safeBirthdate, 
+            birthdate: safeBirthdate,
             is_male: isMale,
-            // grade_code: safeGradeCode, 
-            grade_manual: true,        
+            grade_code: safeGradeCode,
+            grade_manual: true,
+
+            // (참고) auth metadata에도 알림 기본값을 남겨두고 싶으면 이렇게도 가능하지만
+            // 실제 관리/조회는 profiles를 기준으로 할 거예요.
+            alarm_enabled: true,
           },
         },
       });
@@ -148,21 +134,31 @@ const Signup = () => {
         return;
       }
 
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .upsert(
-          {
-            id: user.id,
-            nickname: safeNickname,
-            birthdate: safeBirthdate, 
-            is_male: isMale,
-            // grade_code: safeGradeCode,
-            grade_manual: true,       
-          },
-          { onConflict: "id" }
-        );
+      // ✅ 여기에서 핵심: 회원가입 직후 profiles에 알림 ON을 디폴트로 저장
+      // profiles 테이블에 alarm_enabled(boolean), alarm_enabled_at(timestamptz) 컬럼이 있어야 해요.
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          id: user.id,
+          nickname: safeNickname,
+          birthdate: safeBirthdate,
+          is_male: isMale,
+          grade_code: safeGradeCode,
+          grade_manual: true,
+
+          alarm_enabled: true,
+          alarm_enabled_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
 
       if (profileError) throw profileError;
+
+      // 로컬에도 “켜짐”으로 한 번 저장(앱이 빨리 반응하게)
+      try {
+        localStorage.setItem(`planner_alarm_enabled_v1:${user.id}`, "1");
+      } catch {
+        //
+      }
 
       alert("회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.");
       navigate("/login");
@@ -176,8 +172,6 @@ const Signup = () => {
       setLoading(false);
     }
   };
-
-  
 
   return (
     <div className="signup auth-page">
@@ -215,9 +209,7 @@ const Signup = () => {
           required
         />
 
-        {!isPasswordMatch && (
-          <p className="pw-hint">비밀번호가 서로 달라요.</p>
-        )}
+        {!isPasswordMatch && <p className="pw-hint">비밀번호가 서로 달라요.</p>}
 
         <input
           type="text"
@@ -239,7 +231,7 @@ const Signup = () => {
             onChange={(e) => {
               const v = onlyDigitsMax(e.target.value, 4);
               setBirthY(v);
-              if (v.length === 4) refBirthM.current?.focus(); // 4자리면 월로
+              if (v.length === 4) refBirthM.current?.focus();
             }}
             maxLength={4}
             required
@@ -251,7 +243,8 @@ const Signup = () => {
             ref={refBirthM}
             value={birthM}
             onChange={(e) => {
-               setBirthM(e.target.value);
+              setBirthM(e.target.value);
+              refBirthD.current?.focus();
             }}
             required
           >
@@ -261,7 +254,6 @@ const Signup = () => {
                 {m}
               </option>
             ))}
-
           </select>
 
           <span className="birth-sep">-</span>
@@ -271,7 +263,7 @@ const Signup = () => {
             value={birthD}
             onChange={(e) => setBirthD(e.target.value)}
             required
-            disabled={birthY.length !== 4 || birthM.length !== 2}  // 년/월 없으면 비활성
+            disabled={birthY.length !== 4 || birthM.length !== 2}
           >
             <option value="">DD</option>
             {getDayOptions(birthY, birthM).map((d) => (
@@ -284,41 +276,19 @@ const Signup = () => {
 
         <div className="gender-wrap">
           <label>
-            <input
-              type="radio"
-              name="gender"
-              checked={isMale === true}
-              onChange={() => setIsMale(true)}
-            />
+            <input type="radio" name="gender" checked={isMale === true} onChange={() => setIsMale(true)} />
             <span>남자</span>
           </label>
 
           <label>
-            <input
-              type="radio"
-              name="gender"
-              checked={isMale === false}
-              onChange={() => setIsMale(false)}
-            />
+            <input type="radio" name="gender" checked={isMale === false} onChange={() => setIsMale(false)} />
             <span>여자</span>
           </label>
         </div>
 
-         <button
-          className="auth-submit"
-          type="submit"
-          disabled={loading || !isPasswordMatch}
-        >
-          {loading ? "가입 중..." : "가입하기"}
-        </button>
-
+        {/* 학년 선택(원래 코드 구조 유지) */}
         {/* <div className="grade-wrap">
-          <select
-            value={gradeCode}
-            onChange={(e) => setGradeCode(e.target.value)}
-            required
-            aria-label="학년 선택"
-          >
+          <select value={gradeCode} onChange={(e) => setGradeCode(e.target.value)} required aria-label="학년 선택">
             <option value="">학년 선택</option>
             {GRADE_OPTIONS.map((x) => (
               <option key={x.value} value={String(x.value)}>
@@ -328,12 +298,14 @@ const Signup = () => {
           </select>
         </div> */}
 
+        <button className="auth-submit" type="submit" disabled={loading || !isPasswordMatch}>
+          {loading ? "가입 중..." : "가입하기"}
+        </button>
       </form>
 
       <p className="auth-foot">
         이미 계정이 있나요? <Link to="/login">로그인</Link>
       </p>
-
     </div>
   );
 };
