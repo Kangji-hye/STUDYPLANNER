@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
-import RankingFilters from "../components/common/RankingFilters";
 import { bestByNickname } from "../utils/rankingBest";
 
 const GAME_KEY = "baduk";
@@ -18,15 +17,21 @@ const BADUK_LEVELS = [
 export default function BadukRanking() {
   const navigate = useNavigate();
 
-  // 지금은 바둑 전용 랭킹이지만,
-  // 나중에 통합랭킹 페이지로 바꾸기 쉬우라고 gameKey 상태는 유지해 둡니다.
-  const [gameKey, setGameKey] = useState(GAME_KEY);
+  // ✅ 바둑 랭킹은 game_key가 고정이므로 setter가 필요 없습니다.
+  // ✅ setGameKey 미사용 경고도 같이 해결됩니다.
+  const [gameKey] = useState(GAME_KEY);
+
+  // ✅ 사용자가 바꾸는 건 난이도만!
   const [level, setLevel] = useState("easy");
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
 
-  const [myInfo, setMyInfo] = useState({ is_admin: false, score: null, nickname: "" });
+  const [myInfo, setMyInfo] = useState({
+    is_admin: false,
+    score: null,
+    nickname: "",
+  });
   const [emptyReason, setEmptyReason] = useState("");
 
   const levels = useMemo(() => BADUK_LEVELS, []);
@@ -58,16 +63,19 @@ export default function BadukRanking() {
           myNickname = String(meProf?.nickname ?? "").trim();
         }
 
-        // 1) 점수 원본 가져오기
+        // 1) 점수 원본 가져오기 (기존 사람들 점수도 그대로 여기서 가져옵니다)
         let list = [];
 
-        // RPC가 있으면 RPC를 쓰고(없어도 괜찮게 fallback)
+        // RPC가 있으면 RPC를 쓰고, 없으면 direct select로 fallback
         try {
-          const { data, error } = await supabase.rpc("get_game_ranking_best_by_nickname", {
-            game_key: String(gameKey),
-            level: String(level),
-            limit_n: 200,
-          });
+          const { data, error } = await supabase.rpc(
+            "get_game_ranking_best_by_nickname",
+            {
+              game_key: String(gameKey),
+              level: String(level),
+              limit_n: 200,
+            }
+          );
           if (error) throw error;
           list = data ?? [];
         } catch {
@@ -151,6 +159,11 @@ export default function BadukRanking() {
     run();
   }, [gameKey, level]);
 
+  const currentLevelLabel = useMemo(() => {
+    const found = levels.find((x) => x.value === level);
+    return found?.label ?? "";
+  }, [levels, level]);
+
   return (
     <div className="ranking-page">
       <header className="top-header">
@@ -162,12 +175,46 @@ export default function BadukRanking() {
         </div>
       </header>
 
-      <RankingFilters
-        levelLabel="난이도 선택"
-        level={level}
-        onChangeLevel={setLevel}
-        levels={levels}
-      />
+      {/* ✅ 셀렉트 대신 버튼 3개 */}
+      <div style={{ padding: "10px 12px" }}>
+        <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 8 }}>
+          난이도 선택
+        </div>
+
+        <div style={{ display: "flex", gap: 8 }}>
+          {levels.map((lv) => {
+            const active = lv.value === level;
+
+            return (
+              <button
+                key={lv.value}
+                type="button"
+                onClick={() => setLevel(lv.value)}
+                aria-pressed={active}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 12,
+                  border: active
+                    ? "2px solid rgba(0,0,0,0.55)"
+                    : "1px solid rgba(0,0,0,0.12)",
+                  background: active ? "rgba(0,0,0,0.06)" : "#fff",
+                  fontSize: 14,
+                  fontWeight: active ? 700 : 600,
+                  cursor: "pointer",
+                }}
+                title={lv.label}
+              >
+                {lv.value === "easy" ? "하" : lv.value === "normal" ? "중" : "상"}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.8 }}>
+          현재 선택: {currentLevelLabel}
+        </div>
+      </div>
 
       {loading ? (
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
@@ -185,7 +232,9 @@ export default function BadukRanking() {
           {rows.map((r, idx) => (
             <div
               key={`${r.nickname}-${idx}`}
-              className={`ranking-item ${idx === 0 ? "top1" : idx === 1 ? "top2" : idx === 2 ? "top3" : ""}`}
+              className={`ranking-item ${
+                idx === 0 ? "top1" : idx === 1 ? "top2" : idx === 2 ? "top3" : ""
+              }`}
             >
               <div className="ranking-rank">
                 <span className="rank-badge">

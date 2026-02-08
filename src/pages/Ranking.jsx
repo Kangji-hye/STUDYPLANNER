@@ -11,17 +11,30 @@ export default function Ranking() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
 
-  const gradeToLabel = (gradeCode) => {
-    if (gradeCode === null || gradeCode === undefined || gradeCode === "") {
+    const gradeToLabel = (gradeCode) => {
+    if (gradeCode === null || gradeCode === undefined) return null;
+
+    const raw = String(gradeCode).trim();
+    if (!raw) return null;
+
+    if (raw.includes("유치")) return "유치부";
+    if (raw.includes("학년")) return raw;
+
+    const n = Number(raw);
+    if (Number.isFinite(n)) {
+      if (n === -1 || n === 0) return "유치부";
+      if (n >= 1 && n <= 6) return `${n}학년`; // 6학년까지
       return null;
     }
 
-    const n = Number(gradeCode);
-    if (!Number.isFinite(n)) return null;
+    const m = raw.match(/-?\d+/);
+    if (!m) return null;
 
-    if (n === -1 || n === 0) return "유치부";
-    if (n >= 1 && n <= 5) return `${n}학년`;
+    const nn = Number(m[0]);
+    if (!Number.isFinite(nn)) return null;
 
+    if (nn === -1 || nn === 0) return "유치부";
+    if (nn >= 1 && nn <= 6) return `${nn}학년`;
     return null;
   };
 
@@ -91,7 +104,7 @@ useEffect(() => {
         return b.stamp_count - a.stamp_count;
       });
 
-      setRows(merged.slice(0, 10));
+      setRows(merged.slice(0, 11));
     } catch (e) {
       console.error("ranking load error:", e);
       setRows([]);
