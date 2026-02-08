@@ -37,7 +37,7 @@ export default function HelpModal({ open, onClose }) {
             11) 2학년은 카라 "오늘의 암송 말씀"이 나와요. <br />
             12) "마이페이지"에서 비밀번호 수정 가능해요.<br />
             13) 리딩레이스와 그레이프시드는 외부링크에요. <br />
-            14) 회원탈퇴 문의는 joyloop7@gmail.com으로 메일주세요.
+            14) 회원탈퇴는 joyloop7@gmail.com으로 메일주세요.
           </div>
 
           <button className="modal-primary" onClick={onClose}>

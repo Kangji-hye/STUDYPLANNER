@@ -25,6 +25,11 @@ import HanjaGame from "./pages/HanjaGame";
 import HanjaRanking from "./pages/HanjaRanking";
 import BadukRanking from "./pages/BadukRanking";
 import OmokRanking from "./pages/OmokRanking";
+import BibleQuiz from "./pages/BibleQuiz";
+import BibleRanking from "./pages/BibleRanking";
+import TypingPractice from "./pages/TypingPractice";
+import TypingRanking from "./pages/TypingRanking";
+
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -141,7 +146,41 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
-            <Route path="/baduk-ranking" element={<BadukRanking />} />
+            <Route
+              path="/bible-quiz"
+              element={
+                <ProtectedRoute>
+                  <BibleQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bible-ranking"
+              element={
+                <ProtectedRoute>
+                  <BibleRanking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/typing"
+              element={
+                <ProtectedRoute>
+                  <TypingPractice />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/typing-ranking"
+              element={
+                <ProtectedRoute>
+                  <TypingRanking />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* <Route path="/baduk-ranking" element={<BadukRanking />} /> */}
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
 

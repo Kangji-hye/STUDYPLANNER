@@ -1,0 +1,169 @@
+/* =========================
+   Bible Quiz – 말씀 영역만 기본폰트
+   상단 메뉴/햄버거 폰트는 건드리지 않음
+   ========================= */
+
+/* 페이지 기본 구조 */
+.bible-page {
+  padding-bottom: 24px;
+}
+
+/* 카드 */
+.bible-card {
+  margin: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ===== 말씀 / 문제 영역 ===== */
+
+/* 성경 구절 또는 인물 설명 */
+/* .bible-verse-box {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
+
+.bible-verse {
+  font-size: 14px;   
+  line-height: 1.65;
+  color: #222;
+  word-break: keep-all;
+} */
+
+/* =========================
+   성경 구절(문제) – 기본 폰트
+   ========================= */
+.bible-verse-box,
+.bible-verse, .hanja-word {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+
+  font-size: 1.2rem;      /* 글씨 큼 문제 해결 */
+  line-height: 1.4;
+  color: #222;
+}
+
+/* =========================
+   보기(선택지) – 기본 폰트
+   ========================= */
+.bible-choice {
+  line-height: 1;
+}
+
+.bible-hint, .hanja-choice {
+  font-size: 1rem;  
+  margin-top: 6px;
+  color: #666;
+   font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
+
+/* 출처 표시 (잠언 3:5 같은 부분) */
+.bible-ref {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #777;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
+
+/* ===== 보기 버튼 ===== */
+
+.bible-choices {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.bible-choice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #fff;
+  text-align: left;
+
+  /* 👉 보기 텍스트도 기본폰트 */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+
+  cursor: pointer;
+}
+
+.bible-choice:hover {
+  background: #f2f4f7;
+}
+
+.bible-choice.correct {
+  border-color: #4caf50;
+  background: #e8f5e9;
+}
+
+.bible-choice.wrong {
+  border-color: #f44336;
+  background: #fdecea;
+}
+
+/* ===== 결과 메시지 ===== */
+
+.bible-result {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #333;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
+
+/* ===== 점수 / 상태 ===== */
+
+.bible-score {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #333;
+}
+
+/* ===== 버튼 ===== */
+
+.bible-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bible-btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #4b7cff;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.bible-btn.ghost {
+  background: #eef1f6;
+  color: #333;
+}
+
+/* ===== 저작권 문구 (아주 작게, 흐리게) ===== */
+
+.bible-copyright {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.35);
+}
+.bible-page .choice-hint {
+  display: none;
+}

@@ -301,3 +301,56 @@
   font-size: 0.55rem;
   opacity: 0.6;
 }
+/* src/pages/Ranking.css 맨 아래에 추가 */
+
+.ranking-filters {
+  margin: 12px 0 14px;
+  padding: 12px 12px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ranking-filter-row {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-filter-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.ranking-filter-select {
+  width: 100%;
+  padding: 10px 12px;
+
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+
+  font-size: 0.95rem;
+  font-weight: 400;
+  outline: none;
+}
+
+@media (max-width: 420px) {
+  .ranking-filter-row {
+    grid-template-columns: 72px 1fr;
+  }
+  .ranking-filter-select {
+    padding: 9px 10px;
+    border-radius: 12px;
+  }
+}

@@ -159,19 +159,6 @@ export default function LoadScheduleModal({
             </label>
 
             <div className="load-divider thin" />
-
-            <label className="load-item">
-              <input
-                type="radio"
-                name="load_choice"
-                value="vacation"
-                checked={loadChoice === "vacation"}
-                onChange={() => setLoadChoice("vacation")}
-                disabled={disabledAll}
-              />
-              <span className="load-item-text">방학 숙제 샘플</span>
-            </label>
-
             <label className="load-item">
               <input
                 type="radio"
@@ -195,10 +182,29 @@ export default function LoadScheduleModal({
               />
               <span className="load-item-text">주말 숙제 샘플</span>
             </label>
+            
+            <label className="load-item">
+              <input
+                type="radio"
+                name="load_choice"
+                value="vacation"
+                checked={loadChoice === "vacation"}
+                onChange={() => setLoadChoice("vacation")}
+                disabled={disabledAll}
+              />
+              <span className="load-item-text">방학 숙제 샘플</span>
+            </label>
           </div>
 
-          <div className="load-divider" />
-
+           <label className="modal-check">
+            <input
+              type="checkbox"
+              checked={isReplaceChecked}
+              onChange={(e) => setReplaceChecked(e.target.checked)}
+              disabled={disabledAll}
+            />
+            기존목록을 비우고 불러오기 (교체)
+          </label>
           <div
             className="load-preview"
             style={{
@@ -208,7 +214,7 @@ export default function LoadScheduleModal({
               background: "#fff",
             }}
           >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>미리보기</div>
+           <div style={{ fontWeight: 700, marginBottom: 6 }}>미리보기</div>
 
             {previewLoading ? (
               <div style={{ color: "var(--muted)" }}>불러오는 중...</div>
@@ -243,20 +249,6 @@ export default function LoadScheduleModal({
               </div>
             )}
           </div>
-
-          <div className="load-divider" />
-
-          <label className="modal-check">
-            <input
-              type="checkbox"
-              checked={isReplaceChecked}
-              onChange={(e) => setReplaceChecked(e.target.checked)}
-              disabled={disabledAll}
-            />
-            기존목록을 비우고 불러오기 (교체)
-          </label>
-
-          <div className="load-divider" />
 
           <button
             className="modal-primary"

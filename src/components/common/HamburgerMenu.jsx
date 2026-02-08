@@ -121,15 +121,15 @@ export default function HamburgerMenu() {
             🔗 공유하기
           </button>
 
-          <div className="hamburger-divider" />
+          {/*<div className="hamburger-divider" />
 
-          <button className="hamburger-item" onClick={() => go("readingrace")} role="menuitem">
+           <button className="hamburger-item" onClick={() => go("readingrace")} role="menuitem">
             📚 리딩레이스
           </button>
 
           <button className="hamburger-item" onClick={() => go("grapeseed")} role="menuitem">
             🍇 그레이프시드
-          </button>
+          </button> */}
 
           <div className="hamburger-divider" />
 
@@ -146,9 +146,19 @@ export default function HamburgerMenu() {
             🔠 영어 놀이
           </button>
 
+           <div className="hamburger-divider" />
+
           <button className="hamburger-item" type="button" onClick={() => navigate("/hanja")} >
             🈶 한자 놀이
           </button>
+
+          <button className="hamburger-item"  type="button" onClick={() => navigate("/bible-quiz")}>
+            📖 성경퀴즈
+          </button>
+
+          {/* <button className="hamburger-item" type="button" onClick={() => navigate("/typing")}>
+           ✍️ 타이핑 연습
+          </button> */}
 
           <button className="hamburger-item" type="button" onClick={() => navigate("/omok")}>
             ⚫ 오목
@@ -157,7 +167,6 @@ export default function HamburgerMenu() {
           <button className="hamburger-item" type="button" onClick={() => navigate("/baduk")}>
             ⚪ 바둑
           </button>
-
           <div className="hamburger-divider" />
 
           <button className="hamburger-item danger" onClick={() => go("logout")} role="menuitem">

@@ -1,0 +1,32 @@
+.typing-rank-page .typing-rank-list,
+.typing-rank-page .typing-rank-row,
+.typing-rank-page .typing-rank-name,
+.typing-rank-page .typing-rank-score {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
+
+.typing-rank-row {
+  display: grid;
+  grid-template-columns: 38px 1fr 90px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.typing-rank-no {
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.typing-rank-name {
+  font-size: 14px;
+}
+
+.typing-rank-score {
+  text-align: right;
+  font-weight: 700;
+}
