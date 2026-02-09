@@ -205,12 +205,12 @@ export default function OmokGame() {
 
           <div className="omok-controls">
             <div className="omok-level-buttons" role="group" aria-label="난이도 선택">
-              <button
+               <button
                 type="button"
-                className={`omok-level-btn ${level === "hard" ? "on" : ""}`}
-                onClick={() => onPickLevel("hard")}
+                className={`omok-level-btn ${level === "easy" ? "on" : ""}`}
+                onClick={() => onPickLevel("easy")}
               >
-                상
+                하
               </button>
               <button
                 type="button"
@@ -221,10 +221,10 @@ export default function OmokGame() {
               </button>
               <button
                 type="button"
-                className={`omok-level-btn ${level === "easy" ? "on" : ""}`}
-                onClick={() => onPickLevel("easy")}
+                className={`omok-level-btn ${level === "hard" ? "on" : ""}`}
+                onClick={() => onPickLevel("hard")}
               >
-                하
+                상
               </button>
             </div>
 

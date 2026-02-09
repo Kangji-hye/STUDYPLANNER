@@ -96,14 +96,17 @@ export default function GugudanGame() {
   useEffect(() => {
     if (finished) stopTimer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finished]);
+    }, [finished]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (finished) return;
+
+    if (choices.length === 0) return;
+
     if (timeLeft > 0) return;
     applyWrong("시간 끝! 😅");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeLeft, finished]);
+  }, [timeLeft, finished, choices.length]);
 
   const goNext = () => {
     const nextIdx = idx + 1;
@@ -114,7 +117,6 @@ export default function GugudanGame() {
       setMsg("끝! 오늘도 잘했어요 🎉");
       return;
     }
-
     setIdx(nextIdx);
     makeQuestion();
   };

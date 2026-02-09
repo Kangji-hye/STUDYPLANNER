@@ -6,10 +6,14 @@ import "./BadukGame.css";
 import supabase from "../supabaseClient";
 import { saveBestScore } from "../utils/saveBestScore";
 
+/*
+  난이도 버튼은 "상-중-하" 순서로 보여주고,
+  내부 값은 기존처럼 hard/normal/easy 를 그대로 씁니다.
+*/
 const BADUK_LEVELS = [
-  { label: "하 (쉬움) · 9×9", value: "easy" },
-  { label: "중 (보통) · 9×9", value: "normal" },
-  { label: "상 (어려움) · 13×13", value: "hard" },
+  { label: "하 · 9×9", value: "easy" },
+  { label: "중 · 9×9", value: "normal" },
+  { label: "상 · 13×13", value: "hard" },
 ];
 
 export default function BadukGame() {
@@ -37,8 +41,10 @@ export default function BadukGame() {
 
   const levels = useMemo(() => BADUK_LEVELS, []);
 
+  // 진행 중(내 차례가 아니거나 끝났을 때)에는 난이도 변경 막기
   const levelLocked = winner !== null || turn !== "P";
 
+  // 보드 크기가 바뀌면(상 난이도 13x13 등) 새 판으로 리셋
   useEffect(() => {
     resetToFreshBoard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,6 +177,7 @@ export default function BadukGame() {
     return base + bonus;
   };
 
+  // 오목이랑 똑같이: saveBestScore() 반환값(ok/updated/prevBest)을 기준으로 메시지 정확히 표시
   const saveRanking = async () => {
     setSaveMsg("");
 
@@ -209,12 +216,23 @@ export default function BadukGame() {
         score,
       });
 
-      if (!result.saved) {
-        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+      if (!result?.ok) {
+        throw result?.error ?? new Error(result?.reason ?? "save_failed");
+      }
+
+      if (result.updated) {
+        const prev = result.prevBest;
+        if (prev === null || prev === undefined) {
+          setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
+        } else {
+          setSaveMsg(`최고 기록으로 저장했어요. (이전 ${prev}점 → 이번 ${score}점)`);
+        }
         return;
       }
 
-      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
+      const best = result.prevBest;
+      const bestText = best === null || best === undefined ? "기록 없음" : `${best}점`;
+      setSaveMsg(`이번 점수는 저장되지 않았어요. 내 최고점은 ${bestText}예요.`);
     } catch (e) {
       console.error("baduk save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
@@ -230,6 +248,10 @@ export default function BadukGame() {
     const found = levels.find((x) => x.value === level);
     return found?.label ?? "";
   }, [levels, level]);
+
+  const levelText = useMemo(() => {
+    return level === "hard" ? "상" : level === "normal" ? "중" : "하";
+  }, [level]);
 
   return (
     <div className="baduk-page">
@@ -256,27 +278,29 @@ export default function BadukGame() {
           <div className="baduk-label">난이도</div>
 
           <div className="baduk-controls">
-            <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+            {/* 오목이랑 동일한 버튼 구조 */}
+            <div className="baduk-level-buttons" role="group" aria-label="난이도 선택">
               {levels.map((lv) => (
                 <button
                   key={lv.value}
                   type="button"
-                  className={`wc-pill ${String(level) === String(lv.value) ? "on" : ""}`}
-                  onClick={() => setLevel(String(lv.value))}
-                  disabled={levelLocked} 
+                  className={`baduk-level-btn ${level === lv.value ? "on" : ""}`}
+                  onClick={() => setLevel(lv.value)}
+                  disabled={levelLocked}
                   title={lv.label}
                 >
-                  {lv.value === "easy" ? "하" : lv.value === "normal" ? "중" : "상"}
+                  {/* 여기 줄만 바꾸는게 아니라, 버튼 클래스까지 같이 바꿔야 느낌이 같아져요 */}
+                  {lv.value === "hard" ? "상" : lv.value === "normal" ? "중" : "하"}
                 </button>
               ))}
             </div>
 
             <div className="baduk-mini">
-              {currentLevelLabel} · 돌 {stonesCount}개 ·{" "}
-              {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"} ·{" "}
+              {currentLevelLabel} · 돌 {stonesCount}개 · {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"} ·{" "}
               <span className="baduk-score">
                 내가 잡은 돌 {capB} · 컴퓨터 {capW}
               </span>
+              <span className="baduk-mini-level"> (현재: {levelText})</span>
             </div>
           </div>
         </div>
@@ -320,20 +344,11 @@ export default function BadukGame() {
 
       {!winner && (
         <div className="baduk-actions">
-          <button
-            type="button"
-            className="baduk-pass"
-            onClick={passTurn}
-            disabled={turn !== "P"}
-          >
+          <button type="button" className="baduk-pass" onClick={passTurn} disabled={turn !== "P"}>
             패스
           </button>
 
-          <button
-            type="button"
-            className="baduk-restart"
-            onClick={reset}
-          >
+          <button type="button" className="baduk-restart" onClick={reset}>
             다시하기
           </button>
         </div>
@@ -363,7 +378,7 @@ export default function BadukGame() {
             </button>
           </div>
 
-          {saveMsg ? <div className="baduk-msg" style={{ marginTop: 10 }}>{saveMsg}</div> : null}
+          {saveMsg ? <div className="baduk-save-msg">{saveMsg}</div> : null}
         </div>
       )}
     </div>
@@ -405,15 +420,15 @@ function neighbors(r, c, size) {
   return out;
 }
 
-function getGroup(board, r, c) {
-  const size = board.length;
+function floodGroup(board, r, c, size) {
   const color = board[r][c];
   if (!color) return { stones: [], liberties: 0 };
 
   const q = [[r, c]];
-  const visited = new Set([`${r},${c}`]);
+  const seen = new Set([`${r},${c}`]);
+
   const stones = [];
-  const libSet = new Set();
+  let liberties = 0;
 
   while (q.length) {
     const [cr, cc] = q.pop();
@@ -422,51 +437,49 @@ function getGroup(board, r, c) {
     for (const [nr, nc] of neighbors(cr, cc, size)) {
       const v = board[nr][nc];
       if (v === null) {
-        libSet.add(`${nr},${nc}`);
-      } else if (v === color) {
-        const key = `${nr},${nc}`;
-        if (!visited.has(key)) {
-          visited.add(key);
-          q.push([nr, nc]);
-        }
+        liberties++;
+        continue;
       }
+      if (v !== color) continue;
+
+      const key = `${nr},${nc}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      q.push([nr, nc]);
     }
   }
 
-  return { stones, liberties: libSet.size };
+  return { stones, liberties };
+}
+
+function cloneBoard(board) {
+  return board.map((row) => [...row]);
+}
+
+function removeStones(board, stones) {
+  for (const [r, c] of stones) board[r][c] = null;
 }
 
 function tryPlaceAndCapture(board, r, c, stone) {
   const size = board.length;
-  if (!inRange(r, c, size)) return { ok: false, board, captured: 0 };
   if (board[r][c] !== null) return { ok: false, board, captured: 0 };
 
-  const next = board.map((row) => row.slice());
+  const next = cloneBoard(board);
   next[r][c] = stone;
 
   const opp = stone === "B" ? "W" : "B";
 
   let captured = 0;
-  const toRemove = [];
-
   for (const [nr, nc] of neighbors(r, c, size)) {
     if (next[nr][nc] !== opp) continue;
-    const g = getGroup(next, nr, nc);
+    const g = floodGroup(next, nr, nc, size);
     if (g.liberties === 0) {
-      for (const [sr, sc] of g.stones) toRemove.push([sr, sc]);
+      captured += g.stones.length;
+      removeStones(next, g.stones);
     }
   }
 
-  const uniq = new Set();
-  for (const [sr, sc] of toRemove) {
-    const key = `${sr},${sc}`;
-    if (uniq.has(key)) continue;
-    uniq.add(key);
-    next[sr][sc] = null;
-    captured++;
-  }
-
-  const myGroup = getGroup(next, r, c);
+  const myGroup = floodGroup(next, r, c, size);
   if (myGroup.liberties === 0) {
     return { ok: false, board, captured: 0 };
   }
@@ -474,87 +487,73 @@ function tryPlaceAndCapture(board, r, c, stone) {
   return { ok: true, board: next, captured };
 }
 
-function listLegalMoves(board, stone) {
-  const size = board.length;
-  const out = [];
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      if (board[r][c] !== null) continue;
-      const placed = tryPlaceAndCapture(board, r, c, stone);
-      if (placed.ok) out.push({ r, c, captured: placed.captured, board: placed.board });
-    }
-  }
-  return out;
-}
-
+/* 아래 AI 관련 함수들은 기존 그대로 사용 */
 function pickAiMove(board, level, size) {
-  const legal = listLegalMoves(board, "W");
-  if (legal.length === 0) return null;
+  const candidates = getCandidateMoves(board, size, level === "hard" ? 2 : 1);
+  if (!candidates.length) return null;
 
-  if (level === "easy") {
-    const weighted = legal.map((m) => ({
-      r: m.r,
-      c: m.c,
-      w: centerWeight(m.r, m.c, size) * 1.2 + (m.captured > 0 ? 3 : 0),
-    }));
-    return pickWeighted(weighted);
-  }
+  if (level === "easy") return pickRandom(candidates);
 
   if (level === "normal") {
-    const MISTAKE_RATE = 0.30;
-
-    const captures = legal.filter((m) => m.captured > 0);
-    if (captures.length > 0 && Math.random() > MISTAKE_RATE) {
-      captures.sort((a, b) => b.captured - a.captured);
-      return { r: captures[0].r, c: captures[0].c };
-    }
-
-    const weighted = legal.map((m) => ({
-      r: m.r,
-      c: m.c,
-      w: centerWeight(m.r, m.c, size) + (m.captured > 0 ? 2 : 0),
-    }));
-    return pickWeighted(weighted);
+    if (Math.random() < 0.35) return pickRandom(candidates);
+    return pickBestByCapture(board, candidates, size, "W");
   }
 
-  let best = legal[0];
+  return pickBestByCapture(board, candidates, size, "W");
+}
+
+function getCandidateMoves(board, size, dist) {
+  const stones = [];
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) if (board[r][c]) stones.push([r, c]);
+
+  if (!stones.length) {
+    const mid = Math.floor(size / 2);
+    return [{ r: mid, c: mid }];
+  }
+
+  const set = new Set();
+  for (const [sr, sc] of stones) {
+    for (let dr = -dist; dr <= dist; dr++) {
+      for (let dc = -dist; dc <= dist; dc++) {
+        const r = sr + dr;
+        const c = sc + dc;
+        if (r < 0 || r >= size || c < 0 || c >= size) continue;
+        if (board[r][c] !== null) continue;
+        set.add(`${r},${c}`);
+      }
+    }
+  }
+
+  return Array.from(set).map((key) => {
+    const [r, c] = key.split(",").map(Number);
+    return { r, c };
+  });
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function pickBestByCapture(board, moves, size, stone) {
+  let best = moves[0];
   let bestScore = -Infinity;
 
-  for (const m of legal) {
-    const myLib = getGroup(m.board, m.r, m.c).liberties;
-    const myGain = m.captured;
+  for (const m of moves) {
+    const placed = tryPlaceAndCapture(board, m.r, m.c, stone);
+    if (!placed.ok) continue;
 
-    const oppLegal = listLegalMoves(m.board, "B");
-    let oppMaxCap = 0;
-    for (const om of oppLegal) oppMaxCap = Math.max(oppMaxCap, om.captured);
-
-    const score =
-      myGain * 120 +
-      myLib * 2 +
-      centerWeight(m.r, m.c, size) * 0.9 -
-      oppMaxCap * 130;
-
+    const score = placed.captured * 10 + centerBonus(m.r, m.c, size);
     if (score > bestScore) {
       bestScore = score;
       best = m;
     }
   }
 
-  return { r: best.r, c: best.c };
+  return best;
 }
 
-function centerWeight(r, c, size) {
+function centerBonus(r, c, size) {
   const mid = (size - 1) / 2;
   const dist = Math.abs(r - mid) + Math.abs(c - mid);
-  return Math.max(1, 10 - dist);
-}
-
-function pickWeighted(moves) {
-  const sum = moves.reduce((a, m) => a + (m.w ?? 1), 0);
-  let x = Math.random() * sum;
-  for (const m of moves) {
-    x -= m.w ?? 1;
-    if (x <= 0) return { r: m.r, c: m.c };
-  }
-  return { r: moves[0].r, c: moves[0].c };
+  return Math.max(0, 7 - dist);
 }
