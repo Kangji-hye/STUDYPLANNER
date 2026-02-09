@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
-import { bestByNickname } from "../utils/rankingBest";
+import { bestByUserId } from "../utils/rankingBest";
 
 const GAME_KEY = "wordchain";
 const LEVEL = "default";
@@ -43,29 +43,14 @@ export default function WordChainRanking() {
           myNickname = String(meProf?.nickname ?? "").trim();
         }
 
-        let list = [];
+        const { data: direct } = await supabase
+          .from("game_scores")
+          .select("user_id, nickname, score")
+          .eq("game_key", GAME_KEY)
+          .eq("level", LEVEL)
+          .limit(2000);
 
-        try {
-          const { data, error } = await supabase.rpc("get_game_ranking_best_by_nickname", {
-            game_key: String(GAME_KEY),
-            level: String(LEVEL),
-            limit_n: 300,
-          });
-          if (error) throw error;
-          list = data ?? [];
-        } catch {
-          const { data: direct } = await supabase
-            .from("game_scores")
-            .select("user_id, nickname, score")
-            .eq("game_key", String(GAME_KEY))
-            .eq("level", String(LEVEL))
-            .order("score", { ascending: false })
-            .limit(800);
-
-          list = direct ?? [];
-        }
-
-        const bestList = bestByNickname(list);
+        const bestList = bestByUserId(direct ?? []);
 
         const ids = bestList.map((x) => x.user_id).filter(Boolean);
         const adminMap = {};
@@ -89,15 +74,6 @@ export default function WordChainRanking() {
             nickname: String(r.nickname ?? "").trim(),
             score: Number(r.score ?? 0),
           }))
-          .filter((row) => {
-            const n = row.nickname;
-            const compact = n.replace(/\s+/g, "");
-            if (!n) return false;
-            if (compact === "익명") return false;
-            if (compact.startsWith("익명")) return false;
-            if (compact === "닉네임") return false;
-            return true;
-          })
           .sort((a, b) => b.score - a.score);
 
         const top10 = filtered.slice(0, 10);
@@ -110,13 +86,16 @@ export default function WordChainRanking() {
             .from("game_scores")
             .select("score, nickname")
             .eq("user_id", me.id)
-            .eq("game_key", String(GAME_KEY))
-            .eq("level", String(LEVEL))
-            .order("score", { ascending: false })
-            .limit(1);
+            .eq("game_key", GAME_KEY)
+            .eq("level", LEVEL)
+            .limit(200);
 
-          const s = mine?.[0]?.score;
-          if (s !== null && s !== undefined) myBestScore = Number(s);
+          let best = -Infinity;
+          for (const r of mine ?? []) {
+            best = Math.max(best, Number(r?.score ?? 0));
+          }
+          if (best !== -Infinity) myBestScore = best;
+
           if (!myNickname) myNickname = String(mine?.[0]?.nickname ?? "").trim();
         }
 
@@ -192,7 +171,7 @@ export default function WordChainRanking() {
         </div>
       )}
 
-      <div className="ranking-tip">같은 이름으로 점수가 여러 번 저장되어도, 랭킹에는 가장 높은 점수만 보여요.</div>
+      <div className="ranking-tip">내 점수는 내 계정 기준으로 최고 기록이 반영돼요.</div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>
         <button type="button" className="hanja-btn ghost" onClick={() => navigate("/planner")} style={{ width: "100%" }}>

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./OmokGame.css";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
 
 export default function OmokGame() {
   const navigate = useNavigate();
@@ -104,13 +105,11 @@ export default function OmokGame() {
     const fastBonus = Math.max(0, 70 - myStone) * 2;
 
     const diff = winner === "P" ? 200 : winner === "DRAW" ? 60 : 0;
-
     const levelBonus = level === "hard" ? 60 : level === "normal" ? 30 : 0;
 
     return Math.max(0, diff + levelBonus + fastBonus);
   };
 
-  // ✅ 랭킹 저장: "누적"이 아니라 "내 최고점"만 남기기
   const saveRanking = async () => {
     setSaveMsg("");
 
@@ -140,58 +139,32 @@ export default function OmokGame() {
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
       const score = calcOmokScore();
 
-      // 1) 내 기존 최고점 확인
-      const { data: existing, error: exErr } = await supabase
-        .from("game_scores")
-        .select("id, score")
-        .eq("user_id", me.id)
-        .eq("game_key", "omok")
-        .eq("level", String(level))
-        .order("score", { ascending: false })
-        .limit(1);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: "omok",
+        level: String(level),
+        score,
+      });
 
-      if (exErr) throw exErr;
+      if (!result?.ok) {
+        throw result?.error ?? new Error(result?.reason ?? "save_failed");
+      }
 
-      const row = existing?.[0] ?? null;
-      const prevBest = Number(row?.score ?? 0);
-
-      // 2) 이번 점수가 더 낮으면 저장하지 않음
-      if (row?.id && score <= prevBest) {
-        setSaveMsg(`이미 더 높은 기록이 있어요. (내 최고점 ${prevBest}점)`);
+      if (result.updated) {
+        const prev = result.prevBest;
+        if (prev === null || prev === undefined) {
+          setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
+        } else {
+          setSaveMsg(`최고 기록으로 저장했어요. (이전 ${prev}점 → 이번 ${score}점)`);
+        }
         return;
       }
 
-      // 3) 더 높으면 업데이트, 없으면 추가
-      if (row?.id) {
-        const { error: upErr } = await supabase
-          .from("game_scores")
-          .update({
-            nickname,
-            score,
-            game_key: "omok",
-            level: String(level),
-          })
-          .eq("id", row.id);
-
-        if (upErr) throw upErr;
-
-        setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
-        return;
-      }
-
-      const { error: insErr } = await supabase.from("game_scores").insert([
-        {
-          user_id: me.id,
-          nickname,
-          game_key: "omok",
-          level: String(level),
-          score,
-        },
-      ]);
-
-      if (insErr) throw insErr;
-
-      setSaveMsg(`랭킹에 저장했어요. (이번 ${score}점)`);
+      const best = result.prevBest;
+      const bestText = best === null || best === undefined ? "기록 없음" : `${best}점`;
+      setSaveMsg(`이번 점수는 저장되지 않았어요. 내 최고점은 ${bestText}예요.`);
     } catch (e) {
       console.error("omok save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
@@ -199,6 +172,12 @@ export default function OmokGame() {
   };
 
   const finalScore = winner ? calcOmokScore() : null;
+
+  const onPickLevel = (next) => {
+    setLevel(next);
+    // 원하면 난이도 바꾸면 바로 새 판 시작하게 할 수도 있어요.
+    // 지금은 진행 중에도 난이도만 바뀌게 유지합니다.
+  };
 
   return (
     <div className="omok-page">
@@ -223,12 +202,31 @@ export default function OmokGame() {
       <div className="omok-card">
         <div className="omok-row">
           <div className="omok-label">난이도</div>
+
           <div className="omok-controls">
-            <select value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="easy">하 (쉬움)</option>
-              <option value="normal">중 (보통)</option>
-              <option value="hard">상 (어려움)</option>
-            </select>
+            <div className="omok-level-buttons" role="group" aria-label="난이도 선택">
+              <button
+                type="button"
+                className={`omok-level-btn ${level === "hard" ? "on" : ""}`}
+                onClick={() => onPickLevel("hard")}
+              >
+                상
+              </button>
+              <button
+                type="button"
+                className={`omok-level-btn ${level === "normal" ? "on" : ""}`}
+                onClick={() => onPickLevel("normal")}
+              >
+                중
+              </button>
+              <button
+                type="button"
+                className={`omok-level-btn ${level === "easy" ? "on" : ""}`}
+                onClick={() => onPickLevel("easy")}
+              >
+                하
+              </button>
+            </div>
 
             <div className="omok-mini">
               돌 {stonesCount}개 · {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"}
@@ -274,9 +272,7 @@ export default function OmokGame() {
             {winner === "P" ? "내가 이겼어요! 🎉" : winner === "AI" ? "컴퓨터가 이겼어요 🙂" : "비겼어요 🙂"}
           </div>
 
-          <div className="omok-finish-sub" style={{ marginTop: 6, opacity: 0.95 }}>
-            점수 {finalScore}점
-          </div>
+          <div className="omok-finish-sub">점수 {finalScore}점</div>
 
           <div className="omok-finish-actions">
             <button type="button" className="omok-restart" onClick={reset}>
@@ -292,7 +288,7 @@ export default function OmokGame() {
             </button>
           </div>
 
-          {saveMsg ? <div className="omok-msg" style={{ marginTop: 10 }}>{saveMsg}</div> : null}
+          {saveMsg ? <div className="omok-save-msg">{saveMsg}</div> : null}
         </div>
       )}
     </div>
@@ -455,7 +451,6 @@ function pickFromTopKBy(board, moves, size, k, scoreFn) {
 
 function topKByHeuristic(board, moves, size, k) {
   const scored = moves.map((m) => ({ ...m, s: heuristicScoreHard(board, m.r, m.c, size) })).sort((a, b) => b.s - a.s);
-
   return scored.slice(0, Math.min(k, scored.length)).map(({ r, c }) => ({ r, c }));
 }
 

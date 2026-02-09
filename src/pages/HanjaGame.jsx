@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import "./HanjaGame.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
 
 const MAX_QUESTIONS = 15;
 const TIME_LIMIT = 15;
@@ -354,8 +355,8 @@ export default function HanjaGame() {
   };
 
   const saveScore = async () => {
-    if (saving) return;
-    if (saved) return;
+    if (!finished) return;
+    if (saving || saved) return;
 
     setSaving(true);
     setSaveMsg("");
@@ -380,7 +381,6 @@ export default function HanjaGame() {
       if (profErr) throw profErr;
 
       if (prof?.is_admin) {
-        setSaved(true);
         setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
         setSaving(false);
         return;
@@ -388,57 +388,26 @@ export default function HanjaGame() {
 
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
 
-      const { data: existing, error: exErr } = await supabase
-        .from("game_scores")
-        .select("id, score")
-        .eq("user_id", me.id)
-        .eq("game_key", "hanja")
-        .eq("level", String(levelKey))
-        .order("score", { ascending: false })
-        .limit(1);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: "hanja",
+        level: String(levelKey),
+        score: Number(score ?? 0),
+      });
 
-      if (exErr) throw exErr;
-
-      const row = existing?.[0] ?? null;
-      const prevScore = Number(row?.score ?? -999999);
-
-      if (score <= prevScore) {
-        setSaved(true);
-        setSaveMsg("이미 더 높은 점수가 저장되어 있어요.");
+      if (!result.saved) {
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
         setSaving(false);
         return;
       }
 
-      if (row?.id) {
-        const { error: upErr } = await supabase
-          .from("game_scores")
-          .update({ score, nickname, level: String(levelKey) })
-          .eq("id", row.id);
-
-        if (upErr) throw upErr;
-      } else {
-        const { error: insErr } = await supabase.from("game_scores").insert([
-          {
-            user_id: me.id,
-            nickname,
-            game_key: "hanja",
-            level: String(levelKey),
-            score,
-          },
-        ]);
-
-        if (insErr) throw insErr;
-      }
-
       setSaved(true);
-      setSaveMsg("랭킹에 점수를 저장했어요.");
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
-      console.error("hanja score save error:", e);
-      const msg =
-        String(e?.message ?? "").trim() ||
-        String(e?.error_description ?? "").trim() ||
-        "저장에 실패했어요. 잠시 후 다시 시도해 주세요.";
-      setSaveMsg(msg);
+      console.error("hanja save error:", e);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSaving(false);
     }

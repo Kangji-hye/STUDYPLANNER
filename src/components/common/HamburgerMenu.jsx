@@ -154,9 +154,9 @@ export default function HamburgerMenu() {
             📖 성경퀴즈
           </button>
 
-          {/* <button className="hamburger-item" type="button" onClick={() => navigate("/typing")}>
+          <button className="hamburger-item" type="button" onClick={() => navigate("/typing")}>
            ✍️ 타이핑 연습
-          </button> */}
+          </button>
 
           <button className="hamburger-item" type="button" onClick={() => navigate("/omok")}>
             ⚫ 오목

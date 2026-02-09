@@ -1,5 +1,4 @@
 // src/data/wordBank.js
-// ✅ 단어 파일들을 한 곳에서 모아서 export
 import { WORDS as EASY } from "./easyWords";
 import { WORDS as NORMAL } from "./normalWords";
 import { WORDS as HARD } from "./hardWords";

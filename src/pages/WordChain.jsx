@@ -5,6 +5,7 @@ import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./WordChain.css";
 import supabase from "../supabaseClient";
 import { BOT_WORDS, ANCHORS, BIBLE_WORDS } from "../data/wordBank";
+import { saveBestScore } from "../utils/saveBestScore";
 
 function cleanWord(s) {
   return String(s ?? "").trim().replace(/\s+/g, "");
@@ -30,6 +31,71 @@ function buildIndex(words) {
     map[fc].push(ww);
   }
   return map;
+}
+
+/*
+  시작 글자 후보를 넓혀서 "막히는 글자"를 줄입니다.
+  예: 녀/뇨/뉴/니 -> 여/요/유/이 계열처럼 많이 쓰는 규칙을 반영합니다.
+  완벽한 국어 규정 구현이 목표가 아니라, 끝말잇기가 덜 끊기게 만드는 실전용 안전장치입니다.
+*/
+function getStartCharCandidates(ch) {
+  const w = cleanWord(ch);
+  if (!w) return [];
+  const c = w[0];
+
+  const SBase = 0xac00;
+  const LCount = 19;
+  const VCount = 21;
+  const TCount = 28;
+  const NCount = VCount * TCount;
+
+  const code = c.charCodeAt(0);
+  const SIndex = code - SBase;
+
+  // 한글 음절이 아니면 그대로만
+  if (SIndex < 0 || SIndex >= LCount * NCount) return [c];
+
+  const LIndex = Math.floor(SIndex / NCount);
+  const VIndex = Math.floor((SIndex % NCount) / TCount);
+  const TIndex = SIndex % TCount;
+
+  const compose = (newL) => {
+    const S = SBase + newL * NCount + VIndex * TCount + TIndex;
+    return String.fromCharCode(S);
+  };
+
+  const candidates = new Set();
+  candidates.add(c);
+
+  // 초성 인덱스: ㄴ=2, ㄹ=5, ㅇ=11
+  const isNieun = LIndex === 2;
+  const isRieul = LIndex === 5;
+
+  // 대략적으로 i/y 계열에서 ㄴ->ㅇ 두음이 자주 허용됩니다(녀/뇨/뉴/니 -> 여/요/유/이 등)
+  // 너무 빡빡하게 하면 오히려 재미가 줄어서, 실전에서 자주 쓰는 방향으로만 넓힙니다.
+  const dueumVowels = new Set([
+    2,  // ㅑ
+    6,  // ㅕ
+    12, // ㅛ
+    17, // ㅠ
+    20, // ㅣ
+    19, // ㅢ
+    14, // ㅟ
+    15, // ㅝ
+    16, // ㅞ
+  ]);
+
+  // ㄹ -> ㄴ 후보(라/래/려/료/류/리 등에서 자주 쓰는 편의 규칙)
+  if (isRieul) {
+    candidates.add(compose(2));
+  }
+
+  // ㄴ -> ㅇ 후보(녀/뇨/뉴/니 -> 여/요/유/이)
+  if (isNieun && dueumVowels.has(VIndex)) {
+    candidates.add(compose(11));
+  }
+
+  return Array.from(candidates);
 }
 
 export default function WordChain() {
@@ -63,7 +129,10 @@ export default function WordChain() {
           ];
 
     const merged = [...allBot, ...ANCHORS, ...BIBLE_WORDS];
+
+    // 중복/공백 정리, 2글자 이상만
     const mergedWords = Array.from(new Set(merged.map(cleanWord))).filter((w) => w.length >= 2);
+
     return buildIndex(mergedWords);
   }, []);
 
@@ -89,43 +158,6 @@ export default function WordChain() {
     setTimeout(() => focusInput(), 0);
   }, [locked, current, finished]);
 
-  const pickAnyBotWord = (used) => {
-    const keys = Object.keys(index);
-    if (keys.length === 0) return null;
-
-    const shuffledKeys = [...keys].sort(() => Math.random() - 0.5);
-
-    for (const k of shuffledKeys) {
-      const pool = index[k] ?? [];
-      const candidates = pool.filter((x) => !used.has(cleanWord(x)) && cleanWord(x).length >= 2);
-      if (candidates.length > 0) {
-        return candidates[Math.floor(Math.random() * candidates.length)];
-      }
-    }
-    return null;
-  };
-
-  const preferShort = (turnCount) => turnCount < 6;
-
-  const pickBotWord = (needChar, used, turnCount) => {
-    if (!needChar) return null;
-
-    const pool = index[needChar] ?? [];
-    const candidates = pool.filter((x) => !used.has(cleanWord(x)) && cleanWord(x).length >= 2);
-    if (candidates.length === 0) return null;
-
-    const shortFirst = candidates
-      .slice()
-      .sort((a, b) => cleanWord(a).length - cleanWord(b).length);
-
-    if (preferShort(turnCount)) {
-      const top = shortFirst.slice(0, Math.min(30, shortFirst.length));
-      return top[Math.floor(Math.random() * top.length)];
-    }
-
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  };
-
   const userTurnsCount = (h) => {
     const n = Math.max(0, (h?.length ?? 0) - 1);
     return Math.ceil(n / 2);
@@ -136,6 +168,124 @@ export default function WordChain() {
     const base = turns * 10;
     const winBonus = w === "P" ? 80 : w === "DRAW" ? 30 : 0;
     return Math.max(0, base + winBonus);
+  };
+
+  const preferShort = (turnCount) => turnCount < 6;
+
+  /*
+    "이어질 가능성" 점수 계산:
+    어떤 단어를 봇이 내면, 그 단어의 끝 글자로 사용자가 이어야 합니다.
+    끝 글자가 시작되는 단어 풀이 풍부할수록 게임이 길어질 가능성이 큽니다.
+  */
+  const remainingStartCount = (startChar, used) => {
+    const startChars = getStartCharCandidates(startChar);
+    let cnt = 0;
+
+    for (const ch of startChars) {
+      const pool = index[ch] ?? [];
+      for (const w of pool) {
+        const ww = cleanWord(w);
+        if (ww.length < 2) continue;
+        if (used.has(ww)) continue;
+        cnt++;
+      }
+    }
+    return cnt;
+  };
+
+  const pickAnyBotWord = (used) => {
+    const keys = Object.keys(index);
+    if (keys.length === 0) return null;
+
+    // 시작 단어도 "이어지기 쉬운" 단어를 고릅니다.
+    // 너무 무겁게 계산하면 느려질 수 있어서, 후보를 조금만 뽑아 평가합니다.
+    const shuffledKeys = [...keys].sort(() => Math.random() - 0.5);
+
+    const candidates = [];
+    for (const k of shuffledKeys) {
+      const pool = index[k] ?? [];
+      for (const x of pool) {
+        const ww = cleanWord(x);
+        if (ww.length < 2) continue;
+        if (used.has(ww)) continue;
+        candidates.push(ww);
+        if (candidates.length >= 120) break;
+      }
+      if (candidates.length >= 120) break;
+    }
+
+    if (candidates.length === 0) return null;
+
+    // 이어질 가능성이 높은 단어를 더 자주 뽑도록 가중치 랜덤
+    const weighted = candidates.map((w) => {
+      const need = lastChar(w);
+      const cont = remainingStartCount(need, used);
+      // 최소 가중치 1, 너무 큰 값은 완만하게
+      const weight = Math.max(1, Math.min(30, Math.floor(cont / 3) + 1));
+      return { w, weight };
+    });
+
+    return pickWeightedWord(weighted);
+  };
+
+  const pickBotWord = (needChar, used, turnCount) => {
+    if (!needChar) return null;
+
+    const startChars = getStartCharCandidates(needChar);
+
+    let candidates = [];
+    for (const ch of startChars) {
+      const pool = index[ch] ?? [];
+      for (const x of pool) {
+        const ww = cleanWord(x);
+        if (ww.length < 2) continue;
+        if (used.has(ww)) continue;
+        candidates.push(ww);
+      }
+    }
+
+    candidates = Array.from(new Set(candidates));
+    if (candidates.length === 0) return null;
+
+    // 초반에는 짧고 쉬운 단어 + "이어지기 쉬운 끝글자"를 더 강하게 선호합니다.
+    // 후반에는 랜덤성을 조금 올려서 반복 느낌을 줄입니다.
+    const wantShort = preferShort(turnCount);
+
+    const scored = candidates.map((w) => {
+      const len = cleanWord(w).length;
+      const cont = remainingStartCount(lastChar(w), used);
+
+      // 이어질 가능성 가중치
+      // cont가 0이면 사실상 "바로 끝"이라 초반에는 거의 안 뽑히게
+      let score = cont * 6;
+
+      // 초반에는 짧은 단어 선호(아이들이 이해하기 쉽고, 실수도 적음)
+      if (wantShort) score += Math.max(0, 10 - len) * 3;
+
+      // 후보가 너무 많을 때는 다양성 위해 작은 랜덤 노이즈
+      score += Math.random() * 3;
+
+      return { w, score };
+    });
+
+    // score를 가중치로 변환해서 뽑기
+    const weighted = scored.map((x) => ({
+      w: x.w,
+      weight: Math.max(1, Math.floor(x.score)),
+    }));
+
+    // 초반에는 더 안전하게(이어질 가능성이 큰 쪽으로)
+    // 후반에는 조금 더 랜덤하게
+    if (turnCount < 8) {
+      return pickWeightedWord(weighted);
+    }
+
+    // 후반: 상위 일부 중에서 랜덤 선택
+    const top = scored
+      .slice()
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.min(80, scored.length));
+    return top[Math.floor(Math.random() * top.length)].w;
   };
 
   const resetGame = () => {
@@ -174,6 +324,7 @@ export default function WordChain() {
 
   useEffect(() => {
     resetGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const finish = (w, finalHistory, extraMsg) => {
@@ -208,7 +359,11 @@ export default function WordChain() {
 
     if (current) {
       const need = lastChar(current);
-      if (firstChar(w) !== need) {
+      const allowedStarts = getStartCharCandidates(need);
+      const fc = firstChar(w);
+
+      // 사용자는 두음 후보 글자도 허용해서 덜 막히게 합니다.
+      if (!allowedStarts.includes(fc)) {
         setMsg(`'${need}'(으)로 시작해야 해요.`);
         setTimeout(() => focusInput(), 0);
         return;
@@ -231,9 +386,11 @@ export default function WordChain() {
     setMsg("컴퓨터가 생각 중이에요...");
 
     if (botTimerRef.current) clearTimeout(botTimerRef.current);
+
     botTimerRef.current = setTimeout(() => {
       const tempUsed = new Set(newHistory.map(cleanWord));
       const turns = userTurnsCount(newHistory);
+
       const botWord = pickBotWord(userNeed, tempUsed, turns);
 
       if (!botWord) {
@@ -270,11 +427,13 @@ export default function WordChain() {
         return;
       }
 
-      const { data: prof } = await supabase
+      const { data: prof, error: profErr } = await supabase
         .from("profiles")
         .select("nickname, is_admin")
         .eq("id", me.id)
         .maybeSingle();
+
+      if (profErr) throw profErr;
 
       if (prof?.is_admin) {
         setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
@@ -285,20 +444,23 @@ export default function WordChain() {
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
       const score = calcScore(history, winner);
 
-      const { error } = await supabase.from("game_scores").insert([
-        {
-          user_id: me.id,
-          nickname,
-          game_key: "wordchain",
-          level: "default",
-          score,
-        },
-      ]);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: "wordchain",
+        level: "default",
+        score,
+      });
 
-      if (error) throw error;
+      if (!result.saved) {
+        setSaved(true);
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        return;
+      }
 
       setSaved(true);
-      setSaveMsg("랭킹에 저장했어요.");
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
       console.error("wordchain save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
@@ -434,4 +596,14 @@ export default function WordChain() {
       </div>
     </div>
   );
+}
+
+function pickWeightedWord(items) {
+  const sum = items.reduce((a, it) => a + (it.weight ?? 1), 0);
+  let x = Math.random() * sum;
+  for (const it of items) {
+    x -= it.weight ?? 1;
+    if (x <= 0) return it.w;
+  }
+  return items[0]?.w ?? null;
 }

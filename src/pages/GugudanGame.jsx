@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./GugudanGame.css";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
 
 export default function GugudanGame() {
   const navigate = useNavigate();
@@ -174,20 +175,23 @@ export default function GugudanGame() {
 
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
 
-      const { error } = await supabase.from("game_scores").insert([
-        {
-          user_id: me.id,
-          nickname,
-          game_key: "gugudan",
-          level: String(level),
-          score: Number(score ?? 0),
-        },
-      ]);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: "gugudan",
+        level: String(level),
+        score: Number(score ?? 0),
+      });
 
-      if (error) throw error;
+      if (!result.saved) {
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaving(false);
+        return;
+      }
 
       setSaved(true);
-      setSaveMsg("랭킹에 저장했어요.");
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
       console.error("gugudan save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");

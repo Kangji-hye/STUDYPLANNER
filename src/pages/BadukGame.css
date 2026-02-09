@@ -227,6 +227,119 @@
   .baduk-cell{ border-radius:7px; }
 }
 
-/* .baduk-pass{
-  display: none;
-} */
+
+/* 게임 중 행동 버튼 영역 */
+.baduk-actions {
+  display: flex;
+  gap: 10px;
+  margin: 10px;
+}
+
+.baduk-actions .baduk-pass,
+.baduk-actions .baduk-restart {
+  flex: 1;
+  height: 50px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+/* 모바일에서 더 편하게 */
+@media (max-width: 420px) {
+  .baduk-actions {
+    gap: 8px;
+  }
+
+  .baduk-actions .baduk-pass,
+  .baduk-actions .baduk-restart {
+    height: 36px;
+    font-size: 1rem
+  }
+}
+
+
+
+/* 바둑 랭킹(섹션형) - 한 페이지에 하/중/상 */
+.ranking-section {
+  margin-top: 14px;
+}
+
+.ranking-section-title {
+  padding: 0 12px;
+  margin-top: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: -0.2px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+
+}
+
+.ranking-section-list {
+  margin-top: 8px;
+}
+
+.ranking-section-empty {
+  margin-top: 8px;
+}
+
+.ranking-tip-spaced {
+  margin-top: 14px;
+}
+
+.ranking-back-btn {
+  width: 100%;
+}
+
+@media (max-width: 420px) {
+  .ranking-section-title {
+    font-size: 18px;
+  }
+}
+
+.ranking-section-title {
+  opacity: 0.9;
+}
+
+/* 바둑 난이도 버튼 (상/중/하) – 오목과 동일한 느낌 */
+.baduk-level-buttons {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.baduk-level-btn {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 0;
+
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+
+  transition: transform 0.08s ease,
+              box-shadow 0.12s ease,
+              border-color 0.12s ease,
+              background 0.12s ease;
+}
+
+.baduk-level-btn:active {
+  transform: translateY(1px);
+}
+
+/* 선택된 상태 */
+.baduk-level-btn.on {
+  border-color: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+  font-weight: 900;
+}
+
+/* 모바일 */
+@media (max-width: 420px) {
+  .baduk-level-btn {
+    font-size: 0.9rem;
+    padding: 9px 0;
+  }
+}

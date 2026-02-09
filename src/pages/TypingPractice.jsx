@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
 import "./TypingPractice.css";
 
 /*
@@ -228,12 +229,8 @@ export default function TypingPractice() {
   };
 
   const saveScore = useCallback(async () => {
-    if (saving) return;
-    if (saved) return;
-    if (!finished) {
-      setSaveMsg("먼저 타이핑을 끝내 주세요.");
-      return;
-    }
+    if (!finished) return;
+    if (saving || saved) return;
 
     setSaving(true);
     setSaveMsg("");
@@ -251,65 +248,41 @@ export default function TypingPractice() {
 
       const { data: prof, error: profErr } = await supabase
         .from("profiles")
-        .select("nickname")
+        .select("nickname, is_admin")
         .eq("id", me.id)
         .maybeSingle();
 
       if (profErr) throw profErr;
 
-      const nickname = String(prof?.nickname ?? "").trim() || "익명";
-
-      const levelKey = "proverbs";
-
-      // ✅ 저장용 점수도 타건 수 기준으로 계산
-      const acc = calcAccuracy(targetText, typed);
-      const minutes = Math.max(1, elapsedMs) / 60000;
-      const cpm = Math.round(countStrokesNoSpace(typed) / minutes);
-      const score = Math.max(0, Math.round(cpm * acc));
-
-      const { data: existing, error: exErr } = await supabase
-        .from("game_scores")
-        .select("id, score")
-        .eq("user_id", me.id)
-        .eq("game_key", GAME_KEY)
-        .eq("level", levelKey)
-        .order("score", { ascending: false })
-        .limit(1);
-
-      if (exErr) throw exErr;
-
-      const row = existing?.[0] ?? null;
-      const prev = Number(row?.score ?? -999999);
-
-      if (score <= prev) {
-        setSaved(true);
-        setSaveMsg(`이미 더 높은 점수가 있어요. (최고 ${prev}점)`);
+      if (prof?.is_admin) {
+        setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
         setSaving(false);
         return;
       }
 
-      if (row?.id) {
-        const { error: upErr } = await supabase
-          .from("game_scores")
-          .update({ score, nickname, level: levelKey })
-          .eq("id", row.id);
-        if (upErr) throw upErr;
-      } else {
-        const { error: insErr } = await supabase.from("game_scores").insert([
-          { user_id: me.id, nickname, game_key: GAME_KEY, level: levelKey, score },
-        ]);
-        if (insErr) throw insErr;
+      const nickname = String(prof?.nickname ?? "").trim() || "익명";
+      const score = calcScore(targetText, typed, elapsedMs);
+
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: GAME_KEY,
+        level: String(level),
+        score,
+      });
+
+      if (!result.saved) {
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaving(false);
+        return;
       }
 
       setSaved(true);
-      setSaveMsg("랭킹에 저장했어요.");
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
       console.error("typing save error:", e);
-      const msg =
-        String(e?.message ?? "").trim() ||
-        String(e?.error_description ?? "").trim() ||
-        "저장에 실패했어요. 잠시 후 다시 시도해 주세요.";
-      setSaveMsg(msg);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSaving(false);
     }

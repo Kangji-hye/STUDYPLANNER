@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
 import "./BibleQuiz.css";
 
 const QUESTION_COUNT_BY_DIFFICULTY = {
@@ -10,8 +11,8 @@ const QUESTION_COUNT_BY_DIFFICULTY = {
   hard: 15,
 };
 
-const TIME_LIMIT_EASY = 15;
-const TIME_LIMIT_HARD = 12;
+const TIME_LIMIT_EASY = 60;
+const TIME_LIMIT_HARD = 15;
 const AUTO_NEXT_DELAY_MS = 450;
 
 const GAME_KEY = "bible_quiz";
@@ -346,8 +347,7 @@ export default function BibleQuiz() {
   };
 
   const saveScore = useCallback(async () => {
-    if (saving) return;
-    if (saved) return;
+    if (saving || saved) return;
 
     setSaving(true);
     setSaveMsg("");
@@ -365,63 +365,60 @@ export default function BibleQuiz() {
 
       const { data: prof, error: profErr } = await supabase
         .from("profiles")
-        .select("nickname")
+        .select("nickname, is_admin")
         .eq("id", me.id)
         .maybeSingle();
 
       if (profErr) throw profErr;
 
+      if (prof?.is_admin) {
+        setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
+        setSaving(false);
+        return;
+      }
+
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
-      const levelKey2 = `${book}_${difficulty}`;
 
-      const { data: existing, error: exErr } = await supabase
-        .from("game_scores")
-        .select("id, score")
-        .eq("user_id", me.id)
-        .eq("game_key", GAME_KEY)
-        .eq("level", levelKey2)
-        .limit(1);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: GAME_KEY,
+        level: `${book}_${difficulty}`,
+        score: Number(score ?? 0),
+      });
 
-      if (exErr) throw exErr;
-
-      const row = existing?.[0] ?? null;
-      const prev = Number(row?.score ?? 0);
-      const nextTotal = prev + Number(score ?? 0);
-
-      if (row?.id) {
-        const { error: upErr } = await supabase
-          .from("game_scores")
-          .update({
-            score: nextTotal,
-            nickname,
-            level: levelKey2,
-          })
-          .eq("id", row.id);
-
-        if (upErr) throw upErr;
-      } else {
-        const { error: insErr } = await supabase.from("game_scores").insert([
-          {
-            user_id: me.id,
-            nickname,
-            game_key: GAME_KEY,
-            level: levelKey2,
-            score: nextTotal,
-          },
-        ]);
-
-        if (insErr) throw insErr;
+      if (!result?.ok) {
+        throw result?.error ?? new Error(result?.reason ?? "save_failed");
       }
 
       setSaved(true);
-      setSaveMsg(`누적 점수로 저장했어요. (이번 판 ${score}점, 총 ${nextTotal}점)`);
+
+      if (result.updated) {
+        const prev = result.prevBest;
+        if (prev !== null && prev !== undefined) {
+          setSaveMsg(`최고 기록으로 저장했어요. (이전 ${prev}점 → 이번 ${score}점)`);
+        } else {
+          setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
+        }
+        return;
+      }
+
+      const best = result.prevBest ?? 0;
+      setSaveMsg(`저장하지 않았어요. (내 최고점 ${best}점)`);
+
+
+      if (!result.saved) {
+        setSaved(true);
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        return;
+      }
+
+      setSaved(true);
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
-      console.error("bible score save error:", e);
-      const msg =
-        String(e?.message ?? "").trim() ||
-        String(e?.error_description ?? "").trim() ||
-        "저장에 실패했어요. 잠시 후 다시 시도해 주세요.";
-      setSaveMsg(msg);
+      console.error("save score error:", e);
+      setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setSaving(false);
     }
@@ -639,7 +636,7 @@ export default function BibleQuiz() {
 
             <div className="hanja-actions">
               <button type="button" className="hanja-btn" onClick={saveScore} disabled={saving || saved}>
-                {saved ? "저장 완료" : saving ? "저장 중..." : "랭킹에 저장(누적)"}
+                {saved ? "저장 완료" : saving ? "저장 중..." : "랭킹에 저장"}
               </button>
 
               <button type="button" className="hanja-btn ghost" onClick={() => navigate("/bible-ranking")}>

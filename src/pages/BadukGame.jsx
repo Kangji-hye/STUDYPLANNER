@@ -4,6 +4,13 @@ import { useNavigate } from "react-router-dom";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./BadukGame.css";
 import supabase from "../supabaseClient";
+import { saveBestScore } from "../utils/saveBestScore";
+
+const BADUK_LEVELS = [
+  { label: "하 (쉬움) · 9×9", value: "easy" },
+  { label: "중 (보통) · 9×9", value: "normal" },
+  { label: "상 (어려움) · 13×13", value: "hard" },
+];
 
 export default function BadukGame() {
   const navigate = useNavigate();
@@ -27,6 +34,10 @@ export default function BadukGame() {
   const stonesCount = useMemo(() => countStones(board), [board]);
 
   const [saveMsg, setSaveMsg] = useState("");
+
+  const levels = useMemo(() => BADUK_LEVELS, []);
+
+  const levelLocked = winner !== null || turn !== "P";
 
   useEffect(() => {
     resetToFreshBoard();
@@ -160,7 +171,6 @@ export default function BadukGame() {
     return base + bonus;
   };
 
-  // ✅ 랭킹 저장: "누적"이 아니라 "내 최고점"만 남기기
   const saveRanking = async () => {
     setSaveMsg("");
 
@@ -190,57 +200,21 @@ export default function BadukGame() {
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
       const score = calcBadukScore();
 
-      // 1) 내 기존 최고점이 있는지 확인
-      const { data: existing, error: exErr } = await supabase
-        .from("game_scores")
-        .select("id, score")
-        .eq("user_id", me.id)
-        .eq("game_key", "baduk")
-        .eq("level", String(level))
-        .order("score", { ascending: false })
-        .limit(1);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: "baduk",
+        level: String(level),
+        score,
+      });
 
-      if (exErr) throw exErr;
-
-      const row = existing?.[0] ?? null;
-      const prevBest = Number(row?.score ?? 0);
-
-      // 2) 이번 점수가 더 낮으면 저장하지 않음(최고점 유지)
-      if (row?.id && score <= prevBest) {
-        setSaveMsg(`이미 더 높은 기록이 있어요. (내 최고점 ${prevBest}점)`);
+      if (!result.saved) {
+        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
         return;
       }
 
-      // 3) 더 높은 점수면 업데이트, 없으면 새로 추가
-      if (row?.id) {
-        const { error: upErr } = await supabase
-          .from("game_scores")
-          .update({
-            nickname,
-            score,
-            game_key: "baduk",
-            level: String(level),
-          })
-          .eq("id", row.id);
-
-        if (upErr) throw upErr;
-        setSaveMsg(`최고 기록으로 저장했어요. (이번 ${score}점)`);
-        return;
-      }
-
-      const { error: insErr } = await supabase.from("game_scores").insert([
-        {
-          user_id: me.id,
-          nickname,
-          game_key: "baduk",
-          level: String(level),
-          score,
-        },
-      ]);
-
-      if (insErr) throw insErr;
-
-      setSaveMsg(`랭킹에 저장했어요. (이번 ${score}점)`);
+      setSaveMsg(`최고 기록으로 저장했어요. (이번 ${result.newBest}점)`);
     } catch (e) {
       console.error("baduk save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
@@ -252,6 +226,11 @@ export default function BadukGame() {
 
   const finalScore = winner ? calcBadukScore() : null;
 
+  const currentLevelLabel = useMemo(() => {
+    const found = levels.find((x) => x.value === level);
+    return found?.label ?? "";
+  }, [levels, level]);
+
   return (
     <div className="baduk-page">
       <div className="baduk-head">
@@ -262,10 +241,6 @@ export default function BadukGame() {
         <div className="baduk-title">⚫ 바둑</div>
 
         <div className="baduk-head-right">
-          <button type="button" className="baduk-pass" onClick={passTurn}>
-            패스
-          </button>
-
           <button type="button" className="baduk-restart" onClick={reset}>
             다시하기
           </button>
@@ -281,14 +256,24 @@ export default function BadukGame() {
           <div className="baduk-label">난이도</div>
 
           <div className="baduk-controls">
-            <select value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="easy">하 (쉬움) · 9×9</option>
-              <option value="normal">중 (보통) · 9×9</option>
-              <option value="hard">상 (어려움) · 13×13</option>
-            </select>
+            <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+              {levels.map((lv) => (
+                <button
+                  key={lv.value}
+                  type="button"
+                  className={`wc-pill ${String(level) === String(lv.value) ? "on" : ""}`}
+                  onClick={() => setLevel(String(lv.value))}
+                  disabled={levelLocked} 
+                  title={lv.label}
+                >
+                  {lv.value === "easy" ? "하" : lv.value === "normal" ? "중" : "상"}
+                </button>
+              ))}
+            </div>
 
             <div className="baduk-mini">
-              돌 {stonesCount}개 · {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"} ·{" "}
+              {currentLevelLabel} · 돌 {stonesCount}개 ·{" "}
+              {winner ? "끝" : turn === "P" ? "내 차례" : "컴퓨터 차례"} ·{" "}
               <span className="baduk-score">
                 내가 잡은 돌 {capB} · 컴퓨터 {capW}
               </span>
@@ -332,6 +317,27 @@ export default function BadukGame() {
           </div>
         ))}
       </div>
+
+      {!winner && (
+        <div className="baduk-actions">
+          <button
+            type="button"
+            className="baduk-pass"
+            onClick={passTurn}
+            disabled={turn !== "P"}
+          >
+            패스
+          </button>
+
+          <button
+            type="button"
+            className="baduk-restart"
+            onClick={reset}
+          >
+            다시하기
+          </button>
+        </div>
+      )}
 
       {winner && (
         <div className="baduk-finish">
@@ -522,7 +528,11 @@ function pickAiMove(board, level, size) {
     let oppMaxCap = 0;
     for (const om of oppLegal) oppMaxCap = Math.max(oppMaxCap, om.captured);
 
-    const score = myGain * 120 + myLib * 2 + centerWeight(m.r, m.c, size) * 0.9 - oppMaxCap * 130;
+    const score =
+      myGain * 120 +
+      myLib * 2 +
+      centerWeight(m.r, m.c, size) * 0.9 -
+      oppMaxCap * 130;
 
     if (score > bestScore) {
       bestScore = score;

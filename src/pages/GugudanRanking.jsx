@@ -1,11 +1,10 @@
 // src/pages/GugudanRanking.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
-import RankingFilters from "../components/common/RankingFilters";
-import { bestByNickname } from "../utils/rankingBest";
+import { bestByUserId } from "../utils/rankingBest";
 
 const GAME_KEY = "gugudan";
 
@@ -19,8 +18,11 @@ export default function GugudanRanking() {
   const navigate = useNavigate();
 
   const [level, setLevel] = useState("easy");
+  const levels = useMemo(() => LEVELS, []);
+
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
+
   const [myInfo, setMyInfo] = useState({ is_admin: false, score: null, nickname: "" });
   const [emptyReason, setEmptyReason] = useState("");
 
@@ -51,29 +53,14 @@ export default function GugudanRanking() {
           myNickname = String(meProf?.nickname ?? "").trim();
         }
 
-        let list = [];
+        const { data: direct } = await supabase
+          .from("game_scores")
+          .select("user_id, nickname, score")
+          .eq("game_key", GAME_KEY)
+          .eq("level", String(level))
+          .limit(2000);
 
-        try {
-          const { data, error } = await supabase.rpc("get_game_ranking_best_by_nickname", {
-            game_key: GAME_KEY,
-            level,
-            limit_n: 300,
-          });
-          if (error) throw error;
-          list = data ?? [];
-        } catch {
-          const { data } = await supabase
-            .from("game_scores")
-            .select("user_id, nickname, score")
-            .eq("game_key", GAME_KEY)
-            .eq("level", level)
-            .order("score", { ascending: false })
-            .limit(800);
-
-          list = data ?? [];
-        }
-
-        const bestList = bestByNickname(list);
+        const bestList = bestByUserId(direct ?? []);
 
         const ids = bestList.map((x) => x.user_id).filter(Boolean);
         const adminMap = {};
@@ -91,7 +78,13 @@ export default function GugudanRanking() {
 
         const filtered = bestList
           .map((it) => ({ ...it, is_admin: adminMap[it.user_id] ?? false }))
-          .filter((it) => !it.is_admin);
+          .filter((it) => !it.is_admin)
+          .map((r) => ({
+            user_id: r.user_id,
+            nickname: String(r.nickname ?? "").trim(),
+            score: Number(r.score ?? 0),
+          }))
+          .sort((a, b) => b.score - a.score);
 
         const top10 = filtered.slice(0, 10);
         setRows(top10);
@@ -104,12 +97,13 @@ export default function GugudanRanking() {
             .select("score, nickname")
             .eq("user_id", me.id)
             .eq("game_key", GAME_KEY)
-            .eq("level", level)
-            .order("score", { ascending: false })
-            .limit(1);
+            .eq("level", String(level))
+            .limit(200);
 
-          const s = mine?.[0]?.score;
-          if (s !== null && s !== undefined) myBestScore = Number(s);
+          let best = -Infinity;
+          for (const r of mine ?? []) best = Math.max(best, Number(r?.score ?? 0));
+          if (best !== -Infinity) myBestScore = best;
+
           if (!myNickname) myNickname = String(mine?.[0]?.nickname ?? "").trim();
         }
 
@@ -154,15 +148,26 @@ export default function GugudanRanking() {
         </div>
       </header>
 
-      <RankingFilters
-        gameOptions={null}
-        gameKey="gugudan"
-        levelsByGame={{ gugudan: LEVELS }}
-        levelLabel="난이도"
-        level={level}
-        onChangeLevel={setLevel}
-        hideLevelSelectOnSingleLevel={false}
-      />
+      <div className="ranking-filters" style={{ marginTop: 10 }}>
+        <div className="ranking-filter-row" style={{ alignItems: "flex-start" }}>
+          <div className="ranking-filter-label">난이도</div>
+
+          <div className="wc-level-buttons" style={{ marginTop: 2 }}>
+            {levels.map((lv) => (
+              <button
+                key={lv.value}
+                type="button"
+                className={`wc-pill ${String(level) === String(lv.value) ? "on" : ""}`}
+                onClick={() => setLevel(String(lv.value))}
+                disabled={loading}
+                title={lv.label}
+              >
+                {lv.value === "easy" ? "하" : lv.value === "normal" ? "중" : "상"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {loading ? (
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
@@ -179,7 +184,7 @@ export default function GugudanRanking() {
         <div className="ranking-list">
           {rows.map((r, idx) => (
             <div
-              key={`${r.nickname}-${idx}`}
+              key={`${r.user_id ?? "u"}-${idx}`}
               className={`ranking-item ${idx === 0 ? "top1" : idx === 1 ? "top2" : idx === 2 ? "top3" : ""}`}
             >
               <div className="ranking-rank">
@@ -195,17 +200,10 @@ export default function GugudanRanking() {
         </div>
       )}
 
-      <div className="ranking-tip">
-        같은 이름으로 점수가 여러 번 저장되어도, 랭킹에는 가장 높은 점수만 보여요.
-      </div>
+      <div className="ranking-tip">내 점수는 내 계정 기준으로 최고 기록이 반영돼요.</div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>
-        <button
-          type="button"
-          className="hanja-btn ghost"
-          onClick={() => navigate("/planner")}
-          style={{ width: "100%" }}
-        >
+        <button type="button" className="hanja-btn ghost" onClick={() => navigate("/planner")} style={{ width: "100%" }}>
           플래너로 돌아가기
         </button>
       </div>

@@ -5,39 +5,56 @@ import "./EnglishWordGame.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import supabase from "../supabaseClient";
 import { WORDS } from "../data/englishWords";
+import { saveBestScore } from "../utils/saveBestScore";
 
 const GAME_KEY = "english";
-const SCORE_KEY = "eng_game_score_v1";
 const BEST_STREAK_KEY = "eng_game_best_streak_v1";
 
-const shuffle = (arr) => {
+function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-};
+}
+
+function normalizeMeaning(item) {
+  if (!item) return "";
+  // 1) { meaning: "apple" } 형태
+  if (typeof item.meaning === "string" && item.meaning.trim()) return item.meaning.trim();
+  // 2) { meanings: ["apple", "사과"] } 형태
+  if (Array.isArray(item.meanings) && item.meanings.length) {
+    const s = item.meanings.map((x) => String(x ?? "").trim()).filter(Boolean).join(", ");
+    if (s) return s;
+  }
+  // 3) 혹시 { answer: ... } 같은 변형이 있을 때 대비
+  if (typeof item.answer === "string" && item.answer.trim()) return item.answer.trim();
+  return "";
+}
+
+function normalizeWord(item) {
+  const w = String(item?.word ?? "").trim();
+  return w;
+}
 
 export default function EnglishWordGame() {
   const navigate = useNavigate();
 
-  const [level, setLevel] = useState("low");
+  // ✅ 쉬움/어려움 2단계
+  const [level, setLevel] = useState("easy");
 
   const [order, setOrder] = useState([]);
   const [pos, setPos] = useState(0);
 
-  const [score, setScore] = useState(() => {
-    const s = Number(localStorage.getItem(SCORE_KEY) || 0);
-    return Number.isFinite(s) ? s : 0;
-  });
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   const [bestStreak, setBestStreak] = useState(() => {
     const b = Number(localStorage.getItem(BEST_STREAK_KEY) || 0);
     return Number.isFinite(b) ? b : 0;
   });
 
-  const [streak, setStreak] = useState(0);
   const [result, setResult] = useState(null);
   const [locked, setLocked] = useState(false);
   const [showAnswer, setShowAnswer] = useState(null);
@@ -51,14 +68,86 @@ export default function EnglishWordGame() {
 
   const endTimerRef = useRef(null);
 
-  const totalQuestions = useMemo(() => (level === "low" ? 10 : 15), [level]);
+  // ✅ 쉬움 10문제 / 어려움 15문제
+  const totalQuestions = useMemo(() => (level === "easy" ? 10 : 15), [level]);
 
-  const list = WORDS[level] ?? [];
-  const current = list[order[pos]];
+  // ✅ 단어 풀 만들기
+  // - 쉬움: low(또는 easy가 있으면 easy)
+  // - 어려움: mid + high(또는 hard가 있으면 hard)
+  const pool = useMemo(() => {
+    const low = Array.isArray(WORDS?.easy) ? WORDS.easy : Array.isArray(WORDS?.low) ? WORDS.low : [];
+    const mid = Array.isArray(WORDS?.mid) ? WORDS.mid : [];
+    const high = Array.isArray(WORDS?.high) ? WORDS.high : [];
+    const hard = Array.isArray(WORDS?.hard) ? WORDS.hard : [];
 
-  useEffect(() => {
-    localStorage.setItem(SCORE_KEY, String(score));
-  }, [score]);
+    if (level === "easy") return low;
+    if (hard.length) return hard;
+    return [...mid, ...high];
+  }, [level]);
+
+  const current = useMemo(() => {
+    if (!pool.length) return null;
+    const idx = order[pos];
+    if (typeof idx !== "number") return null;
+    return pool[idx] ?? null;
+  }, [pool, order, pos]);
+
+  const correctText = useMemo(() => normalizeMeaning(current), [current]);
+
+  // ✅ 보기(선택지) 4개를 항상 만들기: 정답 1 + 오답 3
+  // - current.wrong가 있으면 그것도 활용
+  // - 없으면 pool에서 랜덤으로 뽑아 오답을 구성
+  const choices = useMemo(() => {
+    if (!current) return [];
+
+    const correct = normalizeMeaning(current);
+    if (!correct) return [];
+
+    const used = new Set([correct]);
+    const wrongs = [];
+
+    // 1) current.wrong 형태 지원(배열이든 문자열이든 최대한 살림)
+    const rawWrong = current?.wrong;
+    if (Array.isArray(rawWrong)) {
+      for (const w of rawWrong) {
+        const t = Array.isArray(w)
+          ? w.map((x) => String(x ?? "").trim()).filter(Boolean).join(", ")
+          : String(w ?? "").trim();
+        if (!t) continue;
+        if (used.has(t)) continue;
+        used.add(t);
+        wrongs.push(t);
+        if (wrongs.length >= 3) break;
+      }
+    } else if (typeof rawWrong === "string") {
+      const t = rawWrong.trim();
+      if (t && !used.has(t)) {
+        used.add(t);
+        wrongs.push(t);
+      }
+    }
+
+    // 2) 부족하면 pool에서 랜덤 오답 채우기
+    let guard = 0;
+    while (wrongs.length < 3 && guard < 3000) {
+      guard += 1;
+      const cand = pool[Math.floor(Math.random() * pool.length)];
+      const t = normalizeMeaning(cand);
+      if (!t) continue;
+      if (used.has(t)) continue;
+      used.add(t);
+      wrongs.push(t);
+    }
+
+    const items = [
+      { text: correct, isCorrect: true },
+      ...wrongs.slice(0, 3).map((t) => ({ text: t, isCorrect: false })),
+    ];
+
+    // 혹시 오답이 부족하면 최소 2개라도 보여주게 안전장치
+    const final = items.filter((x) => String(x.text ?? "").trim());
+    return shuffle(final);
+  }, [current, pool]);
 
   useEffect(() => {
     localStorage.setItem(BEST_STREAK_KEY, String(bestStreak));
@@ -73,45 +162,38 @@ export default function EnglishWordGame() {
 
   const speakWord = (text) => {
     if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
-    u.rate = 0.95;
-    window.speechSynthesis.speak(u);
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(text ?? ""));
+      u.lang = "en-US";
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      console.warn("speakWord error:", e);
+    }
   };
 
-  const correctText = useMemo(() => {
-    if (!current) return "";
-    return (current.meanings ?? []).join(", ");
-  }, [current]);
-
-  const choices = useMemo(() => {
-    if (!current) return [];
-
-    const correct = {
-      text: (current.meanings ?? []).join(", "),
-      isCorrect: true,
-    };
-
-    const wrongs = (current.wrong ?? []).map((w) => ({
-      text: (w ?? []).join(", "),
-      isCorrect: false,
-    }));
-
-    return shuffle([correct, ...wrongs]).slice(0, 3);
-  }, [current]);
-
   const startGame = (lv = level) => {
-    const nextList = WORDS[lv] ?? [];
-    const idxs = shuffle(nextList.map((_, i) => i));
+    const nextPool = (() => {
+      const low = Array.isArray(WORDS?.easy) ? WORDS.easy : Array.isArray(WORDS?.low) ? WORDS.low : [];
+      const mid = Array.isArray(WORDS?.mid) ? WORDS.mid : [];
+      const high = Array.isArray(WORDS?.high) ? WORDS.high : [];
+      const hard = Array.isArray(WORDS?.hard) ? WORDS.hard : [];
 
-    const limit = lv === "low" ? 10 : 15;
+      if (lv === "easy") return low;
+      if (hard.length) return hard;
+      return [...mid, ...high];
+    })();
+
+    const idxs = shuffle(nextPool.map((_, i) => i));
+    const limit = lv === "easy" ? 10 : 15;
     const sliced = idxs.slice(0, Math.min(limit, idxs.length));
 
     setOrder(sliced);
     setPos(0);
     setQNo(1);
 
+    setScore(0);
     setResult(null);
     setShowAnswer(null);
     setLocked(false);
@@ -157,7 +239,6 @@ export default function EnglishWordGame() {
       finishNow();
       return;
     }
-
     setQNo(nextNo);
     setPos((p) => p + 1);
   };
@@ -194,12 +275,12 @@ export default function EnglishWordGame() {
   const resetScore = () => {
     setScore(0);
     setStreak(0);
-    localStorage.setItem(SCORE_KEY, "0");
     localStorage.setItem(BEST_STREAK_KEY, "0");
     setBestStreak(0);
   };
 
   const saveRanking = async () => {
+    if (!finished) return;
     if (saving) return;
     if (saved) return;
 
@@ -213,40 +294,50 @@ export default function EnglishWordGame() {
       const me = authData?.user;
       if (!me?.id) {
         setSaveMsg("로그인이 필요해요.");
-        setSaving(false);
         return;
       }
 
-      const { data: prof } = await supabase
+      const { data: prof, error: profErr } = await supabase
         .from("profiles")
         .select("nickname, is_admin")
         .eq("id", me.id)
         .maybeSingle();
 
+      if (profErr) throw profErr;
+
       if (prof?.is_admin) {
         setSaveMsg("관리자 계정은 랭킹에서 제외되어 저장하지 않아요.");
-        setSaved(true);
-        setSaving(false);
         return;
       }
 
       const nickname = String(prof?.nickname ?? "").trim() || "익명";
+      const nextScore = Number(score ?? 0);
 
-      const { error } = await supabase.from("game_scores").insert([
-        {
-          user_id: me.id,
-          nickname,
-          game_key: GAME_KEY,
-          level: String(level),
-          score: Number(score),
-        },
-      ]);
+      const result = await saveBestScore({
+        supabase,
+        user_id: me.id,
+        nickname,
+        game_key: String(GAME_KEY),
+        level: String(level), // easy | hard
+        score: nextScore,
+      });
 
-      if (error) throw error;
+      if (!result?.ok) throw result?.error ?? new Error(result?.reason ?? "save_failed");
 
       setSaved(true);
-      setSaveMsg("랭킹에 저장했어요.");
+      if (result.updated) {
+        const prev = result.prevBest ?? null;
+        if (prev !== null && Number.isFinite(Number(prev))) {
+          setSaveMsg(`점수를 업데이트했어요. (이전 ${prev}점 → 이번 ${nextScore}점)`);
+        } else {
+          setSaveMsg("랭킹에 저장했어요.");
+        }
+      } else {
+        const best = result.prevBest ?? 0;
+        setSaveMsg(`이미 더 높은 기록이 있어요. (내 최고점 ${best}점)`);
+      }
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.error("english save error:", e);
       setSaveMsg("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -254,14 +345,12 @@ export default function EnglishWordGame() {
     }
   };
 
+  const wordText = normalizeWord(current);
+
   return (
     <div className="gugu-page english-game notranslate">
       <div className="gugu-head">
-        <button
-          type="button"
-          className="gugu-back"
-          onClick={() => navigate("/english-word-ranking")}
-        >
+        <button type="button" className="gugu-back" onClick={() => navigate("/english-word-ranking")}>
           영어 랭킹
         </button>
 
@@ -287,7 +376,7 @@ export default function EnglishWordGame() {
       </div>
 
       <div className="english-levels">
-        {["low", "mid", "high"].map((lv) => (
+        {["easy", "hard"].map((lv) => (
           <button
             key={lv}
             type="button"
@@ -295,7 +384,7 @@ export default function EnglishWordGame() {
             onClick={() => changeLevel(lv)}
             disabled={saving}
           >
-            {lv === "low" ? "하(10문제)" : lv === "mid" ? "중(15문제)" : "상(15문제)"}
+            {lv === "easy" ? "쉬움(10문제)" : "어려움(15문제)"}
           </button>
         ))}
       </div>
@@ -304,67 +393,55 @@ export default function EnglishWordGame() {
         current ? (
           <div className="english-play">
             <div className="english-word-row">
-              <span className="english-word-text">{current.word}</span>
-              <button
-                type="button"
-                className="english-speaker"
-                onClick={() => speakWord(current.word)}
-              >
+              <span className="english-word-text">{wordText || "단어 없음"}</span>
+              <button type="button" className="english-speaker" onClick={() => speakWord(wordText)}>
                 🔊
               </button>
             </div>
 
-            <div className="english-choices">
-              {choices.map((c, i) => (
-                <button key={i} onClick={() => onSelect(c.isCorrect)} disabled={locked}>
-                  {c.text}
-                </button>
-              ))}
-            </div>
+            {/* ✅ choices가 비어있으면 “데이터 문제” 메시지를 화면에 보여줌 */}
+            {choices.length > 0 ? (
+              <div className="english-choices">
+                {choices.map((c, i) => (
+                  <button key={i} type="button" onClick={() => onSelect(c.isCorrect)} disabled={locked}>
+                    {c.text}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="english-data-warning">
+                보기가 만들어지지 않았어요. 영어 단어 데이터에 meaning/meanings 값이 있는지 확인해 주세요.
+              </div>
+            )}
 
-            {result && <div className="english-result">{result}</div>}
-            {showAnswer && <div className="english-answer">정답: {showAnswer}</div>}
+            {result ? <div className="english-result">{result}</div> : null}
+            {showAnswer ? <div className="english-answer">정답: {showAnswer}</div> : null}
           </div>
         ) : (
           <div className="english-play">
-            <div className="english-result">문제가 비어 있어요. 단어 데이터를 확인해 주세요.</div>
+            <div className="english-result">문제가 비어 있어요. 영어 단어 데이터를 확인해 주세요.</div>
           </div>
         )
       ) : (
         <div className="english-play">
-          <div className="english-result" style={{ fontWeight: 900 }}>
-            끝! 최종 점수는 {score}점 입니다.
-          </div>
+          <div className="english-finish-title">끝! 최종 점수는 {score}점 입니다.</div>
 
-          {saveMsg ? (
-            <div className="english-answer" style={{ marginTop: 8 }}>
-              {saveMsg}
-            </div>
-          ) : null}
+          {saveMsg ? <div className="english-answer english-save-msg">{saveMsg}</div> : null}
 
-          <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="gugu-restart"
-              onClick={saveRanking}
-              disabled={saving || saved}
-            >
+          <div className="english-finish-actions">
+            <button type="button" className="gugu-restart" onClick={saveRanking} disabled={saving || saved}>
               {saved ? "저장 완료" : saving ? "저장 중..." : "랭킹에 저장"}
             </button>
 
-            <button
-              type="button"
-              className="gugu-restart"
-              onClick={() => navigate("/english-word-ranking")}
-            >
+            <button type="button" className="gugu-restart ghost" onClick={() => navigate("/english-word-ranking")}>
               랭킹 보기
             </button>
 
-            <button type="button" className="gugu-restart" onClick={() => startGame(level)}>
+            <button type="button" className="gugu-restart ghost" onClick={() => startGame(level)}>
               한 번 더
             </button>
 
-            <button type="button" className="gugu-restart" onClick={() => navigate("/planner")}>
+            <button type="button" className="gugu-restart ghost" onClick={() => navigate("/planner")}>
               플래너
             </button>
           </div>

@@ -4,10 +4,11 @@ import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Ranking.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import { bestByUserId } from "../utils/rankingBest";
 
 const GAME_KEY = "hanja";
 
-const HANJA_LEVELS = [
+const LEVELS = [
   { label: "8급", value: "8" },
   { label: "7급", value: "7" },
   { label: "6급", value: "6" },
@@ -17,7 +18,7 @@ export default function HanjaRanking() {
   const navigate = useNavigate();
 
   const [level, setLevel] = useState("8");
-  const levels = useMemo(() => HANJA_LEVELS, []);
+  const levels = useMemo(() => LEVELS, []);
 
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
@@ -26,27 +27,6 @@ export default function HanjaRanking() {
   const [emptyReason, setEmptyReason] = useState("");
 
   useEffect(() => {
-    setLevel("8");
-  }, []);
-
-  useEffect(() => {
-    const normalize = (data) =>
-      (data ?? [])
-        .map((r) => ({
-          user_id: r.user_id,
-          nickname: String(r.nickname ?? "").trim(),
-          score: Number(r.score ?? 0),
-        }))
-        .filter((row) => {
-          const n = row.nickname;
-          const compact = n.replace(/\s+/g, "");
-          if (!n) return false;
-          if (compact === "익명") return false;
-          if (compact.startsWith("익명")) return false;
-          if (compact === "닉네임") return false;
-          return true;
-        });
-
     const run = async () => {
       if (!level) return;
 
@@ -73,51 +53,44 @@ export default function HanjaRanking() {
           myNickname = String(meProf?.nickname ?? "").trim();
         }
 
-        let list = [];
+        const { data: direct } = await supabase
+          .from("game_scores")
+          .select("user_id, nickname, score")
+          .eq("game_key", GAME_KEY)
+          .eq("level", String(level))
+          .limit(2000);
 
-        try {
-          const { data, error } = await supabase.rpc("get_game_ranking", {
-            game_key: GAME_KEY,
-            level: String(level),
-            limit_n: 50,
-          });
-          if (error) throw error;
-          list = normalize(data);
-        } catch {
-          list = [];
-        }
+        const bestList = bestByUserId(direct ?? []);
 
-        if (list.length === 0) {
-          const { data: direct, error: directErr } = await supabase
-            .from("game_scores")
-            .select("user_id, nickname, score")
-            .eq("game_key", GAME_KEY)
-            .eq("level", String(level))
-            .order("score", { ascending: false })
-            .limit(50);
-
-          if (!directErr) list = normalize(direct);
-        }
-
-        const ids = list.map((x) => x.user_id).filter(Boolean);
+        const ids = bestList.map((x) => x.user_id).filter(Boolean);
         const adminMap = {};
 
         if (ids.length > 0) {
-          const { data: profs } = await supabase.from("profiles").select("id, is_admin").in("id", ids);
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, is_admin")
+            .in("id", ids);
+
           (profs ?? []).forEach((p) => {
             adminMap[p.id] = Boolean(p.is_admin);
           });
         }
 
-        const filtered = list
+        const filtered = bestList
           .map((it) => ({ ...it, is_admin: adminMap[it.user_id] ?? false }))
-          .filter((it) => !it.is_admin);
+          .filter((it) => !it.is_admin)
+          .map((r) => ({
+            user_id: r.user_id,
+            nickname: String(r.nickname ?? "").trim(),
+            score: Number(r.score ?? 0),
+          }))
+          .sort((a, b) => b.score - a.score);
 
-        filtered.sort((a, b) => b.score - a.score);
         const top10 = filtered.slice(0, 10);
         setRows(top10);
 
         let myBestScore = null;
+
         if (me?.id) {
           const { data: mine } = await supabase
             .from("game_scores")
@@ -125,11 +98,12 @@ export default function HanjaRanking() {
             .eq("user_id", me.id)
             .eq("game_key", GAME_KEY)
             .eq("level", String(level))
-            .order("score", { ascending: false })
-            .limit(1);
+            .limit(200);
 
-          const s = mine?.[0]?.score;
-          if (s !== null && s !== undefined) myBestScore = Number(s);
+          let best = -Infinity;
+          for (const r of mine ?? []) best = Math.max(best, Number(r?.score ?? 0));
+          if (best !== -Infinity) myBestScore = best;
+
           if (!myNickname) myNickname = String(mine?.[0]?.nickname ?? "").trim();
         }
 
@@ -163,10 +137,10 @@ export default function HanjaRanking() {
       <header className="top-header">
         <div className="top-row">
           <button type="button" className="ranking-nav-btn" onClick={() => navigate("/hanja")}>
-            한자놀이로
+            한자로
           </button>
 
-          <h1 className="app-title">한자 놀이 랭킹</h1>
+          <h1 className="app-title">한자 랭킹</h1>
 
           <div className="header-right">
             <HamburgerMenu />
@@ -199,7 +173,7 @@ export default function HanjaRanking() {
         <div className="ranking-loading">랭킹을 불러오는 중...</div>
       ) : rows.length === 0 ? (
         <div className="ranking-empty">
-          {emptyReason || "아직 랭킹 데이터가 없어요 🙂"}
+          {emptyReason || "아직 표시할 랭킹이 없어요."}
           {myInfo?.score !== null ? (
             <div style={{ marginTop: 10, fontSize: 13, opacity: 0.9 }}>
               내 점수: {myInfo.score}점{myInfo.is_admin ? " (관리자 계정)" : ""}
@@ -226,15 +200,10 @@ export default function HanjaRanking() {
         </div>
       )}
 
-      <div className="ranking-tip">점수는 높을수록 위에 보여요. 급수를 눌러서 바로 바꿔볼 수 있어요 🙂</div>
+      <div className="ranking-tip">내 점수는 내 계정 기준으로 최고 기록이 반영돼요.</div>
 
       <div className="ranking-tip" style={{ marginTop: 10 }}>
-        <button
-          type="button"
-          className="hanja-btn ghost"
-          onClick={() => navigate("/planner")}
-          style={{ width: "100%" }}
-        >
+        <button type="button" className="hanja-btn ghost" onClick={() => navigate("/planner")} style={{ width: "100%" }}>
           플래너로 돌아가기
         </button>
       </div>
