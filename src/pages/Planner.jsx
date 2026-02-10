@@ -1,5 +1,5 @@
 // src/pages/Planner.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
@@ -83,6 +83,7 @@ async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
     }, timeoutMs);
   });
 }
+
 
 // 메인 플래너 페이지
 function Planner() {
@@ -279,28 +280,31 @@ function Planner() {
     return a;
   };
 
-  const fetchHallOfFame = async (dayKey) => {
-    setHofLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("hall_of_fame")
-        .select("user_id, nickname, finished_at")
-        .eq("day_key", dayKey);
+const fetchHallOfFame = useCallback(async (dayKey) => {
+  setHofLoading(true);
+  try {
+    const { data, error } = await supabase
+      .from("hall_of_fame")
+      .select("user_id, nickname, finished_at")
+      .eq("day_key", dayKey);
 
-      if (error) throw error;
-      const rows = data ?? [];
-      const myId = me?.id;
-      const mine = myId ? rows.find((r) => r.user_id === myId) : null;
-      const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
-      const mixedOthers = shuffleArray(others);
-      setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
-    } catch (err) {
-      console.error("fetchHallOfFame error:", err);
-      setHof([]);
-    } finally {
-      setHofLoading(false);
-    }
-  };
+    if (error) throw error;
+
+    const rows = data ?? [];
+    const myId = me?.id;
+
+    const mine = myId ? rows.find((r) => r.user_id === myId) : null;
+    const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
+    const mixedOthers = shuffleArray(others);
+
+    setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
+  } catch (err) {
+    console.error("fetchHallOfFame error:", err);
+    setHof([]);
+  } finally {
+    setHofLoading(false);
+  }
+}, [me?.id]);
   
   const recordCompletionForDay = async (dayKey) => {
     if (!me?.id) return;
@@ -451,38 +455,50 @@ function Planner() {
     return { id: data?.id ?? null };
   };
 
-  async function fetchTodayAlarm(kind, todayKey) {
-    const { data, error } = await supabase
-      .from("alarm_settings")
-      .select("id, kind, title, message, time_hhmm, start_day, end_day, is_active, updated_at")
-      .eq("kind", kind)
-      .eq("is_active", true)
-      .order("updated_at", { ascending: false });
+  // Planner.jsx 안에 그대로 두고, 내용만 교체하세요.
+async function fetchTodayAlarm(kind, todayKey) {
+  const { data, error } = await supabase
+    .from("alarm_settings")
+    .select("id, kind, title, message, time_hhmm, start_day, end_day, day_type, is_active, updated_at")
+    .eq("kind", kind)
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false });
 
-    if (error) {
-      console.error("fetchTodayAlarm error:", error);
-      return null;
-    }
-
-    const rows = data ?? [];
-    if (rows.length === 0) return null;
-
-    const today = new Date(`${todayKey}T00:00:00`);
-    const isInRange = (row) => {
-      const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
-      const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
-
-      if (s && today < s) return false;
-      if (e && today > e) return false;
-      return true;
-    };
-
-    const inRange = rows.filter(isInRange);
-    if (inRange.length > 0) return inRange[0];
-
-    const always = rows.filter((r) => !r.start_day && !r.end_day);
-    return always[0] ?? null;
+  if (error) {
+    console.error("fetchTodayAlarm error:", error);
+    return null;
   }
+
+  const rows = data ?? [];
+  if (rows.length === 0) return null;
+
+  // 오늘 날짜/요일 준비
+  const todayDate = new Date(`${todayKey}T00:00:00`);
+  const day = todayDate.getDay(); // 0=일, 6=토
+  const isWeekend = day === 0 || day === 6;
+
+  const isInRange = (row) => {
+    const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
+    const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
+
+    if (s && todayDate < s) return false;
+    if (e && todayDate > e) return false;
+    return true;
+  };
+
+  const isDayTypeOk = (row) => {
+    const t = String(row.day_type || "all");
+    if (t === "weekday") return !isWeekend;
+    if (t === "weekend") return isWeekend;
+    return true; // all
+  };
+
+  const filtered = rows.filter((r) => isInRange(r) && isDayTypeOk(r));
+
+  // 조건을 만족하는 것 중 최신 1개
+  return filtered[0] ?? null;
+}
+
 
   // 브라우저 알림 띄우기 
   async function showLocalNotification({ title, body }) {
@@ -636,50 +652,105 @@ function Planner() {
       const rows = await fetchTodos(me.id, selectedDayKey);
       await fetchHallOfFame(selectedDayKey);
       if ((rows ?? []).length === 0 && hasMyList) {
-        await autoImportMyListIfEmptyToday({
-          userId: me.id,
-          dayKey: selectedDayKey,
-        });
+        await autoImportMyListIfEmptyToday({ userId: me.id, dayKey: selectedDayKey });
       }
     };
 
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDayKey, me?.id, hasMyList]);
+  }, [selectedDayKey, me?.id, hasMyList, fetchHallOfFame]); 
 
-  // 명예의 전당 자동 새로고침
-  useEffect(() => {
-    if (!me?.id) return;
-
-    const INTERVAL_MS = 5 * 60 * 1000;
-    const intervalId = setInterval(() => {
-      fetchHallOfFame(selectedDayKey);
-    }, INTERVAL_MS);
-
-    return () => clearInterval(intervalId);
-  }, [me?.id, selectedDayKey]);
-
-  // 내 도장 개수 불러오기 (hall_of_fame에서 내 기록 개수 세기)
+  // Planner.jsx 안, 다른 useEffect들 있는 곳에 붙여넣기
 useEffect(() => {
   if (!me?.id) return;
+  if (loading) return;
 
-  const fetchMyStampCount = async () => {
+  let intervalId = null;
+
+  const tick = async () => {
     try {
-      const { count, error } = await supabase
-        .from("hall_of_fame")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", me.id);
+      // 1) 알림 권한이 없으면 아무것도 못 합니다.
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "granted") return;
 
-      if (error) throw error;
-      setStampCount(count ?? 0);
+      // 2) 오늘 키 기준으로 오늘 알람 1개 가져오기
+      const todayKey = toKstDayKey(new Date());
+      const alarm = await fetchTodayAlarm("todo_remind", todayKey);
+      if (!alarm) return;
+
+      const hhmm = String(alarm.time_hhmm || "");
+      if (!/^\d{2}:\d{2}$/.test(hhmm)) return;
+
+      // 3) 지금 시간이 알람 시간인지 검사(분 단위)
+      const now = new Date();
+      const nowH = String(now.getHours()).padStart(2, "0");
+      const nowM = String(now.getMinutes()).padStart(2, "0");
+      const nowHHMM = `${nowH}:${nowM}`;
+
+      if (nowHHMM !== hhmm) return;
+
+      // 4) 같은 날 같은 알람은 한 번만 울리기(중복 방지)
+      const onceKey = `alarm_fired_v1:${alarm.id}:${todayKey}`;
+      try {
+        if (localStorage.getItem(onceKey) === "1") return;
+        localStorage.setItem(onceKey, "1");
+      } catch {
+        // localStorage 막혀도 알림은 울리게 두되, 중복 가능성은 감수
+      }
+
+      await showLocalNotification({
+        title: "초등 스터디 플래너",
+        body: String(alarm.message || "오늘의 할 일을 확인해 보세요."),
+      });
     } catch (e) {
-      console.warn("fetchMyStampCount error:", e);
-      setStampCount(0);
+      console.warn("alarm tick error:", e);
     }
   };
 
-  fetchMyStampCount();
-}, [me?.id]);
+  // 시작하자마자 1번 체크
+  tick();
+
+  // 이후 20초마다 체크(분 바뀌는 타이밍 놓치지 않게 약간 촘촘히)
+  intervalId = window.setInterval(tick, 20 * 1000);
+
+  return () => {
+    if (intervalId) window.clearInterval(intervalId);
+  };
+}, [me?.id, loading, selectedDayKey]); 
+
+  // 명예의 전당 자동 새로고침
+  useEffect(() => {
+  if (!me?.id) return;
+
+  const INTERVAL_MS = 5 * 60 * 1000;
+  const intervalId = setInterval(() => {
+    fetchHallOfFame(selectedDayKey);
+  }, INTERVAL_MS);
+
+  return () => clearInterval(intervalId);
+  }, [me?.id, selectedDayKey, fetchHallOfFame]); 
+
+
+  // 내 도장 개수 불러오기 (hall_of_fame에서 내 기록 개수 세기)
+  useEffect(() => {
+    if (!me?.id) return;
+
+    const fetchMyStampCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("hall_of_fame")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", me.id);
+
+        if (error) throw error;
+        setStampCount(count ?? 0);
+      } catch (e) {
+        console.warn("fetchMyStampCount error:", e);
+        setStampCount(0);
+      }
+    };
+
+    fetchMyStampCount();
+  }, [me?.id]);
 
   // 메모 불러오기
   useEffect(() => {
@@ -1392,42 +1463,105 @@ const deleteSelectedTodos = async () => {
   );
 
   useEffect(() => {
-    if (!me?.id) return;         
-    if (loading) return;        
+  if (!me?.id) return;
+  if (loading) return;
 
-    let timerId = null;
+  let checking = false;
 
-    const schedule = async () => {
+  let intervalId = null;
+
+  const isDayTypeAllowed = (dayType, dateObj) => {
+    const d = dateObj.getDay(); 
+    const isWeekend = d === 0 || d === 6;
+
+    if (dayType === "weekday") return !isWeekend;
+    if (dayType === "weekend") return isWeekend; 
+    return true;                                 
+  };
+
+  const makeFiredKey = (alarmId, dayKey) => `alarm_fired_v1:${alarmId}:${dayKey}`;
+
+  const isInRange = (row, todayKey) => {
+    if (!row?.start_day && !row?.end_day) return true;
+
+    const today = new Date(`${todayKey}T00:00:00`);
+    const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
+    const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
+
+    if (s && today < s) return false;
+    if (e && today > e) return false;
+    return true;
+  };
+
+  const isNowMatched = (hhmm, now) => {
+    const [hh, mm] = String(hhmm || "").split(":").map((x) => Number(x));
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return false;
+    return now.getHours() === hh && now.getMinutes() === mm;
+  };
+  const tick = async () => {
+    if (checking) return;
+    checking = true;
+
+    try {
       const todayKey = toKstDayKey(new Date());
-
-      const alarm = await fetchTodayAlarm("todo_remind", todayKey);
-      if (!alarm) return;
-
-      const hhmm = String(alarm.time_hhmm || "19:30");
-      const [hh, mm] = hhmm.split(":").map((x) => Number(x));
-
       const now = new Date();
-      const target = new Date(now);
-      target.setHours(hh || 0, mm || 0, 0, 0);
 
-      const diffMs = target.getTime() - now.getTime();
+      const { data, error } = await supabase
+        .from("alarm_settings")
+        .select("id, kind, title, message, time_hhmm, start_day, end_day, day_type, is_active, updated_at")
+        .eq("kind", "todo_remind")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false });
 
-      if (diffMs <= 0) return;
+      if (error) {
+        console.warn("alarm tick load error:", error);
+        return;
+      }
 
-      timerId = window.setTimeout(() => {
-        showLocalNotification({
-          title: "초등 스터디 플래너",
-          body: alarm.message,
-        });
-      }, diffMs);
-    };
+      const rows = (data ?? []).map((r) => ({
+        ...r,
+        day_type: r?.day_type || "all", 
+      }));
 
-    schedule();
+      const available = rows.filter((r) => isInRange(r, todayKey) && isDayTypeAllowed(r.day_type, now));
+      if (available.length === 0) return;
 
-    return () => {
-      if (timerId) window.clearTimeout(timerId);
-    };
-  }, [me?.id, loading]);
+      const alarm = available[0];
+
+      if (!isNowMatched(alarm.time_hhmm, now)) return;
+
+      const firedKey = makeFiredKey(alarm.id, todayKey);
+      try {
+        if (localStorage.getItem(firedKey) === "1") return;
+      } catch {
+        // localStorage 막힌 환경이면 그냥 진행(중복 가능)
+      }
+
+      await showLocalNotification({
+        title: "초등 스터디 플래너",
+        body: String(alarm.message ?? "오늘의 할 일을 끝내보세요."),
+      });
+
+      try {
+        localStorage.setItem(firedKey, "1");
+      } catch {
+        //
+      }
+    } finally {
+      checking = false;
+    }
+  };
+
+  tick();
+
+  intervalId = window.setInterval(tick, 60 * 1000);
+
+  return () => {
+    if (intervalId) window.clearInterval(intervalId);
+  };
+}, [me?.id, loading]);
+
+
 
   // 첫 방문 투어 시작
   useEffect(() => {
@@ -1563,7 +1697,7 @@ const deleteSelectedTodos = async () => {
     }
 
     if (remainingSec > 0) timerEndedRef.current = false;
-  }, [remainingSec, timerSoundOn]);
+}, [remainingSec, timerSoundOn, playTimerEnd]);
 
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
