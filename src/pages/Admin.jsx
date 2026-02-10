@@ -5,7 +5,6 @@ import supabase from "../supabaseClient";
 import "./Admin.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 
-
 const GRADE_OPTIONS = [
   { label: "6세", value: -1 },
   { label: "7세", value: 0 },
@@ -87,7 +86,7 @@ function isSameDay(a, b) {
 function getWeekStartDayKey(dayKey) {
   const d = parseDayKeyToDate(dayKey);
   const day = d.getDay(); // 0(일)~6(토)
-  const diffToMon = (day === 0 ? -6 : 1 - day);
+  const diffToMon = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diffToMon);
   return dateToDayKey(d);
 }
@@ -143,12 +142,15 @@ export default function Admin() {
   const [alarmTitle, setAlarmTitle] = useState(""); // 예: 방학-저녁 알림
   const [alarmMessage, setAlarmMessage] = useState("오늘의 할 일을 끝내보세요.");
   const [alarmTime, setAlarmTime] = useState("19:30"); // "HH:MM"
-  const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
-  const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"(현재는 기능 미사용)
+  const [alarmStartDay, setAlarmStartDay] = useState(""); // "YYYY-MM-DD"
+  const [alarmEndDay, setAlarmEndDay] = useState(""); // "YYYY-MM-DD"
   const [editingAlarmId, setEditingAlarmId] = useState(null);
   const [alarmDayType, setAlarmDayType] = useState("all"); // all | weekday | weekend
   const [alarmList, setAlarmList] = useState([]); // 목록 표시용
-  const [alarmPeriodMode, setAlarmPeriodMode] = useState("always"); // always | today
+  const [alarmPeriodMode, setAlarmPeriodMode] = useState("always"); // always | today | range
+
+  // 알람 ON인 유저(참고용)
+  const [alarmOnUsers, setAlarmOnUsers] = useState([]);
 
   // =========================
   // 주간 숙제 사진 업로드
@@ -202,7 +204,6 @@ export default function Admin() {
         upsert: true,
         contentType: file.type || "image/jpeg",
       });
-
       if (upErr) throw upErr;
 
       // 2) Public URL 얻기(버킷을 Public로 해둔 경우)
@@ -223,11 +224,9 @@ export default function Admin() {
           },
           { onConflict: "week_start_day,grade_code" }
         );
-
       if (dbErr) throw dbErr;
 
       alert(`주간 숙제 사진을 저장했어요! (주 시작: ${weekStartDayKey} / ${gradeLabel})`);
-
       setWeekImgFile(null);
       await loadWeekImage();
     } catch (err) {
@@ -239,8 +238,22 @@ export default function Admin() {
   };
 
   // =======================
-  // 알람 목록 불러오기
+  // 알람 목록/유저 불러오기
   // =======================
+  const loadAlarmOnUsers = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nickname, alarm_enabled_at")
+      .eq("alarm_enabled", true)
+      .order("alarm_enabled_at", { ascending: false });
+
+    if (error) {
+      console.error("loadAlarmOnUsers error:", error);
+      return [];
+    }
+    return data ?? [];
+  };
+
   const loadAlarmList = async () => {
     const { data, error } = await supabase
       .from("alarm_settings")
@@ -260,6 +273,10 @@ export default function Admin() {
     }));
 
     setAlarmList(rows);
+
+    // 참고용(알람 켜둔 유저)
+    const users = await loadAlarmOnUsers();
+    setAlarmOnUsers(users);
   };
 
   // 알람 저장 (추가/수정 공용)
@@ -277,8 +294,29 @@ export default function Admin() {
     }
 
     const todayKey = toDayKey(new Date());
-    const resolvedStartDay = alarmPeriodMode === "today" ? todayKey : null;
-    const resolvedEndDay = alarmPeriodMode === "today" ? todayKey : null;
+
+    let resolvedStartDay = null;
+    let resolvedEndDay = null;
+
+    if (alarmPeriodMode === "today") {
+      resolvedStartDay = todayKey;
+      resolvedEndDay = todayKey;
+    } else if (alarmPeriodMode === "range") {
+      const s = String(alarmStartDay || "").trim();
+      const e = String(alarmEndDay || "").trim();
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+        alert("기간 날짜 형식이 올바르지 않습니다.");
+        return;
+      }
+      if (keyToNum(s) > keyToNum(e)) {
+        alert("시작일이 종료일보다 늦을 수 없어요.");
+        return;
+      }
+
+      resolvedStartDay = s;
+      resolvedEndDay = e;
+    }
 
     const payload = {
       kind: alarmKind,
@@ -361,6 +399,8 @@ export default function Admin() {
     const todayKey = toDayKey(new Date());
     if (row.start_day && row.end_day && String(row.start_day) === todayKey && String(row.end_day) === todayKey) {
       setAlarmPeriodMode("today");
+    } else if (row.start_day || row.end_day) {
+      setAlarmPeriodMode("range");
     } else {
       setAlarmPeriodMode("always");
     }
@@ -387,23 +427,6 @@ export default function Admin() {
     }
 
     await loadAlarmList();
-    const users = await loadAlarmOnUsers();
-    setAlarmOnUsers(users);
-  };
-
-  const loadAlarmOnUsers = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, nickname, alarm_enabled_at")
-      .eq("alarm_enabled", true)
-      .order("alarm_enabled_at", { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return [];
-    }
-
-    return data ?? [];
   };
 
   // =======================
@@ -566,10 +589,7 @@ export default function Admin() {
 
     const { error } = await supabase
       .from("daily_homeworks")
-      .upsert(
-        { day_key: dayKey, grade_code: Number(gradeCode), items: cleaned },
-        { onConflict: "day_key,grade_code" }
-      );
+      .upsert({ day_key: dayKey, grade_code: Number(gradeCode), items: cleaned }, { onConflict: "day_key,grade_code" });
 
     if (error) {
       console.error("saveHomework error:", error);
@@ -638,7 +658,11 @@ export default function Admin() {
       const email = user.email ?? "";
       if (mounted) setMyEmail(email);
 
-      const { data: p, error: pErr } = await supabase.from("profiles").select("id, is_admin").eq("id", user.id).maybeSingle();
+      const { data: p, error: pErr } = await supabase
+        .from("profiles")
+        .select("id, is_admin")
+        .eq("id", user.id)
+        .maybeSingle();
 
       if (pErr) {
         console.error(pErr);
@@ -908,8 +932,8 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          매일 모든 학년을 다 채울 필요는 없어요. 한 학년만 저장해도, 사용자는 그 날짜에 “저장된 학년 중 하나”를 볼 수
-          있게 만들 수 있습니다.
+          매일 모든 학년을 다 채울 필요는 없어요. 한 학년만 저장해도, 사용자는 그 날짜에 “저장된 학년 중 하나”를 볼 수 있게
+          만들 수 있습니다.
         </div>
 
         <div className="admin-row">
@@ -941,8 +965,8 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          예) 수학: 30페이지 / 영어: 20쪽 쓰기 / 국어: 받아쓰기 3페이지 처럼 입력해요. “추가”를 누르면 아래에 쌓이고,
-          “숙제 저장”을 누르면 DB에 저장됩니다.
+          예) 수학: 30페이지 / 영어: 20쪽 쓰기 / 국어: 받아쓰기 3페이지 처럼 입력해요. “추가”를 누르면 아래에 쌓이고, “숙제
+          저장”을 누르면 DB에 저장됩니다.
         </div>
 
         <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
@@ -1201,8 +1225,7 @@ export default function Admin() {
         </div>
 
         <div className="admin-help">
-          지금은 기간 기능이 불안정해서, “항상”과 “오늘만”만 확실히 동작하도록 만들었어요. “오늘만”은 저장할 때 자동으로 오늘 날짜로
-          고정됩니다.
+          “항상 / 오늘만 / 기간” 3가지로 동작합니다. 기간을 선택하면 시작일~종료일이 그대로 DB에 저장됩니다.
         </div>
 
         <div className="admin-row">
@@ -1250,41 +1273,37 @@ export default function Admin() {
               const next = e.target.value;
               setAlarmPeriodMode(next);
 
-              // 기간 입력값은 현재 기능 미사용이라 혼란 방지를 위해 비워둡니다.
-              setAlarmStartDay("");
-              setAlarmEndDay("");
+              const t = toDayKey(new Date());
+
+              if (next === "always") {
+                setAlarmStartDay("");
+                setAlarmEndDay("");
+              } else if (next === "today") {
+                setAlarmStartDay(t);
+                setAlarmEndDay(t);
+              } else if (next === "range") {
+                if (!alarmStartDay) setAlarmStartDay(t);
+                if (!alarmEndDay) setAlarmEndDay(t);
+              }
             }}
           >
             <option value="always">항상</option>
             <option value="today">오늘만</option>
+            <option value="range">기간</option>
           </select>
         </div>
 
-        {alarmPeriodMode === "always" ? (
+        {alarmPeriodMode === "range" ? (
           <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
-            <span className="admin-label" style={{ opacity: 0.6 }}>
-              기간(미사용)
-            </span>
-            <input
-              type="date"
-              value={alarmStartDay}
-              onChange={(e) => setAlarmStartDay(e.target.value)}
-              aria-label="시작일"
-              disabled
-              title="현재는 기간 기능이 꺼져 있어요"
-            />
-            <span style={{ opacity: 0.6 }}>~</span>
-            <input
-              type="date"
-              value={alarmEndDay}
-              onChange={(e) => setAlarmEndDay(e.target.value)}
-              aria-label="종료일"
-              disabled
-              title="현재는 기간 기능이 꺼져 있어요"
-            />
+            <span className="admin-label">시작/종료</span>
+            <input type="date" value={alarmStartDay} onChange={(e) => setAlarmStartDay(e.target.value)} aria-label="시작일" />
+            <span>~</span>
+            <input type="date" value={alarmEndDay} onChange={(e) => setAlarmEndDay(e.target.value)} aria-label="종료일" />
           </div>
+        ) : alarmPeriodMode === "today" ? (
+          <div className="admin-help">“오늘만”은 오늘({toDayKey(new Date())}) 하루만 적용되도록 저장됩니다.</div>
         ) : (
-          <div className="admin-help">“오늘만”을 선택하면 이 알람은 오늘({toDayKey(new Date())}) 하루만 적용되도록 저장됩니다.</div>
+          <div className="admin-help">“항상”은 기간 없이 매일 적용됩니다.</div>
         )}
 
         <div className="admin-actions">
@@ -1353,6 +1372,17 @@ export default function Admin() {
             </div>
           )}
         </div>
+
+        {alarmOnUsers.length > 0 ? (
+          <div className="admin-help" style={{ marginTop: 10 }}>
+            알람 ON 유저: {alarmOnUsers.slice(0, 10).map((u) => String(u.nickname || "이름없음")).join(", ")}
+            {alarmOnUsers.length > 10 ? " …" : ""}
+          </div>
+        ) : (
+          <div className="admin-help" style={{ marginTop: 10 }}>
+            알람 ON 유저가 아직 없어요.
+          </div>
+        )}
 
         <div className="admin-hamburger-menu">
           <HamburgerMenu />
