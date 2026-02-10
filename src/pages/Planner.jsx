@@ -455,50 +455,36 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
     return { id: data?.id ?? null };
   };
 
-  // Planner.jsx 안에 그대로 두고, 내용만 교체하세요.
-async function fetchTodayAlarm(kind, todayKey) {
-  const { data, error } = await supabase
-    .from("alarm_settings")
-    .select("id, kind, title, message, time_hhmm, start_day, end_day, day_type, is_active, updated_at")
-    .eq("kind", kind)
-    .eq("is_active", true)
-    .order("updated_at", { ascending: false });
+  async function fetchTodayAlarm(kind) {
+    const today = new Date();
 
-  if (error) {
-    console.error("fetchTodayAlarm error:", error);
-    return null;
+    const { data } = await supabase
+      .from("alarm_settings")
+      .select("*")
+      .eq("kind", kind)
+      .eq("is_active", true);
+
+    if (!data || data.length === 0) return null;
+
+    const toDateOrNull = (v, endOfDay) => {
+      const s = String(v ?? "").trim();
+      if (!s) return null;
+      return new Date(`${s}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+    };
+
+    const isInRange = (row) => {
+      const s = toDateOrNull(row.start_day, false);
+      const e = toDateOrNull(row.end_day, true);
+
+      if (s && today < s) return false;
+      if (e && today > e) return false;
+      return true;
+    };
+
+    const row = data.find((r) => isInRange(r));
+
+    return row ?? null;
   }
-
-  const rows = data ?? [];
-  if (rows.length === 0) return null;
-
-  // 오늘 날짜/요일 준비
-  const todayDate = new Date(`${todayKey}T00:00:00`);
-  const day = todayDate.getDay(); // 0=일, 6=토
-  const isWeekend = day === 0 || day === 6;
-
-  const isInRange = (row) => {
-    const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
-    const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
-
-    if (s && todayDate < s) return false;
-    if (e && todayDate > e) return false;
-    return true;
-  };
-
-  const isDayTypeOk = (row) => {
-    const t = String(row.day_type || "all");
-    if (t === "weekday") return !isWeekend;
-    if (t === "weekend") return isWeekend;
-    return true; // all
-  };
-
-  const filtered = rows.filter((r) => isInRange(r) && isDayTypeOk(r));
-
-  // 조건을 만족하는 것 중 최신 1개
-  return filtered[0] ?? null;
-}
-
 
   // 브라우저 알림 띄우기 
   async function showLocalNotification({ title, body }) {
@@ -659,63 +645,74 @@ async function fetchTodayAlarm(kind, todayKey) {
     run();
   }, [selectedDayKey, me?.id, hasMyList, fetchHallOfFame]); 
 
-  // Planner.jsx 안, 다른 useEffect들 있는 곳에 붙여넣기
-useEffect(() => {
-  if (!me?.id) return;
-  if (loading) return;
+  useEffect(() => {
+    if (!me?.id) return;
+    if (loading) return;
 
-  let intervalId = null;
+    let timerId = null;
 
-  const tick = async () => {
-    try {
-      // 1) 알림 권한이 없으면 아무것도 못 합니다.
-      if (!("Notification" in window)) return;
-      if (Notification.permission !== "granted") return;
+    const clearTimer = () => {
+      if (timerId) {
+        window.clearTimeout(timerId);
+        timerId = null;
+      }
+    };
 
-      // 2) 오늘 키 기준으로 오늘 알람 1개 가져오기
+    const schedule = async () => {
+      clearTimer();
+
+      // 사용자가 마이페이지에서 알림을 꺼둔 경우면 예약 자체를 안 잡음
+      if (profile?.alarm_enabled === false) return;
+
       const todayKey = toKstDayKey(new Date());
+
       const alarm = await fetchTodayAlarm("todo_remind", todayKey);
       if (!alarm) return;
 
-      const hhmm = String(alarm.time_hhmm || "");
-      if (!/^\d{2}:\d{2}$/.test(hhmm)) return;
+      const hhmm = String(alarm.time_hhmm || "19:30").trim();
 
-      // 3) 지금 시간이 알람 시간인지 검사(분 단위)
+      // "HH:MM" 또는 "HH:MM:SS" 모두 대응
+      const parts = hhmm.split(":").map((x) => Number(x));
+      const hh = Number.isFinite(parts[0]) ? parts[0] : 0;
+      const mm = Number.isFinite(parts[1]) ? parts[1] : 0;
+
       const now = new Date();
-      const nowH = String(now.getHours()).padStart(2, "0");
-      const nowM = String(now.getMinutes()).padStart(2, "0");
-      const nowHHMM = `${nowH}:${nowM}`;
+      const target = new Date(now);
+      target.setHours(hh, mm, 0, 0);
 
-      if (nowHHMM !== hhmm) return;
+      const diffMs = target.getTime() - now.getTime();
+      if (diffMs <= 0) return;
 
-      // 4) 같은 날 같은 알람은 한 번만 울리기(중복 방지)
-      const onceKey = `alarm_fired_v1:${alarm.id}:${todayKey}`;
-      try {
-        if (localStorage.getItem(onceKey) === "1") return;
-        localStorage.setItem(onceKey, "1");
-      } catch {
-        // localStorage 막혀도 알림은 울리게 두되, 중복 가능성은 감수
+      timerId = window.setTimeout(() => {
+        showLocalNotification({
+          title: "초등 스터디 플래너",
+          body: String(alarm.message || "").trim() || "오늘 할 일을 확인해 보세요.",
+        });
+      }, diffMs);
+    };
+
+    schedule();
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        schedule();
       }
+    };
 
-      await showLocalNotification({
-        title: "초등 스터디 플래너",
-        body: String(alarm.message || "오늘의 할 일을 확인해 보세요."),
-      });
-    } catch (e) {
-      console.warn("alarm tick error:", e);
-    }
-  };
+    document.addEventListener("visibilitychange", onVisibility);
 
-  // 시작하자마자 1번 체크
-  tick();
+    // 폴링: 관리자가 알람을 바꿨을 때 반영되게 하기 (원치 않으면 제거 가능)
+    const pollId = window.setInterval(() => {
+      schedule();
+    }, 60 * 1000);
 
-  // 이후 20초마다 체크(분 바뀌는 타이밍 놓치지 않게 약간 촘촘히)
-  intervalId = window.setInterval(tick, 20 * 1000);
+    return () => {
+      clearTimer();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(pollId);
+    };
+  }, [me?.id, loading, profile?.alarm_enabled]);
 
-  return () => {
-    if (intervalId) window.clearInterval(intervalId);
-  };
-}, [me?.id, loading, selectedDayKey]); 
 
   // 명예의 전당 자동 새로고침
   useEffect(() => {
