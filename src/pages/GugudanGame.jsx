@@ -187,7 +187,7 @@ export default function GugudanGame() {
       });
 
       if (!result.saved) {
-        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaveMsg(`저장했어요. (현재 내 최고점 ${result.prevBest}점)`);
         setSaving(false);
         return;
       }

@@ -455,7 +455,7 @@ export default function WordChain() {
 
       if (!result.saved) {
         setSaved(true);
-        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaveMsg(`저장했어요. (내 최고점 ${result.prevBest}점)`);
         return;
       }
 

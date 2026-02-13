@@ -398,7 +398,7 @@ export default function HanjaGame() {
       });
 
       if (!result.saved) {
-        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaveMsg(`. (내 최고점 ${result.prevBest}점)`);
         setSaving(false);
         return;
       }

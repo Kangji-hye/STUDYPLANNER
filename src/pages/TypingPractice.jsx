@@ -5,15 +5,6 @@ import supabase from "../supabaseClient";
 import { saveBestScore } from "../utils/saveBestScore";
 import "./TypingPractice.css";
 
-/*
-  타이핑 연습 규칙(초등 기준으로 단순하게)
-  - "타수"는 한글 특성 때문에 "완성 글자 수"로 세면 낮게 나옵니다.
-    그래서 여기서는 "타건 수(키 누른 횟수에 가까운 값)"로 환산해서 CPM을 계산합니다.
-  - 정확도 = 목표 문장과 같은 위치 글자가 일치하는 비율
-  - 최종 점수 = CPM * 정확도(0~1) 를 반올림
-  - 점수는 랭킹에 "최고 점수"로 저장(더 높을 때만 갱신)
-*/
-
 const GAME_KEY = "typing";
 const DEFAULT_BOOK = "proverbs";
 
@@ -21,12 +12,6 @@ function nowMs() {
   return Date.now();
 }
 
-/* ✅ 한글을 "타건 수"로 세기(2벌식 체감에 가깝게)
-   - 공백 제외
-   - 한글 완성형(가~힣): 초성(1) + 중성(1 또는 2) + 종성(있으면 1 또는 2)
-   - 한글 자모(ㄱ/ㅏ 같은 것): 1타
-   - 영문/숫자/기호: 1타(Shift까지 완벽 반영은 아니지만 체감 개선에 충분)
-*/
 function countStrokesNoSpace(s) {
   const str = String(s ?? "").replace(/\s+/g, "");
   let total = 0;
@@ -41,35 +26,28 @@ function countStrokesNoSpace(s) {
   for (const ch of str) {
     const code = ch.charCodeAt(0);
 
-    // 1) 한글 완성형(가~힣)
     if (code >= 0xac00 && code <= 0xd7a3) {
       const idx = code - 0xac00;
-      const choIdx = Math.floor(idx / (21 * 28));
       const jungIdx = Math.floor((idx % (21 * 28)) / 28);
       const jongIdx = idx % 28;
 
       const jung = JUNG[jungIdx];
       const jong = JONG[jongIdx];
 
-      // 초성
       total += 1;
 
-      // 중성(이중모음이면 2타로)
       total += DOUBLE_VOWELS.has(jung) ? 2 : 1;
 
-      // 종성(받침 있으면 1타, 겹받침이면 2타)
       if (jong) total += DOUBLE_FINALS.has(jong) ? 2 : 1;
 
       continue;
     }
 
-    // 2) 한글 자모(ㄱ, ㅏ 등)
     if ((code >= 0x3131 && code <= 0x318e) || (code >= 0x1100 && code <= 0x11ff)) {
       total += 1;
       continue;
     }
 
-    // 3) 그 외(영문/숫자/기호)
     total += 1;
   }
 
@@ -260,20 +238,26 @@ export default function TypingPractice() {
         return;
       }
 
-      const nickname = String(prof?.nickname ?? "").trim() || "익명";
-      const score = calcScore(targetText, typed, elapsedMs);
+      let nickname = String(prof?.nickname ?? "").trim();
+
+      if (!nickname) {
+        const tail = String(me.id).slice(-4);
+        nickname = `플래너친구${tail}`;
+      }
+
+      const score = Number(stats.score ?? 0);
 
       const result = await saveBestScore({
         supabase,
         user_id: me.id,
         nickname,
         game_key: GAME_KEY,
-        level: String(level),
+        level: String(book), // "proverbs"로 저장되게 맞춤
         score,
       });
 
       if (!result.saved) {
-        setSaveMsg(`저장하지 않았어요. (내 최고점 ${result.prevBest}점)`);
+        setSaveMsg(`저장했어요. (현재 내 최고점 ${Number(result.prevBest ?? 0)}점)`);
         setSaving(false);
         return;
       }
