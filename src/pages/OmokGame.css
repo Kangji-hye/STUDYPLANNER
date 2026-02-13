@@ -245,9 +245,10 @@
 /* 선택된 버튼: 배경 + 더 진한 테두리 + 더 진한 그림자 */
 .omok-level-btn.on {
   border-color: rgba(0, 0, 0, 0.45);
-  background: rgba(0, 0, 0, 0.06);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
   transform: translateY(-1px);
+  border-color: rgba(255, 122, 162, 0.7);
+  box-shadow: 0 0 0 5px rgba(255, 122, 162, 0.12);
 }
 
 /* 선택된 버튼 안의 글씨를 더 또렷하게 */

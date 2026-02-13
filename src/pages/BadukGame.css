@@ -330,7 +330,8 @@
 /* 선택된 상태 */
 .baduk-level-btn.on {
   border-color: rgba(0, 0, 0, 0.45);
-  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(255, 122, 162, 0.7);
+  box-shadow: 0 0 0 5px rgba(255, 122, 162, 0.12);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
   transform: translateY(-1px);
   font-weight: 900;

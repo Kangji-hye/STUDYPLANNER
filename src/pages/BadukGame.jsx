@@ -278,7 +278,6 @@ export default function BadukGame() {
           <div className="baduk-label">난이도</div>
 
           <div className="baduk-controls">
-            {/* 오목이랑 동일한 버튼 구조 */}
             <div className="baduk-level-buttons" role="group" aria-label="난이도 선택">
               {levels.map((lv) => (
                 <button
@@ -289,7 +288,6 @@ export default function BadukGame() {
                   disabled={levelLocked}
                   title={lv.label}
                 >
-                  {/* 여기 줄만 바꾸는게 아니라, 버튼 클래스까지 같이 바꿔야 느낌이 같아져요 */}
                   {lv.value === "hard" ? "상" : lv.value === "normal" ? "중" : "하"}
                 </button>
               ))}

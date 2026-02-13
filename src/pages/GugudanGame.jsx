@@ -226,14 +226,40 @@ export default function GugudanGame() {
       <div className="gugu-card">
         <div className="gugu-row">
           <div className="gugu-label">난이도</div>
+
           <div className="gugu-controls">
-            <select value={level} onChange={(e) => setLevel(e.target.value)} disabled={saving}>
-              <option value="easy">쉬움 (선택지 3개)</option>
-              <option value="normal">보통 (선택지 4개)</option>
-              <option value="hard">어려움 (선택지 5개)</option>
-            </select>
+            {/* 한자 랭킹과 동일한 버튼 클래스 사용 */}
+            <div className="wc-level-buttons">
+              <button
+                type="button"
+                className={`wc-pill ${level === "easy" ? "on" : ""}`}
+                onClick={() => setLevel("easy")}
+                disabled={saving}
+              >
+                하
+              </button>
+
+              <button
+                type="button"
+                className={`wc-pill ${level === "normal" ? "on" : ""}`}
+                onClick={() => setLevel("normal")}
+                disabled={saving}
+              >
+                중
+              </button>
+
+              <button
+                type="button"
+                className={`wc-pill ${level === "hard" ? "on" : ""}`}
+                onClick={() => setLevel("hard")}
+                disabled={saving}
+              >
+                상
+              </button>
+            </div>
           </div>
         </div>
+
 
         <div className="gugu-row">
           <div className="gugu-label">단 범위</div>
