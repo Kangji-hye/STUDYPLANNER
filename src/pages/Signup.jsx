@@ -4,6 +4,32 @@ import { Link, useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Signup.css";
 
+// 학년 자동 계산 규칙
+// - 사용자가 원한 기준: 2018년생이 2026년에 2학년이 되도록 설정
+// - 계산식: grade = (현재연도 - 출생연도 - 6)
+//   예) 2026 - 2018 - 6 = 2
+function calcGradeCodeFromBirthYear(birthYear) {
+  const y = Number(birthYear);
+  if (!Number.isFinite(y) || String(birthYear).length !== 4) return null;
+
+  const currentYear = new Date().getFullYear();
+  const g = currentYear - y - 6;
+
+  // 유치부/학년/중학생 이상 매핑
+  // g가 1~6이면 초등 1~6학년
+  if (g >= 1 && g <= 6) return g;
+
+  // 유치부는 -2(5세 이하), -1(6세), 0(7세)
+  if (g === 0) return 0; // 7세
+  if (g === -1) return -1; // 6세
+  if (g <= -2) return -2; // 5세 이하
+
+  // 초등을 넘으면 중학생 이상으로 처리
+  if (g >= 7) return 99;
+
+  return null;
+}
+
 const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,7 +39,6 @@ const Signup = () => {
   const [birthD, setBirthD] = useState("");
   const [nickname, setNickname] = useState("");
   const [isMale, setIsMale] = useState(true);
-  const [gradeCode, setGradeCode] = useState(""); // 문자열로 들고 있다가 저장할 때 숫자로 바꿔요
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -23,10 +48,11 @@ const Signup = () => {
   const refBirthM = useRef(null);
   const refBirthD = useRef(null);
 
-  // 숫자만 남기고, 최대 길이까지 자르기
-  const onlyDigitsMax = (v, maxLen) => String(v ?? "").replace(/\D/g, "").slice(0, maxLen);
+  // 숫자만 남기고 최대 길이까지 자르기
+  const onlyDigitsMax = (v, maxLen) =>
+    String(v ?? "").replace(/\D/g, "").slice(0, maxLen);
 
-  // YYYY-MM-DD 조립 (검증은 submit에서)
+  // YYYY-MM-DD 조립
   const buildBirthdate = () => {
     if (birthY.length !== 4 || birthM.length !== 2 || birthD.length !== 2) return "";
     return `${birthY}-${birthM}-${birthD}`;
@@ -37,19 +63,6 @@ const Signup = () => {
   }, [birthM, birthY]);
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"));
-
-  const GRADE_OPTIONS = [
-    { label: "5세 이하", value: -2 },
-    { label: "6세", value: -1 },
-    { label: "7세", value: 0 },
-    { label: "1학년", value: 1 },
-    { label: "2학년", value: 2 },
-    { label: "3학년", value: 3 },
-    { label: "4학년", value: 4 },
-    { label: "5학년", value: 5 },
-    { label: "6학년", value: 6 },
-    { label: "중학생 이상", value: 99 },
-  ];
 
   const getDayOptions = (year, month) => {
     if (!year || !month) return [];
@@ -80,17 +93,9 @@ const Signup = () => {
     const safeNickname = nickname.trim();
     const safeBirthdate = buildBirthdate();
 
-    const safeGradeCode = Number(gradeCode);
-    if (!Number.isFinite(safeGradeCode)) {
-      alert("학년을 선택해 주세요.");
-      setLoading(false);
-      return;
-    }
-
     // 생년월일 검증: YYYY-MM-DD 형태로 만들어졌는지
     if (!safeBirthdate) {
       alert("생년월일을 YYYY / MM / DD 형식으로 모두 입력해 주세요.");
-      setLoading(false);
       return;
     }
 
@@ -99,7 +104,13 @@ const Signup = () => {
     const dd = Number(safeBirthdate.slice(8, 10));
     if (mm < 1 || mm > 12 || dd < 1 || dd > 31) {
       alert("생년월일의 월/일을 올바르게 입력해 주세요.");
-      setLoading(false);
+      return;
+    }
+
+    // 학년 자동 계산 (학년 선택 없음)
+    const autoGradeCode = calcGradeCodeFromBirthYear(birthY);
+    if (autoGradeCode === null) {
+      alert("출생 연도를 확인해 주세요.");
       return;
     }
 
@@ -114,11 +125,12 @@ const Signup = () => {
             nickname: safeNickname,
             birthdate: safeBirthdate,
             is_male: isMale,
-            grade_code: safeGradeCode,
-            grade_manual: true,
 
-            // (참고) auth metadata에도 알림 기본값을 남겨두고 싶으면 이렇게도 가능하지만
-            // 실제 관리/조회는 profiles를 기준으로 할 거예요.
+            // 학년은 자동 계산으로 저장
+            grade_code: autoGradeCode,
+            grade_manual: false,
+
+            // 알림 기본값
             alarm_enabled: true,
           },
         },
@@ -134,17 +146,15 @@ const Signup = () => {
         return;
       }
 
-      // ✅ 여기에서 핵심: 회원가입 직후 profiles에 알림 ON을 디폴트로 저장
-      // profiles 테이블에 alarm_enabled(boolean), alarm_enabled_at(timestamptz) 컬럼이 있어야 해요.
+      // profiles에도 동일하게 저장
       const { error: profileError } = await supabase.from("profiles").upsert(
         {
           id: user.id,
           nickname: safeNickname,
           birthdate: safeBirthdate,
           is_male: isMale,
-          grade_code: safeGradeCode,
-          grade_manual: true,
-
+          grade_code: autoGradeCode,
+          grade_manual: false,
           alarm_enabled: true,
           alarm_enabled_at: new Date().toISOString(),
         },
@@ -153,7 +163,6 @@ const Signup = () => {
 
       if (profileError) throw profileError;
 
-      // 로컬에도 “켜짐”으로 한 번 저장(앱이 빨리 반응하게)
       try {
         localStorage.setItem(`planner_alarm_enabled_v1:${user.id}`, "1");
       } catch {
@@ -220,7 +229,7 @@ const Signup = () => {
           maxLength={6}
         />
 
-        {/* 생년월일: YYYY / MM / DD (년도는 입력, 월/일은 셀렉트) */}
+        {/* 생년월일: YYYY / MM / DD */}
         <div className="birth-split">
           <input
             ref={refBirthY}
@@ -285,17 +294,6 @@ const Signup = () => {
             <span>여자</span>
           </label>
         </div>
-
-        {/* 학년 선택(원래 코드 구조 유지) */}
-        {/* <div className="grade-wrap">
-          <select value={gradeCode} onChange={(e) => setGradeCode(e.target.value)} required aria-label="학년 선택">
-            <option value="">학년 선택</option>
-            {GRADE_OPTIONS.map((x) => (
-              <option key={x.value} value={String(x.value)}>
-                {x.label}
-              </option>
-            ))}
-        </div> */}
 
         <button className="auth-submit" type="submit" disabled={loading || !isPasswordMatch}>
           {loading ? "가입 중..." : "가입하기"}
