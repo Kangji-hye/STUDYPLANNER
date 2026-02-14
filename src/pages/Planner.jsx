@@ -2257,10 +2257,10 @@ const deleteSelectedTodos = async () => {
                 className="weekly-hw-btn"
                 onClick={() => setWeekHwImgOpen(true)}
               >
-                🖼️ 일주일 숙제 이미지로보기 
+                🖼️ 일주일 전체 숙제 
               </button>
               <button onClick={() => navigate("/dictation")}>
-                오늘의 받아쓰기
+                ✍️ 오늘의 받아쓰기
               </button>
 
               {weekHwImgOpen && (

@@ -108,7 +108,14 @@ function speakKoreanWithQuestionLift(
     u.lang = "ko-KR";
     u.rate = rate;
     u.volume = volume;
-    u.pitch = endP === "?" ? 1.25 : 1.0;
+
+    // 물음표는 끝을 더 확실히 올려 말하는 느낌
+    if (endP === "?") {
+      u.pitch = 1.45;
+      u.rate = rate * 0.98;
+    } else {
+      u.pitch = 1.0;
+    }
 
     if (voice) u.voice = voice;
 
@@ -155,13 +162,17 @@ export default function Dictation() {
   useEffect(() => {
     try {
       localStorage.setItem(TTS_SPEED_STORAGE_KEY, ttsSpeedKey);
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [ttsSpeedKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(TTS_PUNCT_STORAGE_KEY, punctReadOn ? "1" : "0");
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [punctReadOn]);
 
   const today = useMemo(() => ymd(new Date()), []);
@@ -226,6 +237,8 @@ export default function Dictation() {
 
   // 정답 게이트
   const [pressedById, setPressedById] = useState({});
+  const [pressSeq, setPressSeq] = useState(0);
+
   const [showAnswerGateBtn, setShowAnswerGateBtn] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
@@ -244,6 +257,7 @@ export default function Dictation() {
   const resetAnswerGate = () => {
     clearGateTimer();
     setPressedById({});
+    setPressSeq(0);
     setShowAnswerGateBtn(false);
     setUnlocked(false);
     setPinOpen(false);
@@ -258,26 +272,25 @@ export default function Dictation() {
     return true;
   }, [list, pressedById]);
 
-  // 핵심: 마지막 스피커를 누를 때마다 “1분 뒤 버튼”을 다시 예약
-  const scheduleAnswerGateFromNow = () => {
+  // 마지막 스피커 클릭(pressSeq 증가) 기준으로 1분 뒤 버튼 등장
+  useEffect(() => {
     clearGateTimer();
     setShowAnswerGateBtn(false);
 
     if (unlocked) return;
     if (!allSpeakersPressedAtLeastOnce) return;
+    if (pressSeq <= 0) return;
 
     gateTimerRef.current = setTimeout(() => {
       setShowAnswerGateBtn(true);
     }, ANSWER_BTN_DELAY_MS);
-  };
+
+    return () => clearGateTimer();
+  }, [pressSeq, allSpeakersPressedAtLeastOnce, unlocked]);
 
   const onPressSpeaker = (id, text) => {
     setPressedById((prev) => ({ ...prev, [id]: true }));
-
-    // pressedById가 바로 반영되지 않을 수 있으니 다음 틱에서 “모두 눌렀는지” 기준으로 예약
-    setTimeout(() => {
-      scheduleAnswerGateFromNow();
-    }, 0);
+    setPressSeq((v) => v + 1);
 
     startTimerFor(id);
     speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
@@ -290,6 +303,7 @@ export default function Dictation() {
       return next + String(d);
     });
   };
+
   const backspacePin = () => setPin((prev) => String(prev ?? "").slice(0, -1));
   const clearPin = () => setPin("");
 
@@ -362,7 +376,9 @@ export default function Dictation() {
 
     try {
       window.speechSynthesis?.getVoices?.();
-    } catch {}
+    } catch {
+      // ignore
+    }
 
     return () => {
       stopSpeaking();
@@ -370,14 +386,6 @@ export default function Dictation() {
       clearGateTimer();
     };
   }, [navigate, today]);
-
-  // allSpeakersPressedAtLeastOnce가 true가 되는 순간에도 예약이 필요함(마지막 문항을 막 눌렀을 때)
-  useEffect(() => {
-    if (!unlocked && allSpeakersPressedAtLeastOnce) {
-      scheduleAnswerGateFromNow();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSpeakersPressedAtLeastOnce]);
 
   const canUseTTS = useMemo(() => {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -409,6 +417,20 @@ export default function Dictation() {
         </div>
       </div>
 
+       {/* 설명 박스 추가 */}
+      <div className="dictationGuideBox">
+        <p className="keypoint">
+          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.<br />
+          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.
+        </p>
+        <p>
+          모든 받아쓰기를 마친 뒤에는 암호를 입력해 정답을 확인할 수 있습니다.
+        </p>
+      </div>
+
+      {/* 기존 속도/문장부호 UI는 그대로 유지 */}
+
+
       <div className="dictationSpeedBar">
         <span className="dictationSpeedLabel">속도 :</span>
 
@@ -427,7 +449,8 @@ export default function Dictation() {
 
         {hasAnyPunct && (
           <>
-            <span className="dictationSpeedLabel">문장부호 말해주기 : </span>
+            <span className="dictationSpeedLabel">문장부호 말해주기 :</span>
+
             {TTS_PUNCT_PRESETS.map((p) => (
               <button
                 key={p.key}
@@ -447,7 +470,9 @@ export default function Dictation() {
       {loading ? (
         <div className="dictationLoading">불러오는 중...</div>
       ) : list.length === 0 ? (
-        <div className="dictationEmpty">오늘({today}) {gradeCode ?? ""}학년 받아쓰기 문장이 아직 없어요.</div>
+        <div className="dictationEmpty">
+          오늘({today}) {gradeCode ?? ""}학년 받아쓰기 문장이 아직 없어요.
+        </div>
       ) : (
         <div className="dictationList">
           {list.map((r) => {
@@ -457,31 +482,34 @@ export default function Dictation() {
             const expired = started && hasRemain && remain <= 0;
 
             return (
-                <div key={r.id} className="dictationRow">
-                <div className="dictationNo">{r.item_no}번</div>
+              <div key={r.id} className="dictationRow">
+                <div className="dictationRowLeft">
+                  <div className="dictationNo">{r.item_no}번</div>
 
-                <button
+                  <button
                     className="dictationSpeakBtn"
                     onClick={() => onPressSpeaker(r.id, r.text)}
                     disabled={!canUseTTS}
                     type="button"
-                >
+                    aria-label={`${r.item_no}번 읽기`}
+                    title={`읽어주기 (${ttsSpeed.label}${punctReadOn ? " + 문장부호" : ""})`}
+                  >
                     🔊
-                </button>
-
-                {/* 정답은 시스템 폰트로 표시 (CSS에서 처리) */}
-                {unlocked && <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>}
-
-                {/* 정답이 풀린(unlocked) 순간에는 초(타이머)를 아예 안 보여줌 */}
-                {!unlocked && started && (
-                    <div className={`dictationTimer ${expired ? "is-expired" : ""}`}>
-                    {expired ? "시간 종료" : fmtMMSS(remain)}
-                    </div>
-                )}
+                  </button>
                 </div>
-            );
-            })}
 
+                <div className="dictationRowRight">
+                  {unlocked && <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>}
+
+                  {!unlocked && started && (
+                    <div className={`dictationTimer ${expired ? "is-expired" : ""}`}>
+                      {expired ? "시간 종료" : fmtMMSS(remain)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
