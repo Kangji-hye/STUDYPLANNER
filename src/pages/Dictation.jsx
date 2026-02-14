@@ -13,12 +13,22 @@ function ymd(date = new Date()) {
 }
 
 const TTS_SPEED_STORAGE_KEY = "dictation_tts_speed_v1";
+const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
+
 const TTS_SPEED_PRESETS = [
   { key: "slow", label: "느리게", rate: 0.6 },
   { key: "normal", label: "보통", rate: 0.95 },
   { key: "fast", label: "빠르게", rate: 1.8 },
 ];
 const DEFAULT_TTS_SPEED_KEY = "normal";
+
+const PUNCT_REGEX = /[,.!?，。！？…]/;
+
+// 문장부호 읽기 버튼을 "느리게/보통/빠르게"와 같은 스타일(같은 버튼 클래스)로 만들기 위한 프리셋
+const TTS_PUNCT_PRESETS = [
+  { key: "off", label: "X", value: false },
+  { key: "on", label: "O", value: true },
+];
 
 function stopSpeaking() {
   try {
@@ -28,7 +38,7 @@ function stopSpeaking() {
   }
 }
 
-function speakKorean(text, { rate = 0.9, pitch = 1.0, volume = 1.0 } = {}) {
+function speakKorean(text, { rate = 0.9, pitch = 1.0, volume = 1.0, punctReadOn = false } = {}) {
   if (!text) return;
 
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
@@ -38,7 +48,24 @@ function speakKorean(text, { rate = 0.9, pitch = 1.0, volume = 1.0 } = {}) {
 
   stopSpeaking();
 
-  const u = new SpeechSynthesisUtterance(String(text));
+  let out = String(text);
+
+  if (punctReadOn) {
+    out = out
+      .replace(/，/g, ",")
+      .replace(/。/g, ".")
+      .replace(/？/g, "?")
+      .replace(/！/g, "!")
+      .replace(/…/g, "…")
+      .replace(/,/g, " 쉼표 ")
+      .replace(/\./g, " 마침표 ")
+      .replace(/\?/g, " 물음표 ")
+      .replace(/!/g, " 느낌표 ")
+      .replace(/…/g, " 줄임표 ");
+    out = out.replace(/\s+/g, " ").trim();
+  }
+
+  const u = new SpeechSynthesisUtterance(out);
   u.lang = "ko-KR";
   u.rate = rate;
   u.pitch = pitch;
@@ -69,6 +96,14 @@ export default function Dictation() {
     }
   });
 
+  const [punctReadOn, setPunctReadOn] = useState(() => {
+    try {
+      return (localStorage.getItem(TTS_PUNCT_STORAGE_KEY) || "0") === "1";
+    } catch {
+      return false;
+    }
+  });
+
   const ttsSpeed = useMemo(() => {
     return TTS_SPEED_PRESETS.find((x) => x.key === ttsSpeedKey) || TTS_SPEED_PRESETS[1];
   }, [ttsSpeedKey]);
@@ -80,6 +115,14 @@ export default function Dictation() {
       // ignore
     }
   }, [ttsSpeedKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TTS_PUNCT_STORAGE_KEY, punctReadOn ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }, [punctReadOn]);
 
   const today = useMemo(() => ymd(new Date()), []);
 
@@ -147,44 +190,69 @@ export default function Dictation() {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
   }, []);
 
+  const hasAnyPunct = useMemo(() => {
+    return (list || []).some((r) => PUNCT_REGEX.test(String(r?.text ?? "")));
+  }, [list]);
+
   return (
     <div className="dictationPage">
-
-     <div className="dictationHeader">
+      <div className="dictationHeader">
         <div className="dictationHeaderLeft">
-            <button className="dictationBack" onClick={() => navigate(-1)}>
+          <button className="dictationBack" onClick={() => navigate(-1)}>
             뒤로
-            </button>
+          </button>
         </div>
 
         <div className="dictationHeaderCenter">
-            <div className="dictationTitle">오늘의 받아쓰기</div>
-            <div className="dictationMeta">
+          <div className="dictationTitle">오늘의 받아쓰기</div>
+          <div className="dictationMeta">
             {today}
             {nickname ? ` · ${nickname}` : ""}
-            </div>
+          </div>
         </div>
 
         <div className="dictationHeaderRight">
-            <HamburgerMenu />
+          <HamburgerMenu />
         </div>
       </div>
 
+      {/* 속도 버튼(1개 선택) + 문장부호 읽기(ON/OFF 선택) */}
+        <div className="dictationSpeedBar">
+        <span className="dictationSpeedLabel">속도 : </span>
 
-      {/* 속도 버튼은 여기만 수정하면 됩니다: label, rate 추가/변경 */}
-      <div className="dictationSpeedBar">
         {TTS_SPEED_PRESETS.map((p) => (
-          <button
+            <button
             key={p.key}
             type="button"
             className={`dictationSpeedBtn ${ttsSpeedKey === p.key ? "is-active" : ""}`}
             onClick={() => setTtsSpeedKey(p.key)}
             disabled={!canUseTTS}
-          >
+            title={`읽기 속도: ${p.label}`}
+            >
             {p.label}
-          </button>
+            </button>
         ))}
-      </div>
+
+        {hasAnyPunct && (
+            <>
+            <span className="dictationSpeedLabel">문장부호 읽어주기 : </span>
+
+            {TTS_PUNCT_PRESETS.map((p) => (
+                <button
+                key={p.key}
+                type="button"
+                className={`dictationSpeedBtn ${punctReadOn === p.value ? "is-active" : ""}`}
+                onClick={() => setPunctReadOn(p.value)}
+                disabled={!canUseTTS}
+                title="쉼표/마침표/물음표 등을 말로 읽어줍니다"
+                >
+                {p.label}
+                </button>
+            ))}
+            </>
+        )}
+        </div>
+
 
       {!canUseTTS && (
         <div className="dictationNotice">
@@ -210,18 +278,23 @@ export default function Dictation() {
 
               <button
                 className="dictationSpeakBtn"
-                onClick={() => speakKorean(r.text, { rate: ttsSpeed.rate })}
+                onClick={() =>
+                  speakKorean(r.text, {
+                    rate: ttsSpeed.rate,
+                    punctReadOn,
+                  })
+                }
                 disabled={!canUseTTS}
                 type="button"
                 aria-label={`${r.item_no}번 읽기`}
-                title={`읽어주기 (${ttsSpeed.label})`}
+                title={`읽어주기 (${ttsSpeed.label}${punctReadOn ? " + 문장부호" : ""})`}
               >
                 🔊
               </button>
 
-              <button className="dictationStopBtn" onClick={() => stopSpeaking()} disabled={!canUseTTS} type="button">
+              {/* <button className="dictationStopBtn" onClick={() => stopSpeaking()} disabled={!canUseTTS} type="button">
                 정지
-              </button>
+              </button> */}
             </div>
           ))}
         </div>

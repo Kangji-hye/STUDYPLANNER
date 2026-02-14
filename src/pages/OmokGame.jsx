@@ -175,8 +175,6 @@ export default function OmokGame() {
 
   const onPickLevel = (next) => {
     setLevel(next);
-    // 원하면 난이도 바꾸면 바로 새 판 시작하게 할 수도 있어요.
-    // 지금은 진행 중에도 난이도만 바뀌게 유지합니다.
   };
 
   return (
