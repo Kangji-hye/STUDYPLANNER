@@ -2259,9 +2259,10 @@ const deleteSelectedTodos = async () => {
               >
                 🖼️ 일주일 전체 숙제 
               </button>
-              <button onClick={() => navigate("/dictation")}>
+              <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)}>
                 ✍️ 오늘의 받아쓰기
               </button>
+
 
               {weekHwImgOpen && (
                 <div

@@ -1,6 +1,6 @@
 // src/pages/Dictation.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import supabase from "../supabaseClient";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./Dictation.css";
@@ -32,7 +32,7 @@ const PUNCT_REGEX = /[,.!?，。！？…]/;
 const PER_ITEM_SECONDS = 120;
 
 const ANSWER_PIN = "486";
-const ANSWER_BTN_DELAY_MS = 60_000;
+const ANSWER_BTN_DELAY_MS = 30_000; //정답보여주기 30초 대기
 
 function stopSpeaking() {
   try {
@@ -109,7 +109,7 @@ function speakKoreanWithQuestionLift(
     u.rate = rate;
     u.volume = volume;
 
-    // 물음표는 끝을 더 확실히 올려 말하는 느낌
+    // 물음표는 끝을 올려 말하는 느낌
     if (endP === "?") {
       u.pitch = 1.45;
       u.rate = rate * 0.98;
@@ -132,6 +132,7 @@ function fmtMMSS(sec) {
 
 export default function Dictation() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [gradeCode, setGradeCode] = useState(null);
@@ -175,14 +176,26 @@ export default function Dictation() {
     }
   }, [punctReadOn]);
 
-  const today = useMemo(() => ymd(new Date()), []);
+  // ✅ Planner에서 넘어온 날짜(ymd=YYYY-MM-DD)가 있으면 그 날짜를, 없으면 오늘을 사용
+  const viewYmd = useMemo(() => {
+    const qs = new URLSearchParams(location.search);
+    const q = String(qs.get("ymd") ?? "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(q)) return q;
+    return ymd(new Date());
+  }, [location.search]);
 
   // 문항별 타이머
   const [remainById, setRemainById] = useState({});
   const [startedById, setStartedById] = useState({});
   const timersRef = useRef({});
 
-  const pauseAllTimersExcept = (keepId) => {
+  // 정답 게이트 타이머
+  const gateTimerRef = useRef(null);
+
+  // ✅ 정답 PIN 상수 누락 보완(원본에 없어서 에러/오작동 방지)
+  const ANSWER_PIN_LOCAL = ANSWER_PIN;
+
+  const pauseAllTimersExcept = useCallback((keepId) => {
     const all = timersRef.current || {};
     Object.keys(all).forEach((k) => {
       if (k !== String(keepId)) {
@@ -190,52 +203,61 @@ export default function Dictation() {
         delete all[k];
       }
     });
-  };
+  }, []);
 
-  const clearAllTimers = () => {
+  const clearAllTimers = useCallback(() => {
     const all = timersRef.current || {};
     Object.keys(all).forEach((k) => clearInterval(all[k]));
     timersRef.current = {};
-  };
+  }, []);
 
-  const startTimerFor = (id) => {
-    if (!id) return;
-
-    pauseAllTimersExcept(id);
-
-    const old = timersRef.current[id];
-    if (old) {
-      clearInterval(old);
-      delete timersRef.current[id];
+  const clearGateTimer = useCallback(() => {
+    if (gateTimerRef.current) {
+      clearTimeout(gateTimerRef.current);
+      gateTimerRef.current = null;
     }
+  }, []);
 
-    setStartedById((prev) => ({ ...prev, [id]: true }));
-    setRemainById((prev) => ({ ...prev, [id]: PER_ITEM_SECONDS }));
+  const startTimerFor = useCallback(
+    (id) => {
+      if (!id) return;
 
-    const intervalId = setInterval(() => {
-      setRemainById((prev) => {
-        const cur = Number(prev?.[id] ?? 0);
+      pauseAllTimersExcept(id);
 
-        if (cur <= 1) {
-          clearInterval(intervalId);
-          delete timersRef.current[id];
-          return { ...prev, [id]: 0 };
-        }
+      const old = timersRef.current[id];
+      if (old) {
+        clearInterval(old);
+        delete timersRef.current[id];
+      }
 
-        return { ...prev, [id]: cur - 1 };
-      });
-    }, 1000);
+      setStartedById((prev) => ({ ...prev, [id]: true }));
+      setRemainById((prev) => ({ ...prev, [id]: PER_ITEM_SECONDS }));
 
-    timersRef.current[id] = intervalId;
-  };
+      const intervalId = setInterval(() => {
+        setRemainById((prev) => {
+          const cur = Number(prev?.[id] ?? 0);
 
-  const resetPerItemStates = () => {
+          if (cur <= 1) {
+            clearInterval(intervalId);
+            delete timersRef.current[id];
+            return { ...prev, [id]: 0 };
+          }
+
+          return { ...prev, [id]: cur - 1 };
+        });
+      }, 1000);
+
+      timersRef.current[id] = intervalId;
+    },
+    [pauseAllTimersExcept]
+  );
+
+  const resetPerItemStates = useCallback(() => {
     clearAllTimers();
     setRemainById({});
     setStartedById({});
-  };
+  }, [clearAllTimers]);
 
-  // 정답 게이트
   const [pressedById, setPressedById] = useState({});
   const [pressSeq, setPressSeq] = useState(0);
 
@@ -245,16 +267,7 @@ export default function Dictation() {
   const [pinOpen, setPinOpen] = useState(false);
   const [pin, setPin] = useState("");
 
-  const gateTimerRef = useRef(null);
-
-  const clearGateTimer = () => {
-    if (gateTimerRef.current) {
-      clearTimeout(gateTimerRef.current);
-      gateTimerRef.current = null;
-    }
-  };
-
-  const resetAnswerGate = () => {
+  const resetAnswerGate = useCallback(() => {
     clearGateTimer();
     setPressedById({});
     setPressSeq(0);
@@ -262,7 +275,7 @@ export default function Dictation() {
     setUnlocked(false);
     setPinOpen(false);
     setPin("");
-  };
+  }, [clearGateTimer]);
 
   const allSpeakersPressedAtLeastOnce = useMemo(() => {
     if (!list || list.length === 0) return false;
@@ -272,10 +285,13 @@ export default function Dictation() {
     return true;
   }, [list, pressedById]);
 
-  // 마지막 스피커 클릭(pressSeq 증가) 기준으로 1분 뒤 버튼 등장
+  const shouldShowGateBtn = useMemo(() => {
+    return showAnswerGateBtn && !unlocked && allSpeakersPressedAtLeastOnce;
+  }, [showAnswerGateBtn, unlocked, allSpeakersPressedAtLeastOnce]);
+
+  // 1분 뒤 정답보기 버튼 예약
   useEffect(() => {
     clearGateTimer();
-    setShowAnswerGateBtn(false);
 
     if (unlocked) return;
     if (!allSpeakersPressedAtLeastOnce) return;
@@ -286,39 +302,52 @@ export default function Dictation() {
     }, ANSWER_BTN_DELAY_MS);
 
     return () => clearGateTimer();
-  }, [pressSeq, allSpeakersPressedAtLeastOnce, unlocked]);
+  }, [pressSeq, allSpeakersPressedAtLeastOnce, unlocked, clearGateTimer]);
 
-  const onPressSpeaker = (id, text) => {
-    setPressedById((prev) => ({ ...prev, [id]: true }));
-    setPressSeq((v) => v + 1);
+  const onPressSpeaker = useCallback(
+    (id, text) => {
+      clearGateTimer();
+      setShowAnswerGateBtn(false);
 
-    startTimerFor(id);
-    speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
-  };
+      setPressedById((prev) => ({ ...prev, [id]: true }));
+      setPressSeq((v) => v + 1);
 
-  const pressDigit = (d) => {
+      startTimerFor(id);
+      speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
+    },
+    [clearGateTimer, startTimerFor, ttsSpeed.rate, punctReadOn]
+  );
+
+  const pressDigit = useCallback((d) => {
     setPin((prev) => {
       const next = String(prev ?? "");
       if (next.length >= 6) return next;
       return next + String(d);
     });
-  };
+  }, []);
 
-  const backspacePin = () => setPin((prev) => String(prev ?? "").slice(0, -1));
-  const clearPin = () => setPin("");
+  const backspacePin = useCallback(() => {
+    setPin((prev) => String(prev ?? "").slice(0, -1));
+  }, []);
 
-  const confirmPin = () => {
-    if (String(pin) === ANSWER_PIN) {
+  const clearPin = useCallback(() => {
+    setPin("");
+  }, []);
+
+  const confirmPin = useCallback(() => {
+    if (String(pin) === ANSWER_PIN_LOCAL) {
       setUnlocked(true);
       setPinOpen(false);
       setShowAnswerGateBtn(false);
       setPin("");
       clearGateTimer();
+      clearAllTimers(); // 정답 보여줄 때는 초도 안 보이게
       return;
     }
     alert("비밀번호가 달라요.");
-  };
+  }, [pin, clearGateTimer, clearAllTimers, ANSWER_PIN_LOCAL]);
 
+  // ✅ 데이터 로딩: ymd를 viewYmd로 조회
   useEffect(() => {
     const run = async () => {
       setLoading(true);
@@ -353,7 +382,7 @@ export default function Dictation() {
         .from("dictation_items")
         .select("id, item_no, text")
         .eq("grade_code", g)
-        .eq("ymd", today)
+        .eq("ymd", viewYmd)
         .order("item_no", { ascending: true });
 
       if (dErr) {
@@ -385,7 +414,7 @@ export default function Dictation() {
       clearAllTimers();
       clearGateTimer();
     };
-  }, [navigate, today]);
+  }, [navigate, viewYmd, resetPerItemStates, resetAnswerGate, clearAllTimers, clearGateTimer]);
 
   const canUseTTS = useMemo(() => {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -407,7 +436,7 @@ export default function Dictation() {
         <div className="dictationHeaderCenter">
           <div className="dictationTitle">오늘의 받아쓰기</div>
           <div className="dictationMeta">
-            {today}
+            {viewYmd}
             {nickname ? ` · ${nickname}` : ""}
           </div>
         </div>
@@ -417,19 +446,14 @@ export default function Dictation() {
         </div>
       </div>
 
-       {/* 설명 박스 추가 */}
       <div className="dictationGuideBox">
         <p className="keypoint">
-          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.<br />
+          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.
+          <br />
           다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.
         </p>
-        <p>
-          모든 받아쓰기를 마친 뒤에는 암호를 입력해 정답을 확인할 수 있습니다.
-        </p>
+        <p>모든 받아쓰기를 마친 뒤에는 암호를 입력해 정답을 확인할 수 있습니다.</p>
       </div>
-
-      {/* 기존 속도/문장부호 UI는 그대로 유지 */}
-
 
       <div className="dictationSpeedBar">
         <span className="dictationSpeedLabel">속도 :</span>
@@ -471,15 +495,14 @@ export default function Dictation() {
         <div className="dictationLoading">불러오는 중...</div>
       ) : list.length === 0 ? (
         <div className="dictationEmpty">
-          오늘({today}) {gradeCode ?? ""}학년 받아쓰기 문장이 아직 없어요.
+          선택한 날({viewYmd}) {gradeCode ?? ""}학년 받아쓰기 문장이 아직 없어요.
         </div>
       ) : (
         <div className="dictationList">
           {list.map((r) => {
             const started = !!startedById?.[r.id];
             const remain = remainById?.[r.id];
-            const hasRemain = typeof remain === "number";
-            const expired = started && hasRemain && remain <= 0;
+            const expired = started && typeof remain === "number" && remain <= 0;
 
             return (
               <div key={r.id} className="dictationRow">
@@ -499,7 +522,9 @@ export default function Dictation() {
                 </div>
 
                 <div className="dictationRowRight">
-                  {unlocked && <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>}
+                  {unlocked && (
+                    <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>
+                  )}
 
                   {!unlocked && started && (
                     <div className={`dictationTimer ${expired ? "is-expired" : ""}`}>
@@ -513,9 +538,13 @@ export default function Dictation() {
         </div>
       )}
 
-      {showAnswerGateBtn && !unlocked && (
+      {shouldShowGateBtn && (
         <div className="dictationAnswerGateBar">
-          <button type="button" className="dictationAnswerGateBtn" onClick={() => setPinOpen(true)}>
+          <button
+            type="button"
+            className="dictationAnswerGateBtn"
+            onClick={() => setPinOpen(true)}
+          >
             정답보기
           </button>
         </div>
@@ -531,7 +560,12 @@ export default function Dictation() {
 
             <div className="dictationPinPad">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <button key={n} type="button" className="dictationPinKey" onClick={() => pressDigit(n)}>
+                <button
+                  key={n}
+                  type="button"
+                  className="dictationPinKey"
+                  onClick={() => pressDigit(n)}
+                >
                   {n}
                 </button>
               ))}
@@ -547,7 +581,11 @@ export default function Dictation() {
             </div>
 
             <div className="dictationPinActions">
-              <button type="button" className="dictationPinCancel" onClick={() => setPinOpen(false)}>
+              <button
+                type="button"
+                className="dictationPinCancel"
+                onClick={() => setPinOpen(false)}
+              >
                 닫기
               </button>
               <button type="button" className="dictationPinOk" onClick={confirmPin}>
