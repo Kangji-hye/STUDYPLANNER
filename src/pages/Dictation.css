@@ -1,0 +1,201 @@
+/* src/pages/Dictation.css */
+.dictationPage {
+  padding: 16px;
+}
+
+.dictationHeader {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.dictationBack {
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.dictationTitle {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dictationMeta {
+  font-size: 13px;
+  color: #666;
+}
+
+.dictationNotice {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff6e6;
+  border: 1px solid #ffe1b3;
+  line-height: 1.4;
+}
+
+.dictationLoading,
+.dictationEmpty {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  line-height: 1.5;
+}
+
+.dictationList {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dictationRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.dictationNo {
+  width: 52px;
+  font-weight: 700;
+}
+
+.dictationSpeakBtn {
+  font-size: 22px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.dictationSpeakBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dictationStopBtn {
+  margin-left: auto;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.dictationStopBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.dictationControlBar {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+  flex-wrap: wrap;
+}
+
+.dictationSpeedBtn,
+.dictationSpacingBtn {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid #ccc;
+  background: #f3f4f6;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin:0 7px 0 0;
+}
+
+.dictationSpeedBtn:hover,
+.dictationSpacingBtn:hover {
+  background: #e5e7eb;
+}
+
+/* 선택된 버튼 */
+.is-active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.dictationControlBar {
+  display: flex;
+  gap: 12px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dictationSpeedBtn,
+.dictationSpacingBtn {
+  padding: 12px 18px;
+  border-radius: 28px;
+  border: 2px solid #d1d5db;
+  background: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 4px 0 #d1d5db;
+}
+
+.dictationSpeedBtn:hover,
+.dictationSpacingBtn:hover {
+  transform: translateY(-2px);
+}
+
+.dictationSpeedBtn:active,
+.dictationSpacingBtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #d1d5db;
+}
+
+/* 선택된 상태 - 스티커처럼 컬러 강조 */
+.is-active {
+  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  color: white;
+  border-color: #2563eb;
+  box-shadow: 0 4px 0 #1d4ed8;
+}
+
+/* 띄어쓰기 버튼은 조금 다른 색으로 */
+.dictationSpacingBtn.is-active {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 0 #d97706;
+}
+
+.dictationHeader {
+  display: grid !important;
+  grid-template-columns: auto 1fr auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 0 10px
+}
+
+.dictationHeaderLeft {
+  justify-self: start !important;
+}
+
+.dictationHeaderCenter {
+  text-align: center !important;
+}
+
+.dictationHeaderRight {
+  justify-self: end !important;
+  display: flex !important;
+  align-items: center !important;
+}

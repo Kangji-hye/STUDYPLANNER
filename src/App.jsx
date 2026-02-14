@@ -32,6 +32,7 @@ import TypingPractice from "./pages/TypingPractice";
 import TypingRanking from "./pages/TypingRanking";
 import GugudanRanking from "./pages/GugudanRanking";
 import EnglishRanking from "./pages/EnglishRanking";
+import Dictation from "./pages/Dictation";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -188,6 +189,7 @@ const App = () => {
             {/* <Route path="/baduk-ranking" element={<BadukRanking />} /> */}
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
+          <Route path="/dictation" element={<Dictation />} />
 
           <Route path="/" element={<Navigate to="/planner" replace />} />
 

@@ -117,6 +117,10 @@ export default function Admin() {
   const [hwContent, setHwContent] = useState("");
   const [hwItems, setHwItems] = useState([]);
 
+  // 받아쓰기 관리(날짜/학년별)
+  const [dictInput, setDictInput] = useState(""); 
+  const [dictItems, setDictItems] = useState([]); 
+
   // 인라인 달력: 현재 보여줄 달
   const [calMonth, setCalMonth] = useState(() => {
     const d = parseDayKeyToDate(toDayKey(new Date()));
@@ -533,6 +537,75 @@ export default function Admin() {
     setHwList([...todayList, ...futureList, ...pastList]);
   };
 
+    // 선택된 날짜/학년에 맞는 받아쓰기 불러오기
+  const loadDictation = async () => {
+    const { data, error } = await supabase
+      .from("dictation_items")
+      .select("item_no, text")
+      .eq("grade_code", Number(gradeCode))
+      .eq("ymd", dayKey)
+      .order("item_no", { ascending: true });
+
+    if (error) {
+      console.error("loadDictation error:", error);
+      alert("받아쓰기를 불러오지 못했습니다.");
+      return;
+    }
+
+    const normalized = (data ?? [])
+      .map((r) => ({
+        item_no: Number(r?.item_no ?? 0),
+        text: String(r?.text ?? "").trim(),
+      }))
+      .filter((r) => r.item_no >= 1 && r.text);
+
+    setDictItems(normalized);
+  };
+
+  // 받아쓰기 저장(날짜/학년/번호 기준 upsert)
+  const saveDictation = async () => {
+    const cleaned = (dictItems ?? [])
+      .map((x) => ({
+        item_no: Number(x?.item_no ?? 0),
+        text: String(x?.text ?? "").trim(),
+      }))
+      .filter((x) => x.item_no >= 1 && x.text);
+
+    if (cleaned.length === 0) {
+      alert("저장할 받아쓰기 문장이 없어요.");
+      return;
+    }
+
+    // 번호 중복 방지(화면 기준)
+    const nums = cleaned.map((x) => x.item_no);
+    const dup = nums.find((n, i) => nums.indexOf(n) !== i);
+    if (dup) {
+      alert(`번호가 중복됐어요: ${dup}번`);
+      return;
+    }
+
+    const payload = cleaned.map((x) => ({
+      grade_code: Number(gradeCode),
+      ymd: dayKey,
+      item_no: x.item_no,
+      text: x.text,
+    }));
+
+    const { error } = await supabase
+      .from("dictation_items")
+      .upsert(payload, { onConflict: "grade_code,ymd,item_no" });
+
+    if (error) {
+      console.error("saveDictation error:", error);
+      alert("받아쓰기 저장 중 오류가 발생했습니다. (권한/RLS 또는 중복 여부 확인)");
+      return;
+    }
+
+    alert(`받아쓰기를 저장했습니다! (${dayKey} / ${gradeLabel})`);
+    await loadDictation();
+  };
+
+
   // 선택된 날짜/학년에 맞는 말씀 불러오기
   const loadVerse = async () => {
     const { data, error } = await supabase
@@ -686,6 +759,7 @@ export default function Admin() {
       await loadHomeworkList();
       await loadAlarmList();
       await loadWeekImage();
+      await loadDictation();
 
       if (mounted) setLoading(false);
     };
@@ -704,6 +778,7 @@ export default function Admin() {
     loadVerse();
     loadHomework();
     loadWeekImage();
+    loadDictation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, dayKey, gradeCode]);
 
@@ -1035,6 +1110,128 @@ export default function Admin() {
           </button>
         </div>
       </div>
+
+      {/* 오늘의 받아쓰기 입력 */}
+      <div className="admin-card">
+        <div className="admin-title" style={{ marginBottom: 8 }}>
+          오늘의 받아쓰기 입력
+        </div>
+
+        <div className="admin-help">
+          아이 화면에서는 문장이 보이지 않고, 번호 옆 스피커를 눌러서 듣게 됩니다.
+          여기서는 날짜/학년별로 문장을 저장해 주세요.
+        </div>
+
+        <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
+          <input
+            type="text"
+            value={dictInput}
+            onChange={(e) => setDictInput(e.target.value)}
+            placeholder="문장 입력 (예: 나는 책을 읽는다.)"
+            style={{ flex: 1, minWidth: 240 }}
+          />
+
+          <button
+            className="admin-btn"
+            type="button"
+            onClick={() => {
+              const t = String(dictInput ?? "").trim();
+              if (!t) {
+                alert("문장을 입력해 주세요.");
+                return;
+              }
+
+              setDictItems((prev) => {
+                const maxNo = (prev ?? []).reduce((acc, it) => Math.max(acc, Number(it.item_no ?? 0)), 0);
+                return [...prev, { item_no: maxNo + 1, text: t }];
+              });
+
+              setDictInput("");
+            }}
+          >
+            추가
+          </button>
+
+          <button className="admin-btn ghost" type="button" onClick={loadDictation} title="현재 날짜/학년 받아쓰기를 다시 불러옵니다">
+            받아쓰기 새로고침
+          </button>
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          {dictItems.length === 0 ? (
+            <div className="admin-help">아직 입력된 받아쓰기가 없어요.</div>
+          ) : (
+            <div className="admin-help">
+              {dictItems
+                .slice()
+                .sort((a, b) => Number(a.item_no) - Number(b.item_no))
+                .map((it, i) => (
+                  <div key={`dict-${it.item_no}-${i}`} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <input
+                        type="number"
+                        value={it.item_no}
+                        onChange={(e) => {
+                          const nextNo = Number(e.target.value ?? 0);
+                          setDictItems((prev) =>
+                            (prev ?? []).map((x) =>
+                              x === it ? { ...x, item_no: nextNo } : x
+                            )
+                          );
+                        }}
+                        style={{
+                          width: 80,
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          border: "1px solid rgba(0,0,0,0.15)",
+                        }}
+                      />
+
+                      <input
+                        type="text"
+                        value={it.text}
+                        onChange={(e) => {
+                          const nextText = e.target.value;
+                          setDictItems((prev) =>
+                            (prev ?? []).map((x) =>
+                              x === it ? { ...x, text: nextText } : x
+                            )
+                          );
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: 220,
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          border: "1px solid rgba(0,0,0,0.15)",
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        className="admin-mini-btn danger"
+                        onClick={() => {
+                          const ok = window.confirm(`${it.item_no}번 문장을 삭제할까요?`);
+                          if (!ok) return;
+                          setDictItems((prev) => (prev ?? []).filter((x) => x !== it));
+                        }}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+
+        <div className="admin-actions">
+          <button className="admin-btn" onClick={saveDictation}>
+            받아쓰기 저장
+          </button>
+        </div>
+      </div>
+
 
       {/* 주간 숙제 사진 업로드 */}
       <div className="admin-card">
