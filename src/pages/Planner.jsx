@@ -1,5 +1,13 @@
 // src/pages/Planner.jsx
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
@@ -9,15 +17,6 @@ import { useWeatherYongin } from "../hooks/useWeatherYongin";
 import WeatherIcon from "../components/WeatherIcon";
 import { useSoundSettings } from "../context/SoundSettingsContext";
 
-import LoadScheduleModal from "../components/planner/LoadScheduleModal";
-import MyListSaveModal from "../components/planner/MyListSaveModal";
-import CalendarModal from "../components/planner/CalendarModal";
-import HelpModal from "../components/planner/HelpModal";
-import OnboardingTour from "../components/planner/OnboardingTour";
-
-import HallOfFameCard from "../components/planner/HallOfFameCard";
-import StudyTools from "../components/planner/StudyTools";
-
 import { toKstDayKey } from "../utils/dateKst";
 import { useBootSplash } from "../hooks/useBootSplash";
 import { useRestoreToToday } from "../hooks/useRestoreToToday";
@@ -25,6 +24,18 @@ import { useDoneDaysForMonth } from "../hooks/useDoneDaysForMonth";
 import { calcLevelFromStamps } from "../utils/leveling";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import { useAppSounds } from "../hooks/useAppSounds";
+
+/*
+  무거운 컴포넌트들은 처음부터 번들에 포함시키지 않고,
+  실제로 열릴 때만 로딩되도록 lazy 처리합니다.
+*/
+const LoadScheduleModal = lazy(() => import("../components/planner/LoadScheduleModal"));
+const MyListSaveModal = lazy(() => import("../components/planner/MyListSaveModal"));
+const CalendarModal = lazy(() => import("../components/planner/CalendarModal"));
+const HelpModal = lazy(() => import("../components/planner/HelpModal"));
+const OnboardingTour = lazy(() => import("../components/planner/OnboardingTour"));
+const HallOfFameCard = lazy(() => import("../components/planner/HallOfFameCard"));
+const StudyTools = lazy(() => import("../components/planner/StudyTools"));
 
 const EMOJI_POOL = [
   "👍", "😀", "😄", "😁", "😆", "🙂", "😊", "🥰", "😍", "🤩", "🤗", "😎", "🥳",
@@ -35,14 +46,13 @@ const EMOJI_POOL = [
   "🚗", "🚌", "🚓", "🚒", "🚜", "🚀", "✈️", "🚁", "🚲", "⚽", "🏀", "🏈", "🎯",
 ];
 
-// 명예의 전당 
+// 명예의 전당 닉네임 표시용(최대 6글자)
 const cutName6 = (name) => {
   const s = String(name ?? "").trim();
   if (!s) return "익명";
-
-  const chars = Array.from(s); 
+  const chars = Array.from(s);
   if (chars.length <= 6) return s;
-  return chars.slice(0, 6).join(""); 
+  return chars.slice(0, 6).join("");
 };
 
 // 생년월일에서 학년 코드 계산
@@ -64,7 +74,7 @@ function calcGradeCodeFromBirthdate(birthdateStr) {
 // 첫 진입 샘플 주입 여부(로컬에서 1회만)
 const FIRST_VISIT_SEED_KEY = "planner_seeded_v1";
 
-// 세션 대기 (Auth 세션이 늦게 잡히는 기기 대비)
+// 세션 대기(Auth 세션이 늦게 잡히는 기기 대비)
 async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   const { data: s1 } = await supabase.auth.getSession();
   if (s1?.session) return s1.session;
@@ -84,6 +94,68 @@ async function waitForAuthSession({ timeoutMs = 1500 } = {}) {
   });
 }
 
+/*
+  알림 설정 로드
+  - kind에 해당하는 활성 알림 중, 오늘 날짜가 start~end 범위 안에 걸리는 것 1개만 선택
+*/
+async function fetchTodayAlarm(kind) {
+  const today = new Date();
+
+  const { data, error } = await supabase
+    .from("alarm_settings")
+    .select("*")
+    .eq("kind", kind)
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    console.warn("fetchTodayAlarm error:", error);
+    return null;
+  }
+  if (!data || data.length === 0) return null;
+
+  const toDateOrNull = (v, endOfDay) => {
+    const s = String(v ?? "").trim();
+    if (!s) return null;
+    return new Date(`${s}T${endOfDay ? "23:59:59" : "00:00:00"}`);
+  };
+
+  const isInRange = (row) => {
+    const s = toDateOrNull(row.start_day, false);
+    const e = toDateOrNull(row.end_day, true);
+
+    if (s && today < s) return false;
+    if (e && today > e) return false;
+    return true;
+  };
+
+  const row = data.find((r) => isInRange(r));
+  return row ?? null;
+}
+
+// 브라우저 알림 띄우기
+async function showLocalNotification({ title, body }) {
+  try {
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.showNotification(title, {
+          body,
+          icon: "/pwa-192x192.png",
+          badge: "/pwa-192x192.png",
+        });
+        return;
+      }
+    }
+
+    new Notification(title, { body });
+  } catch (e) {
+    console.warn("showLocalNotification failed:", e);
+  }
+}
 
 // 메인 플래너 페이지
 function Planner() {
@@ -94,32 +166,35 @@ function Planner() {
   // 기본 상태
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
+
   const [todo, setTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [filter, setFilter] = useState("all");
   const [reorderMode, setReorderMode] = useState(false);
+
   const [usedEmojis, setUsedEmojis] = useState([]);
   const [afterStudyText, setAfterStudyText] = useState("");
   const [afterStudyEditing, setAfterStudyEditing] = useState(false);
+
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedDeleteIds, setSelectedDeleteIds] = useState(() => new Set());
-  const [verseLines, setVerseLines] = useState([]); 
+
+  const [verseLines, setVerseLines] = useState([]);
   const [verseRef, setVerseRef] = useState("");
-  const [homeworkItems, setHomeworkItems] = useState([]); 
+
+  const [homeworkItems, setHomeworkItems] = useState([]);
   const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
   const [weekHwImgOpen, setWeekHwImgOpen] = useState(false);
 
-  // 부트 스플래시 제거
   useBootSplash(loading);
 
   // 데일리: 선택 날짜
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-
-  // 탭 복원 대비: "날이 바뀐 복원 상황"에서만 오늘로 복귀
   useRestoreToToday(setSelectedDate);
+
   const selectedDayKey = useMemo(() => toKstDayKey(selectedDate), [selectedDate]);
-  const todayDayKey = toKstDayKey(new Date());     
-  const isPastSelected = selectedDayKey < todayDayKey;   
+  const todayDayKey = toKstDayKey(new Date());
+  const isPastSelected = selectedDayKey < todayDayKey;
 
   // fetch 레이스 방지(마지막 요청만 반영)
   const selectedDayKeyRef = useRef(selectedDayKey);
@@ -141,6 +216,206 @@ function Planner() {
     userId: me?.id,
     calMonth,
   });
+
+  // 도움말
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const openHelp = () => setShowHelpModal(true);
+  const closeHelp = () => setShowHelpModal(false);
+
+  // 프로필(캐시)
+  const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
+  const [profile, setProfile] = useState(() => {
+    try {
+      const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 날씨
+  const weatherCode = useWeatherYongin();
+
+  // 완료 사운드
+  const { playTodoDone, playTimerEnd, playAllDone } = useAppSounds({
+    todoDoneSrc: "/done.mp3",
+    timerEndSrc: "/time1.mp3",
+    allDoneDefaultSrc: DEFAULT_FINISH_SOUND,
+    finishEnabled,
+  });
+
+  // 오디오 “사용자 상호작용 후” 재생 허용 장치
+  const soundArmedRef = useRef(false);
+  useEffect(() => {
+    const arm = () => {
+      soundArmedRef.current = true;
+    };
+    window.addEventListener("pointerdown", arm, { once: true });
+    window.addEventListener("keydown", arm, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", arm);
+      window.removeEventListener("keydown", arm);
+    };
+  }, []);
+
+  // todos ref(최신값 유지)
+  const todosRef = useRef([]);
+  useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
+
+  // 모달 관련
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [loadChoice, setLoadChoice] = useState("vacation");
+  const [sampleModeReplace, setSampleModeReplace] = useState(false);
+  const [importingSample, setImportingSample] = useState(false);
+
+  const SAMPLE_SETS = [
+    { key: "vacation", label: "방학 샘플" },
+    { key: "weekday", label: "평일 샘플" },
+    { key: "weekend", label: "주말 샘플" },
+  ];
+  const SAMPLE_TABLE_BY_KEY = {
+    vacation: "todo_templates_vacation",
+    weekday: "todo_templates_weekday",
+    weekend: "todo_templates_weekend",
+  };
+
+  const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
+  const [showMyListModal, setShowMyListModal] = useState(false);
+  const [loadReplace, setLoadReplace] = useState(false);
+  const [busyMyList, setBusyMyList] = useState(false);
+  const [hasMyList, setHasMyList] = useState(false);
+
+  const openLoadModal = () => {
+    setLoadChoice(hasMyList ? "my" : "vacation");
+    setSampleModeReplace(false);
+    setLoadReplace(false);
+    setShowLoadModal(true);
+  };
+  const closeLoadModal = () => {
+    if (importingSample || busyMyList) return;
+    setShowLoadModal(false);
+  };
+
+  const openMyListSaveModal = () => setShowMyListModal(true);
+  const closeMyListModal = () => {
+    if (busyMyList) return;
+    setShowMyListModal(false);
+  };
+
+  // 레벨업 모달
+  const [levelUpOpen, setLevelUpOpen] = useState(false);
+  const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
+  const closeLevelUp = () => setLevelUpOpen(false);
+
+  // 내 도장 개수(명예의 전당 기록 수)
+  const [stampCount, setStampCount] = useState(0);
+  const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
+
+  // 명예의 전당
+  const [hof, setHof] = useState([]);
+  const [hofLoading, setHofLoading] = useState(false);
+
+  const shuffleArray = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const fetchHallOfFame = useCallback(
+    async (dayKey) => {
+      setHofLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("hall_of_fame")
+          .select("user_id, nickname, finished_at")
+          .eq("day_key", dayKey);
+
+        if (error) throw error;
+
+        const rows = data ?? [];
+        const myId = me?.id;
+
+        const mine = myId ? rows.find((r) => r.user_id === myId) : null;
+        const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
+        const mixedOthers = shuffleArray(others);
+
+        setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
+      } catch (err) {
+        console.error("fetchHallOfFame error:", err);
+        setHof([]);
+      } finally {
+        setHofLoading(false);
+      }
+    },
+    [me?.id]
+  );
+
+  const recordCompletionForDay = useCallback(
+    async (dayKey) => {
+      if (!me?.id) return;
+      const nickname = profile?.nickname ?? "익명";
+
+      try {
+        const { error } = await supabase
+          .from("hall_of_fame")
+          .upsert(
+            [{ day_key: dayKey, user_id: me.id, nickname, finished_at: new Date().toISOString() }],
+            { onConflict: "day_key,user_id", ignoreDuplicates: true }
+          );
+
+        if (error) throw error;
+        await fetchHallOfFame(dayKey);
+      } catch (err) {
+        console.error("recordCompletionForDay error:", err);
+      }
+    },
+    [me?.id, profile?.nickname, fetchHallOfFame]
+  );
+
+  const removeCompletionForDay = useCallback(
+    async (dayKey) => {
+      if (!me?.id) return;
+
+      try {
+        const { error } = await supabase
+          .from("hall_of_fame")
+          .delete()
+          .eq("day_key", dayKey)
+          .eq("user_id", me.id);
+
+        if (error) throw error;
+        await fetchHallOfFame(dayKey);
+      } catch (err) {
+        console.error("removeCompletionForDay error:", err);
+      }
+    },
+    [me?.id, fetchHallOfFame]
+  );
+
+  const fetchMyStampCountNumber = useCallback(async (userId) => {
+    const { count, error } = await supabase
+      .from("hall_of_fame")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    if (error) throw error;
+    return count ?? 0;
+  }, []);
+
+  const formatSelectedKorean = () => {
+    const d = selectedDate;
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const day = days[d.getDay()];
+    return `${y}-${m}-${dd} (${day})`;
+  };
 
   const VERSE_COLORS = ["#e11d48", "#2563eb", "#16a34a", "#f97316", "#7c3aed", "#0f766e"];
   function pickStableColor(seedText) {
@@ -178,188 +453,14 @@ function Planner() {
     return mod <= 0 ? 0 : h % mod;
   }
 
-  //도움말
-  const [showHelpModal, setShowHelpModal] = useState(false);
-
-  const openHelp = () => setShowHelpModal(true);
-  const closeHelp = () => setShowHelpModal(false);
-
-  // 프로필(캐시)
-  const PROFILE_CACHE_KEY = "planner_profile_cache_v1";
-  const [profile, setProfile] = useState(() => {
-    try {
-      const cached = localStorage.getItem(PROFILE_CACHE_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  // 날씨
-  const weatherCode = useWeatherYongin();
-
-  // 완료 사운드(재사용)
-  const { playTodoDone, playTimerEnd, playAllDone } = useAppSounds({
-    todoDoneSrc: "/done.mp3",
-    timerEndSrc: "/time1.mp3",
-    allDoneDefaultSrc: DEFAULT_FINISH_SOUND, // "/finish1.mp3"
-    finishEnabled, 
-  });
-
-  const soundArmedRef = useRef(false);
-
-  useEffect(() => {
-    const arm = () => {
-      soundArmedRef.current = true;
-    };
-    window.addEventListener("pointerdown", arm, { once: true });
-    window.addEventListener("keydown", arm, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", arm);
-      window.removeEventListener("keydown", arm);
-    };
-  }, []);
-
-  const todosRef = useRef([]);
-  useEffect(() => {
-    todosRef.current = todos;
-  }, [todos]);
-
-  const [showLoadModal, setShowLoadModal] = useState(false);
-  const [loadChoice, setLoadChoice] = useState("vacation");
-  const [sampleModeReplace, setSampleModeReplace] = useState(false); // true면 교체
-  const [importingSample, setImportingSample] = useState(false);
-
-  const SAMPLE_SETS = [
-    { key: "vacation", label: "방학 샘플" },
-    { key: "weekday", label: "평일 샘플" },
-    { key: "weekend", label: "주말 샘플" },
-  ];
-
-  const SAMPLE_TABLE_BY_KEY = {
-    vacation: "todo_templates_vacation",
-    weekday: "todo_templates_weekday",
-    weekend: "todo_templates_weekend",
-  };
-
-  const [selectedSampleKey, setSelectedSampleKey] = useState(SAMPLE_SETS[0].key);
-  const [showMyListModal, setShowMyListModal] = useState(false);
-  const [_myListMode, setMyListMode] = useState("save"); // save만 사용할 예정
-  const [loadReplace, setLoadReplace] = useState(false);
-  const [busyMyList, setBusyMyList] = useState(false);
-  const [hasMyList, setHasMyList] = useState(false);
-
-  const openLoadModal = () => {
-    setLoadChoice(hasMyList ? "my" : "vacation");
-    setSampleModeReplace(false);
-    setLoadReplace(false);
-    setShowLoadModal(true);
-  };
-
-  const closeLoadModal = () => {
-    if (importingSample || busyMyList) return;
-    setShowLoadModal(false);
-  };
-  
-  const [levelUpOpen, setLevelUpOpen] = useState(false);
-  const [levelUpNewLevel, setLevelUpNewLevel] = useState(1);
-  const closeLevelUp = () => setLevelUpOpen(false);
-  const [stampCount, setStampCount] = useState(0);
-  const myLevelInfo = useMemo(() => calcLevelFromStamps(stampCount), [stampCount]);
-
-  // 명예의 전당
-  const [hof, setHof] = useState([]);
-  const [hofLoading, setHofLoading] = useState(false);
-
-  const shuffleArray = (arr) => {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  };
-
-const fetchHallOfFame = useCallback(async (dayKey) => {
-  setHofLoading(true);
-  try {
-    const { data, error } = await supabase
-      .from("hall_of_fame")
-      .select("user_id, nickname, finished_at")
-      .eq("day_key", dayKey);
-
-    if (error) throw error;
-
-    const rows = data ?? [];
-    const myId = me?.id;
-
-    const mine = myId ? rows.find((r) => r.user_id === myId) : null;
-    const others = myId ? rows.filter((r) => r.user_id !== myId) : rows;
-    const mixedOthers = shuffleArray(others);
-
-    setHof(mine ? [mine, ...mixedOthers] : mixedOthers);
-  } catch (err) {
-    console.error("fetchHallOfFame error:", err);
-    setHof([]);
-  } finally {
-    setHofLoading(false);
-  }
-}, [me?.id]);
-  
-  const recordCompletionForDay = async (dayKey) => {
-    if (!me?.id) return;
-    const nickname = profile?.nickname ?? "익명";
-
-    try {
-      const { error } = await supabase
-        .from("hall_of_fame")
-        .upsert(
-          [{ day_key: dayKey, user_id: me.id, nickname, finished_at: new Date().toISOString() }],
-          { onConflict: "day_key,user_id", ignoreDuplicates: true }
-        );
-
-      if (error) throw error;
-      await fetchHallOfFame(dayKey);
-    } catch (err) {
-      console.error("recordCompletionForDay error:", err);
-    }
-  };
-
-  const fetchMyStampCountNumber = async (userId) => {
-    const { count, error } = await supabase
-      .from("hall_of_fame")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    if (error) throw error;
-    return count ?? 0;
-  };
-
-  const removeCompletionForDay = async (dayKey) => {
-    if (!me?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from("hall_of_fame")
-        .delete()
-        .eq("day_key", dayKey)
-        .eq("user_id", me.id);
-
-      if (error) throw error;
-      await fetchHallOfFame(dayKey);
-    } catch (err) {
-      console.error("removeCompletionForDay error:", err);
-    }
-  };
-
-  const formatSelectedKorean = () => {
-    const d = selectedDate;
-    const days = ["일", "월", "화", "수", "목", "금", "토"];
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    const day = days[d.getDay()];
-    return `${y}-${m}-${dd} (${day})`;
+  // 불필요한 렌더 부담을 줄이기 위해 confetti는 그대로 두되, 호출은 필요한 순간만
+  const fireConfetti = () => {
+    confetti({
+      particleCount: 140,
+      spread: 90,
+      origin: { y: 0.62 },
+      colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
+    });
   };
 
   const getRandomEmoji = () => {
@@ -370,17 +471,10 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
     return selected;
   };
 
-  const fireConfetti = () => {
-    confetti({
-      particleCount: 140,
-      spread: 90,
-      origin: { y: 0.62 },
-      colors: ["#ff7aa2", "#ffb86b", "#ffd166", "#a0e7e5"],
-    });
-  };
-
-  const fetchTodos = async (userId, dayKey) => {
+  // todo 로딩
+  const fetchTodos = useCallback(async (userId, dayKey) => {
     const mySeq = ++fetchTodosSeqRef.current;
+
     const { data, error } = await supabase
       .from("todos")
       .select("id, user_id, day_key, title, completed, created_at, sort_order, template_item_key, source_set_item_key")
@@ -394,50 +488,55 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
       alert(error.message);
       return [];
     }
+
     const rows = data ?? [];
     if (mySeq === fetchTodosSeqRef.current && dayKey === selectedDayKeyRef.current) {
       setTodos(rows);
     }
     return rows;
-  };
+  }, []);
 
-  const seedSampleTodosIfEmpty = async ({ userId, dayKey, existingCount }) => {
-    const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
+  const seedSampleTodosIfEmpty = useCallback(
+    async ({ userId, dayKey, existingCount }) => {
+      const seededKey = `${FIRST_VISIT_SEED_KEY}:${userId}`;
 
-    try {
-      if (existingCount > 0) return;
-
-      const alreadySeeded = localStorage.getItem(seededKey) === "true";
-      if (alreadySeeded) return;
-
-      localStorage.setItem(seededKey, "true");
-      const samples = [
-        "오늘의 할 일을 추가해 보세요",
-        "완료 버튼을 눌러 보세요",
-        "모두 완료가 되면 폭죽이 터집니다",
-        "마이 페이지에서 효과음을 설정해보세요",
-      ];
-
-      const rows = samples.map((text) => ({
-        user_id: userId,
-        day_key: dayKey,
-        title: `${getRandomEmoji()} ${text}`,
-        completed: false,
-      }));
-
-      const rowsWithOrder = rows.map((r, idx) => ({ ...r, sort_order: idx + 1 }));
-      const { error } = await supabase.from("todos").insert(rowsWithOrder);
-      if (error) throw error;
-    } catch (err) {
-      console.error("seedSampleTodosIfEmpty error:", err);
       try {
-        localStorage.removeItem(seededKey);
-      // eslint-disable-next-line no-empty
-      } catch {}
-    }
-  };
+        if (existingCount > 0) return;
 
-  const fetchMySingleListInfo = async (userId) => {
+        const alreadySeeded = localStorage.getItem(seededKey) === "true";
+        if (alreadySeeded) return;
+
+        localStorage.setItem(seededKey, "true");
+        const samples = [
+          "오늘의 할 일을 추가해 보세요",
+          "완료 버튼을 눌러 보세요",
+          "모두 완료가 되면 폭죽이 터집니다",
+          "마이 페이지에서 효과음을 설정해보세요",
+        ];
+
+        const rows = samples.map((text) => ({
+          user_id: userId,
+          day_key: dayKey,
+          title: `${getRandomEmoji()} ${text}`,
+          completed: false,
+        }));
+
+        const rowsWithOrder = rows.map((r, idx) => ({ ...r, sort_order: idx + 1 }));
+        const { error } = await supabase.from("todos").insert(rowsWithOrder);
+        if (error) throw error;
+      } catch (err) {
+        console.error("seedSampleTodosIfEmpty error:", err);
+        try {
+          localStorage.removeItem(seededKey);
+        } catch {
+          //
+        }
+      }
+    },
+    [usedEmojis]
+  );
+
+  const fetchMySingleListInfo = useCallback(async (userId) => {
     const { data, error } = await supabase
       .from("todo_sets")
       .select("id")
@@ -453,314 +552,7 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
 
     setHasMyList(!!data?.id);
     return { id: data?.id ?? null };
-  };
-
-  async function fetchTodayAlarm(kind) {
-    const today = new Date();
-
-    const { data } = await supabase
-      .from("alarm_settings")
-      .select("*")
-      .eq("kind", kind)
-      .eq("is_active", true);
-
-    if (!data || data.length === 0) return null;
-
-    const toDateOrNull = (v, endOfDay) => {
-      const s = String(v ?? "").trim();
-      if (!s) return null;
-      return new Date(`${s}T${endOfDay ? "23:59:59" : "00:00:00"}`);
-    };
-
-    const isInRange = (row) => {
-      const s = toDateOrNull(row.start_day, false);
-      const e = toDateOrNull(row.end_day, true);
-
-      if (s && today < s) return false;
-      if (e && today > e) return false;
-      return true;
-    };
-
-    const row = data.find((r) => isInRange(r));
-
-    return row ?? null;
-  }
-
-  // 브라우저 알림 띄우기 
-  async function showLocalNotification({ title, body }) {
-    try {
-      if (!("Notification" in window)) return;
-      if (Notification.permission !== "granted") return;
-
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-          await reg.showNotification(title, {
-            body,
-            icon: "/pwa-192x192.png",
-            badge: "/pwa-192x192.png",
-          });
-          return;
-        }
-      }
-
-      new Notification(title, { body });
-    } catch (e) {
-      console.warn("showLocalNotification failed:", e);
-    }
-  }
-
-  // 초기 로딩
-  useEffect(() => {
-    let mounted = true;
-
-    const loadAll = async () => {
-      if (!mounted) return;
-      setLoading(true);
-
-      const session = await waitForAuthSession({ timeoutMs: 1500 });
-      if (!session?.user) {
-        if (!mounted) return;
-        setLoading(false);
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        if (!mounted) return;
-        setLoading(false);
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const user = userData.user;
-      if (mounted) setMe(user);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual, is_admin")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const nextProfile =
-        profileError || !profileData
-          ? {
-              id: user.id,
-              nickname: user.user_metadata?.nickname ?? "닉네임",
-              birthdate: user.user_metadata?.birthdate ?? null,
-              is_male: user.user_metadata?.is_male ?? true,
-              finish_sound: user.user_metadata?.finish_sound ?? DEFAULT_FINISH_SOUND,
-            }
-          : profileData;
-      
-          try {
-            const hasBirth = String(nextProfile?.birthdate ?? "").trim().length > 0;
-            const gradeManual = Boolean(nextProfile?.grade_manual);
-            const hasGrade = Number.isFinite(Number(nextProfile?.grade_code));
-
-            if (hasBirth && !gradeManual && !hasGrade) {
-              const autoCode = calcGradeCodeFromBirthdate(nextProfile.birthdate);
-
-              if (Number.isFinite(autoCode)) {
-                nextProfile.grade_code = autoCode;
-                nextProfile.grade_manual = false;
-
-                const { error: gErr } = await supabase
-                  .from("profiles")
-                  .update({ grade_code: autoCode, grade_manual: false })
-                  .eq("id", user.id);
-
-                if (gErr) console.warn("auto grade update failed:", gErr);
-              }
-            }
-          } catch (e) {
-            console.warn("auto grade calc failed:", e);
-          }
-       
-      if (mounted) setProfile(nextProfile);
-
-      try {
-        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
-      // eslint-disable-next-line no-empty
-      } catch {}
-
-      if (!profileData) {
-        const { error: upsertErr } = await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,
-              nickname: nextProfile.nickname,
-              birthdate: nextProfile.birthdate,
-              is_male: nextProfile.is_male,
-              finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
-              grade_code: nextProfile.grade_code ?? null,
-              grade_manual: Boolean(nextProfile.grade_manual ?? false),
-            },
-            { onConflict: "id" }
-          );
-        if (upsertErr) console.error("profiles upsert error:", upsertErr);
-      }
-
-      const loaded = await fetchTodos(user.id, selectedDayKey);
-
-      const { id: myListId } = await fetchMySingleListInfo(user.id);
-
-      if (myListId && loaded.length === 0) {
-        await autoImportMyListIfEmptyToday({ userId: user.id, dayKey: selectedDayKey });
-      }
-
-      if (!myListId && loaded.length === 0) {
-        await seedSampleTodosIfEmpty({
-          userId: user.id,
-          dayKey: selectedDayKey,
-          existingCount: loaded.length,
-        });
-        await fetchTodos(user.id, selectedDayKey);
-      }
-      await fetchHallOfFame(selectedDayKey);
-      if (mounted) setLoading(false);
-    };
-
-    loadAll();
-
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!me?.id) return;
-
-    const run = async () => {
-      const rows = await fetchTodos(me.id, selectedDayKey);
-      await fetchHallOfFame(selectedDayKey);
-      if ((rows ?? []).length === 0 && hasMyList) {
-        await autoImportMyListIfEmptyToday({ userId: me.id, dayKey: selectedDayKey });
-      }
-    };
-
-    run();
-  }, [selectedDayKey, me?.id, hasMyList, fetchHallOfFame]); 
-
-  useEffect(() => {
-    if (!me?.id) return;
-    if (loading) return;
-
-    let timerId = null;
-
-    const clearTimer = () => {
-      if (timerId) {
-        window.clearTimeout(timerId);
-        timerId = null;
-      }
-    };
-
-    const schedule = async () => {
-      clearTimer();
-
-      // 사용자가 마이페이지에서 알림을 꺼둔 경우면 예약 자체를 안 잡음
-      if (profile?.alarm_enabled === false) return;
-
-      const todayKey = toKstDayKey(new Date());
-
-      const alarm = await fetchTodayAlarm("todo_remind", todayKey);
-      if (!alarm) return;
-
-      const hhmm = String(alarm.time_hhmm || "19:30").trim();
-
-      // "HH:MM" 또는 "HH:MM:SS" 모두 대응
-      const parts = hhmm.split(":").map((x) => Number(x));
-      const hh = Number.isFinite(parts[0]) ? parts[0] : 0;
-      const mm = Number.isFinite(parts[1]) ? parts[1] : 0;
-
-      const now = new Date();
-      const target = new Date(now);
-      target.setHours(hh, mm, 0, 0);
-
-      const diffMs = target.getTime() - now.getTime();
-      if (diffMs <= 0) return;
-
-      timerId = window.setTimeout(() => {
-        showLocalNotification({
-          title: "초등 스터디 플래너",
-          body: String(alarm.message || "").trim() || "오늘 할 일을 확인해 보세요.",
-        });
-      }, diffMs);
-    };
-
-    schedule();
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        schedule();
-      }
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-
-    // 폴링: 관리자가 알람을 바꿨을 때 반영되게 하기 (원치 않으면 제거 가능)
-    const pollId = window.setInterval(() => {
-      schedule();
-    }, 60 * 1000);
-
-    return () => {
-      clearTimer();
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.clearInterval(pollId);
-    };
-  }, [me?.id, loading, profile?.alarm_enabled]);
-
-
-  // 명예의 전당 자동 새로고침
-  useEffect(() => {
-  if (!me?.id) return;
-
-  const INTERVAL_MS = 5 * 60 * 1000;
-  const intervalId = setInterval(() => {
-    fetchHallOfFame(selectedDayKey);
-  }, INTERVAL_MS);
-
-  return () => clearInterval(intervalId);
-  }, [me?.id, selectedDayKey, fetchHallOfFame]); 
-
-
-  // 내 도장 개수 불러오기 (hall_of_fame에서 내 기록 개수 세기)
-  useEffect(() => {
-    if (!me?.id) return;
-
-    const fetchMyStampCount = async () => {
-      try {
-        const { count, error } = await supabase
-          .from("hall_of_fame")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", me.id);
-
-        if (error) throw error;
-        setStampCount(count ?? 0);
-      } catch (e) {
-        console.warn("fetchMyStampCount error:", e);
-        setStampCount(0);
-      }
-    };
-
-    fetchMyStampCount();
-  }, [me?.id]);
-
-  // 메모 불러오기
-  useEffect(() => {
-    if (!me?.id) return;
-
-    const key = `afterStudyText:${me.id}:${selectedDayKey}`;
-    try {
-      const saved = localStorage.getItem(key);
-      setAfterStudyText(saved ?? "");
-    } catch {
-      setAfterStudyText("");
-    }
-  }, [me?.id, selectedDayKey]);
+  }, []);
 
   // "YYYY-MM-DD" -> Date
   function dayKeyToDate(dayKey) {
@@ -780,7 +572,7 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
   function getWeekStartDayKeyFromSelected(dayKey) {
     const d = dayKeyToDate(dayKey);
     const day = d.getDay(); // 0(일)~6(토)
-    const diffToMon = (day === 0 ? -6 : 1 - day);
+    const diffToMon = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diffToMon);
     return dateToDayKey(d);
   }
@@ -793,6 +585,78 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
       return `${Date.now()}_${Math.random().toString(16).slice(2)}`;
     }
   };
+
+  const autoImportMyListIfEmptyToday = useCallback(
+    async ({ userId, dayKey }) => {
+      if (!userId || !dayKey) return;
+      if (dayKey !== toKstDayKey(new Date())) return;
+
+      const onceKey = `auto_mylist_loaded_v1:${userId}:${dayKey}`;
+      try {
+        if (localStorage.getItem(onceKey) === "1") return;
+      } catch {
+        //
+      }
+
+      const current = todosRef.current ?? [];
+      if (current.length > 0) return;
+
+      try {
+        const { data: setRow, error: setErr } = await supabase
+          .from("todo_sets")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("kind", "single")
+          .maybeSingle();
+
+        if (setErr) throw setErr;
+        if (!setRow?.id) return;
+
+        const { data: items, error: itemsErr } = await supabase
+          .from("todo_set_items")
+          .select("item_key, title, sort_order")
+          .eq("set_id", setRow.id)
+          .order("sort_order", { ascending: true });
+
+        if (itemsErr) throw itemsErr;
+
+        const rows = (items ?? [])
+          .map((x) => {
+            const base = Number(x.sort_order ?? 0) || 0;
+            const itemKey = String(x.item_key ?? "").trim();
+
+            return {
+              user_id: userId,
+              day_key: dayKey,
+              title: String(x.title ?? "").trim(),
+              completed: false,
+              sort_order: base,
+              source_set_item_key: `${dayKey}:auto_single:${itemKey}`,
+            };
+          })
+          .filter((x) => x.title && x.source_set_item_key);
+
+        if (rows.length === 0) return;
+
+        const { error: upErr } = await supabase.from("todos").upsert(rows, {
+          onConflict: "user_id,source_set_item_key",
+          ignoreDuplicates: true,
+        });
+        if (upErr) throw upErr;
+
+        await fetchTodos(userId, dayKey);
+
+        try {
+          localStorage.setItem(onceKey, "1");
+        } catch {
+          //
+        }
+      } catch (e) {
+        console.error("autoImportMyListIfEmptyToday error:", e);
+      }
+    },
+    [fetchTodos]
+  );
 
   const importSampleTodos = async (sampleKeyOverride) => {
     if (!me?.id) return;
@@ -809,9 +673,12 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
       alert("샘플 테이블 설정이 올바르지 않습니다.");
       return;
     }
+
     setSelectedSampleKey(useKey);
+
     try {
       setImportingSample(true);
+
       if (sampleModeReplace) {
         const { error: delErr } = await supabase
           .from("todos")
@@ -827,6 +694,7 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
         .from(tableName)
         .select("item_key, title, sort_order")
         .order("sort_order", { ascending: true });
+
       if (tplErr) throw tplErr;
 
       const maxSort = (todosRef.current ?? [])
@@ -875,16 +743,6 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
     } finally {
       setImportingSample(false);
     }
-  };
-
-  const openMyListSaveModal = () => {
-    setMyListMode("save");
-    setShowMyListModal(true);
-  };
-
-  const closeMyListModal = () => {
-    if (busyMyList) return;
-    setShowMyListModal(false);
   };
 
   const saveMySingleList = async () => {
@@ -1026,77 +884,7 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
     }
   };
 
-  const autoImportMyListIfEmptyToday = async ({ userId, dayKey }) => {
-    if (!userId || !dayKey) return;
-
-    if (dayKey !== toKstDayKey(new Date())) return;
-
-    const onceKey = `auto_mylist_loaded_v1:${userId}:${dayKey}`;
-    try {
-      if (localStorage.getItem(onceKey) === "1") return;
-    } catch {
-      //
-    }
-
-    const current = todosRef.current ?? [];
-    if (current.length > 0) return;
-
-    try {
-      const { data: setRow, error: setErr } = await supabase
-        .from("todo_sets")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("kind", "single")
-        .maybeSingle();
-
-      if (setErr) throw setErr;
-      if (!setRow?.id) return; 
-
-      const { data: items, error: itemsErr } = await supabase
-        .from("todo_set_items")
-        .select("item_key, title, sort_order")
-        .eq("set_id", setRow.id)
-        .order("sort_order", { ascending: true });
-
-      if (itemsErr) throw itemsErr;
-
-      const rows = (items ?? [])
-        .map((x) => {
-          const base = Number(x.sort_order ?? 0) || 0;
-          const itemKey = String(x.item_key ?? "").trim();
-
-          return {
-            user_id: userId,
-            day_key: dayKey,
-            title: String(x.title ?? "").trim(),
-            completed: false,
-            sort_order: base,
-            source_set_item_key: `${dayKey}:auto_single:${itemKey}`,
-          };
-        })
-        .filter((x) => x.title && x.source_set_item_key);
-
-      if (rows.length === 0) return;
-
-      const { error: upErr } = await supabase.from("todos").upsert(rows, {
-        onConflict: "user_id,source_set_item_key",
-        ignoreDuplicates: true,
-      });
-      if (upErr) throw upErr;
-
-      await fetchTodos(userId, dayKey);
-
-      try {
-        localStorage.setItem(onceKey, "1");
-      } catch {
-        //
-      }
-    } catch (e) {
-      console.error("autoImportMyListIfEmptyToday error:", e);
-    }
-  };
-
-  // 정렬
+  // 정렬 보정
   const ensureSortOrderForDay = async () => {
     if (!me?.id) return;
 
@@ -1123,6 +911,7 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
     if (!me?.id) return;
     const aOrder = Number.isFinite(Number(a.sort_order)) ? Number(a.sort_order) : 0;
     const bOrder = Number.isFinite(Number(b.sort_order)) ? Number(b.sort_order) : 0;
+
     const current = todosRef.current ?? [];
     setTodos(
       current.map((x) => {
@@ -1175,7 +964,6 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
   const handleChange = (e) => setTodo(e.target.value);
 
   const addTodo = async () => {
-    
     if (isPastSelected) {
       alert("지난 날짜에는 할 일을 추가할 수 없습니다.");
       return;
@@ -1248,134 +1036,129 @@ const fetchHallOfFame = useCallback(async (dayKey) => {
       t.id === item.id ? { ...t, completed: !t.completed } : t
     );
 
-  const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
+    const willAllCompleted = nextTodos.length > 0 && nextTodos.every((t) => t.completed);
 
-  if (!item.completed) {
-    if (soundArmedRef.current) playTodoDone();
-  }
-
-  if (!wasAllCompleted && willAllCompleted) {
-    fireConfetti();
-    if (soundArmedRef.current) playAllDone(profile?.finish_sound);
-  }
-
-  setTodos(nextTodos);
-
-  try {
-    const { error } = await supabase
-      .from("todos")
-      .update({ completed: !item.completed })
-      .eq("id", item.id);
-
-    if (error) throw error;
+    if (!item.completed) {
+      if (soundArmedRef.current) playTodoDone();
+    }
 
     if (!wasAllCompleted && willAllCompleted) {
-      await recordCompletionForDay(selectedDayKey);
-      const beforeCount = await fetchMyStampCountNumber(me.id); 
-      const afterCount = beforeCount;
-      const estimatedBefore = Math.max(0, afterCount - 1);
+      fireConfetti();
+      if (soundArmedRef.current) playAllDone(profile?.finish_sound);
+    }
 
-      const beforeLv = calcLevelFromStamps(estimatedBefore).level;
-      const afterLv = calcLevelFromStamps(afterCount).level;
+    setTodos(nextTodos);
 
-      if (afterLv > beforeLv) {
-        setLevelUpNewLevel(afterLv);
-        setLevelUpOpen(true);
+    try {
+      const { error } = await supabase
+        .from("todos")
+        .update({ completed: !item.completed })
+        .eq("id", item.id);
+
+      if (error) throw error;
+
+      if (!wasAllCompleted && willAllCompleted) {
+        await recordCompletionForDay(selectedDayKey);
+
+        const afterCount = await fetchMyStampCountNumber(me.id);
+        const estimatedBefore = Math.max(0, afterCount - 1);
+
+        const beforeLv = calcLevelFromStamps(estimatedBefore).level;
+        const afterLv = calcLevelFromStamps(afterCount).level;
+
+        if (afterLv > beforeLv) {
+          setLevelUpNewLevel(afterLv);
+          setLevelUpOpen(true);
+        }
       }
-    }
 
-    if (wasAllCompleted && !willAllCompleted) {
-      await removeCompletionForDay(selectedDayKey);
+      if (wasAllCompleted && !willAllCompleted) {
+        await removeCompletionForDay(selectedDayKey);
+      }
+    } catch (err) {
+      console.error("toggleTodo error:", err);
+      setTodos(current);
+      alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
     }
-  } catch (err) {
-    console.error("toggleTodo error:", err);
-    setTodos(current);
-    alert(err?.message ?? "완료 처리 중 오류가 발생했습니다.");
-  }
-};
+  };
 
   const doneCount = todos.filter((t) => t.completed).length;
   const notDoneCount = todos.filter((t) => !t.completed).length;
 
-const toggleSelectForDelete = (todoId) => {
-  setSelectedDeleteIds((prev) => {
-    const next = new Set(prev);
-    if (next.has(todoId)) next.delete(todoId);
-    else next.add(todoId);
-    return next;
-  });
-};
+  // 삭제 모드
+  const toggleSelectForDelete = (todoId) => {
+    setSelectedDeleteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(todoId)) next.delete(todoId);
+      else next.add(todoId);
+      return next;
+    });
+  };
 
-const selectAllForDelete = () => {
-  const ids = (filteredTodos ?? []).map((t) => t.id);
-  setSelectedDeleteIds(new Set(ids));
-};
+  const clearAllForDelete = () => setSelectedDeleteIds(new Set());
 
-const clearAllForDelete = () => {
-  setSelectedDeleteIds(new Set());
-};
+  const toggleSelectAllForDelete = () => {
+    const list = filteredTodos ?? [];
+    if (list.length === 0) {
+      alert("선택할 것이 없어요 🙂");
+      return;
+    }
+    const isAllSelected = selectedDeleteIds.size === list.length;
+    if (isAllSelected) {
+      clearAllForDelete();
+    } else {
+      setSelectedDeleteIds(new Set(list.map((t) => t.id)));
+    }
+  };
 
-const toggleSelectAllForDelete = () => {
-  const list = filteredTodos ?? [];
+  const deleteSelectedTodos = async () => {
+    if (!me?.id) return;
 
-  if (list.length === 0) {
-    alert("선택할 것이 없어요 🙂");
-    return;
-  }
-  const isAllSelected = selectedDeleteIds.size === list.length;
+    const ids = Array.from(selectedDeleteIds);
+    if (ids.length === 0) {
+      alert("삭제할 항목을 선택해 주세요.");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("todos")
+        .delete()
+        .eq("user_id", me.id)
+        .in("id", ids);
 
-  if (isAllSelected) {
-    clearAllForDelete();
-  } else {
-    selectAllForDelete();
-  }
-};
+      if (error) throw error;
 
-const deleteSelectedTodos = async () => {
-  if (!me?.id) return;
+      const next = (todosRef.current ?? []).filter((x) => !selectedDeleteIds.has(x.id));
+      setTodos(next);
 
-  const ids = Array.from(selectedDeleteIds);
-  if (ids.length === 0) {
-    alert("삭제할 항목을 선택해 주세요.");
-    return;
-  }
-  try {
-    const { error } = await supabase
-      .from("todos")
-      .delete()
-      .eq("user_id", me.id)
-      .in("id", ids);
+      const isAllCompleted = next.length > 0 && next.every((x) => x.completed);
+      if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
 
-    if (error) throw error;
+      clearAllForDelete();
+      setDeleteMode(false);
+    } catch (err) {
+      console.error("deleteSelectedTodos error:", err);
+      alert(err?.message ?? "삭제 중 오류가 발생했습니다.");
+    }
+  };
 
-    const next = (todosRef.current ?? []).filter((x) => !selectedDeleteIds.has(x.id));
-    setTodos(next);
-
-    const isAllCompleted = next.length > 0 && next.every((x) => x.completed);
-    if (!isAllCompleted) await removeCompletionForDay(selectedDayKey);
-
-    clearAllForDelete();
-    setDeleteMode(false);
-  } catch (err) {
-    console.error("deleteSelectedTodos error:", err);
-    alert(err?.message ?? "삭제 중 오류가 발생했습니다.");
-  }
-};
-
-  // 스탑워치/타이머/하가다/
+  // 스탑워치/타이머/하가다
   const [timerSoundOn, setTimerSoundOn] = useState(true);
+
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startTimeRef = useRef(null);
   const timerRef = useRef(null);
+
   const [tourOpen, setTourOpen] = useState(false);
   const [tourStep, setTourStep] = useState(0);
+
   const refCalendarBtn = useRef(null);
   const refInput = useRef(null);
   const refAddBtn = useRef(null);
   const refLoadBtn = useRef(null);
   const refTodoList = useRef(null);
-  const refHamburgerMenu = useRef(null); 
+  const refHamburgerMenu = useRef(null);
 
   const startTour = () => {
     setTourStep(0);
@@ -1384,19 +1167,18 @@ const deleteSelectedTodos = async () => {
 
   const closeTour = () => {
     setTourOpen(false);
-
     try {
       const uid = me?.id ?? "anon";
       localStorage.setItem(`planner_tour_seen_v1:${uid}`, "1");
     } catch {
-      // 
+      //
     }
   };
 
   const tourSteps = useMemo(
     () => [
       {
-        title: "📂 목록 불러오기",
+        title: "목록 불러오기",
         body: (
           <>
             여기서 기본 목록/내 목록을 불러올 수 있어요.<br />
@@ -1406,17 +1188,17 @@ const deleteSelectedTodos = async () => {
         targetRef: refLoadBtn,
       },
       {
-        title: "✏️ 할 일 적기",
+        title: "할 일 적기",
         body: (
           <>
             여기에 오늘 할 일을 적어요.<br />
-            예)  "수학 1장", "영어 10분" 같은 식으로요.
+            예) "수학 1장", "영어 10분" 같은 식으로요.
           </>
         ),
         targetRef: refInput,
       },
       {
-        title: "➕ 입력 버튼",
+        title: "입력 버튼",
         body: (
           <>
             다 적었으면 "입력"을 눌러서 목록에 추가해요.<br />
@@ -1430,13 +1212,13 @@ const deleteSelectedTodos = async () => {
         body: (
           <>
             할 일을 끝내면 완료(체크)를 눌러요.<br />
-            다 끝내면 축하 효과도 나와요 🎉
+            다 끝내면 축하 효과도 나와요.
           </>
         ),
         targetRef: refTodoList,
       },
       {
-        title: "🗓️ 달력으로 날짜 바꾸기",
+        title: "달력으로 날짜 바꾸기",
         body: (
           <>
             어제/내일 할 일을 보고 싶으면 달력을 눌러요.<br />
@@ -1446,7 +1228,7 @@ const deleteSelectedTodos = async () => {
         targetRef: refCalendarBtn,
       },
       {
-        title: "☰ 메뉴 열기",
+        title: "메뉴 열기",
         body: (
           <>
             여기에서 마이페이지, 랭킹, 로그아웃 같은<br />
@@ -1459,125 +1241,6 @@ const deleteSelectedTodos = async () => {
     []
   );
 
-  useEffect(() => {
-  if (!me?.id) return;
-  if (loading) return;
-
-  let checking = false;
-
-  let intervalId = null;
-
-  const isDayTypeAllowed = (dayType, dateObj) => {
-    const d = dateObj.getDay(); 
-    const isWeekend = d === 0 || d === 6;
-
-    if (dayType === "weekday") return !isWeekend;
-    if (dayType === "weekend") return isWeekend; 
-    return true;                                 
-  };
-
-  const makeFiredKey = (alarmId, dayKey) => `alarm_fired_v1:${alarmId}:${dayKey}`;
-
-  const isInRange = (row, todayKey) => {
-    if (!row?.start_day && !row?.end_day) return true;
-
-    const today = new Date(`${todayKey}T00:00:00`);
-    const s = row.start_day ? new Date(`${row.start_day}T00:00:00`) : null;
-    const e = row.end_day ? new Date(`${row.end_day}T23:59:59`) : null;
-
-    if (s && today < s) return false;
-    if (e && today > e) return false;
-    return true;
-  };
-
-  const isNowMatched = (hhmm, now) => {
-    const [hh, mm] = String(hhmm || "").split(":").map((x) => Number(x));
-    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return false;
-    return now.getHours() === hh && now.getMinutes() === mm;
-  };
-  const tick = async () => {
-    if (checking) return;
-    checking = true;
-
-    try {
-      const todayKey = toKstDayKey(new Date());
-      const now = new Date();
-
-      const { data, error } = await supabase
-        .from("alarm_settings")
-        .select("id, kind, title, message, time_hhmm, start_day, end_day, day_type, is_active, updated_at")
-        .eq("kind", "todo_remind")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false });
-
-      if (error) {
-        console.warn("alarm tick load error:", error);
-        return;
-      }
-
-      const rows = (data ?? []).map((r) => ({
-        ...r,
-        day_type: r?.day_type || "all", 
-      }));
-
-      const available = rows.filter((r) => isInRange(r, todayKey) && isDayTypeAllowed(r.day_type, now));
-      if (available.length === 0) return;
-
-      const alarm = available[0];
-
-      if (!isNowMatched(alarm.time_hhmm, now)) return;
-
-      const firedKey = makeFiredKey(alarm.id, todayKey);
-      try {
-        if (localStorage.getItem(firedKey) === "1") return;
-      } catch {
-        // localStorage 막힌 환경이면 그냥 진행(중복 가능)
-      }
-
-      await showLocalNotification({
-        title: "초등 스터디 플래너",
-        body: String(alarm.message ?? "오늘의 할 일을 끝내보세요."),
-      });
-
-      try {
-        localStorage.setItem(firedKey, "1");
-      } catch {
-        //
-      }
-    } finally {
-      checking = false;
-    }
-  };
-
-  tick();
-
-  intervalId = window.setInterval(tick, 60 * 1000);
-
-  return () => {
-    if (intervalId) window.clearInterval(intervalId);
-  };
-}, [me?.id, loading]);
-
-
-
-  // 첫 방문 투어 시작
-  useEffect(() => {
-    if (loading) return;
-
-    try {
-      const uid = me?.id ?? "anon";
-      const key = `planner_tour_seen_v1:${uid}`;
-
-      const seen = localStorage.getItem(key);
-      if (seen === "1") return;
-
-      startTour();
-    } catch {
-      startTour();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, me?.id]);
-  
   useEffect(() => () => clearInterval(timerRef.current), []);
 
   const formatTime = (ms) => {
@@ -1626,8 +1289,7 @@ const deleteSelectedTodos = async () => {
   useEffect(() => {
     if (timerRunning) return;
     setRemainingSec(timerMin * 60);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timerMin]);
+  }, [timerMin, timerRunning]);
 
   useEffect(() => () => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -1654,7 +1316,6 @@ const deleteSelectedTodos = async () => {
           clearInterval(timerIntervalRef.current);
           timerIntervalRef.current = null;
           setTimerRunning(false);
-          // playFinishSound();
           return 0;
         }
         return next;
@@ -1687,29 +1348,299 @@ const deleteSelectedTodos = async () => {
   useEffect(() => {
     if (remainingSec === 0 && !timerEndedRef.current) {
       timerEndedRef.current = true;
-
       if (!timerSoundOn) return;
-
       if (soundArmedRef.current) playTimerEnd();
     }
-
     if (remainingSec > 0) timerEndedRef.current = false;
-}, [remainingSec, timerSoundOn, playTimerEnd]);
+  }, [remainingSec, timerSoundOn, playTimerEnd]);
 
   const [hagadaCount, setHagadaCount] = useState(0);
   const increaseHagada = () => setHagadaCount((prev) => prev + 1);
   const resetHagada = () => setHagadaCount(0);
 
- //관리자 : 숙제 내용 2학년만 보이게
+  // 로그인/프로필/오늘 할일: "필수" 로딩만 먼저 처리
+  useEffect(() => {
+    let mounted = true;
+
+    const loadCore = async () => {
+      if (!mounted) return;
+      setLoading(true);
+
+      const session = await waitForAuthSession({ timeoutMs: 1500 });
+      if (!session?.user) {
+        if (!mounted) return;
+        setLoading(false);
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      const user = session.user;
+      if (mounted) setMe(user);
+
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, nickname, birthdate, is_male, finish_sound, grade_code, grade_manual, is_admin, alarm_enabled")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const nextProfile =
+        profileError || !profileData
+          ? {
+              id: user.id,
+              nickname: user.user_metadata?.nickname ?? "닉네임",
+              birthdate: user.user_metadata?.birthdate ?? null,
+              is_male: user.user_metadata?.is_male ?? true,
+              finish_sound: user.user_metadata?.finish_sound ?? DEFAULT_FINISH_SOUND,
+              grade_code: null,
+              grade_manual: false,
+              is_admin: false,
+              alarm_enabled: true,
+            }
+          : profileData;
+
+      // 학년 자동 계산(수동 설정이 없고 grade_code가 비어있을 때만)
+      try {
+        const hasBirth = String(nextProfile?.birthdate ?? "").trim().length > 0;
+        const gradeManual = Boolean(nextProfile?.grade_manual);
+        const hasGrade = Number.isFinite(Number(nextProfile?.grade_code));
+
+        if (hasBirth && !gradeManual && !hasGrade) {
+          const autoCode = calcGradeCodeFromBirthdate(nextProfile.birthdate);
+          if (Number.isFinite(autoCode)) {
+            nextProfile.grade_code = autoCode;
+            nextProfile.grade_manual = false;
+
+            const { error: gErr } = await supabase
+              .from("profiles")
+              .update({ grade_code: autoCode, grade_manual: false })
+              .eq("id", user.id);
+
+            if (gErr) console.warn("auto grade update failed:", gErr);
+          }
+        }
+      } catch (e) {
+        console.warn("auto grade calc failed:", e);
+      }
+
+      if (mounted) setProfile(nextProfile);
+
+      try {
+        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(nextProfile));
+      } catch {
+        //
+      }
+
+      // 프로필이 없던 첫 유저면 upsert
+      if (!profileData) {
+        const { error: upsertErr } = await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: user.id,
+              nickname: nextProfile.nickname,
+              birthdate: nextProfile.birthdate,
+              is_male: nextProfile.is_male,
+              finish_sound: nextProfile.finish_sound || DEFAULT_FINISH_SOUND,
+              grade_code: nextProfile.grade_code ?? null,
+              grade_manual: Boolean(nextProfile.grade_manual ?? false),
+              alarm_enabled: nextProfile.alarm_enabled ?? true,
+            },
+            { onConflict: "id" }
+          );
+        if (upsertErr) console.error("profiles upsert error:", upsertErr);
+      }
+
+      // 필수: 오늘 할일
+      const loaded = await fetchTodos(user.id, selectedDayKey);
+
+      // 내 목록 존재 여부 확인(필수는 아니지만, "빈 화면"일 때 자동 채우기 판단에 필요)
+      const { id: myListId } = await fetchMySingleListInfo(user.id);
+
+      // 내 목록이 있고 오늘이 비어 있으면 자동 주입
+      if (myListId && loaded.length === 0) {
+        await autoImportMyListIfEmptyToday({ userId: user.id, dayKey: selectedDayKey });
+      }
+
+      // 내 목록도 없고 비어 있으면 샘플 주입
+      if (!myListId && loaded.length === 0) {
+        await seedSampleTodosIfEmpty({
+          userId: user.id,
+          dayKey: selectedDayKey,
+          existingCount: loaded.length,
+        });
+        await fetchTodos(user.id, selectedDayKey);
+      }
+
+      if (mounted) setLoading(false);
+
+      // 부가 로딩은 화면이 뜬 뒤에 천천히
+      const defer = (fn) => {
+        if (typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(() => fn(), { timeout: 1200 });
+        } else {
+          setTimeout(() => fn(), 0);
+        }
+      };
+
+      defer(() => fetchHallOfFame(selectedDayKey));
+      defer(async () => {
+        try {
+          const count = await fetchMyStampCountNumber(user.id);
+          if (mounted) setStampCount(count ?? 0);
+        } catch (e) {
+          console.warn("fetch stamp count error:", e);
+        }
+      });
+    };
+
+    loadCore();
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
+  // 날짜 변경 시: 할일은 즉시, 부가 정보는 약간 늦게
   useEffect(() => {
     if (!me?.id) return;
-    const myGrade = Number(profile?.grade_code);
-    const isSecondGrade = (myGrade === 2);
-    if (!isSecondGrade) {
-      setVerseLines([]); 
-      setVerseRef("");  
-      return;         
+
+    const run = async () => {
+      const rows = await fetchTodos(me.id, selectedDayKey);
+
+      // 오늘이 비었고 내목록이 있으면 자동 주입(오늘만)
+      if ((rows ?? []).length === 0 && hasMyList) {
+        await autoImportMyListIfEmptyToday({ userId: me.id, dayKey: selectedDayKey });
+      }
+
+      const defer = (fn) => {
+        if (typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(() => fn(), { timeout: 1200 });
+        } else {
+          setTimeout(() => fn(), 0);
+        }
+      };
+
+      defer(() => fetchHallOfFame(selectedDayKey));
+    };
+
+    run();
+  }, [selectedDayKey, me?.id, hasMyList, fetchTodos, fetchHallOfFame, autoImportMyListIfEmptyToday]);
+
+  // 알림 예약: "한 번 읽어서 setTimeout 잡기" 방식만 유지
+  useEffect(() => {
+    if (!me?.id) return;
+    if (loading) return;
+
+    let timerId = null;
+
+    const clearTimer = () => {
+      if (timerId) {
+        window.clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    const scheduleOnce = async () => {
+      clearTimer();
+
+      // 마이페이지에서 알림을 꺼둔 경우
+      if (profile?.alarm_enabled === false) return;
+
+      // 오늘의 알림 1개 선택
+      const alarm = await fetchTodayAlarm("todo_remind");
+      if (!alarm) return;
+
+      const hhmm = String(alarm.time_hhmm || "19:30").trim();
+      const parts = hhmm.split(":").map((x) => Number(x));
+      const hh = Number.isFinite(parts[0]) ? parts[0] : 0;
+      const mm = Number.isFinite(parts[1]) ? parts[1] : 0;
+
+      const now = new Date();
+      const target = new Date(now);
+      target.setHours(hh, mm, 0, 0);
+
+      const diffMs = target.getTime() - now.getTime();
+      if (diffMs <= 0) return;
+
+      timerId = window.setTimeout(() => {
+        showLocalNotification({
+          title: "초등 스터디 플래너",
+          body: String(alarm.message || "").trim() || "오늘 할 일을 확인해 보세요.",
+        });
+      }, diffMs);
+    };
+
+    scheduleOnce();
+
+    // 앱을 다시 열었을 때(백그라운드였다가 돌아올 때) 다시 예약
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        scheduleOnce();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearTimer();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [me?.id, loading, profile?.alarm_enabled]);
+
+  // 명예의 전당 자동 새로고침(5분)
+  useEffect(() => {
+    if (!me?.id) return;
+    const INTERVAL_MS = 5 * 60 * 1000;
+
+    const intervalId = setInterval(() => {
+      fetchHallOfFame(selectedDayKey);
+    }, INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [me?.id, selectedDayKey, fetchHallOfFame]);
+
+  // 메모 불러오기
+  useEffect(() => {
+    if (!me?.id) return;
+
+    const key = `afterStudyText:${me.id}:${selectedDayKey}`;
+    try {
+      const saved = localStorage.getItem(key);
+      setAfterStudyText(saved ?? "");
+    } catch {
+      setAfterStudyText("");
     }
+  }, [me?.id, selectedDayKey]);
+
+  // 첫 방문 투어 시작
+  useEffect(() => {
+    if (loading) return;
+
+    try {
+      const uid = me?.id ?? "anon";
+      const key = `planner_tour_seen_v1:${uid}`;
+      const seen = localStorage.getItem(key);
+      if (seen === "1") return;
+      startTour();
+    } catch {
+      startTour();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, me?.id]);
+
+  // 2학년만: 오늘의 말씀/숙제 로딩(부가 데이터이므로 core 로딩과 분리)
+  useEffect(() => {
+    if (!me?.id) return;
+
+    const myGrade = Number(profile?.grade_code);
+    const isSecondGrade = myGrade === 2;
+
+    if (!isSecondGrade) {
+      setVerseLines([]);
+      setVerseRef("");
+      return;
+    }
+
     const run = async () => {
       try {
         const { data, error } = await supabase
@@ -1739,13 +1670,13 @@ const deleteSelectedTodos = async () => {
 
           const mine = valid.find((r) => r.grade_code === 2);
           if (!mine) {
-            setVerseLines([]);  
+            setVerseLines([]);
             setVerseRef("");
             return;
           }
 
           setVerseRef(mine.ref_text || "");
-          const lines = mine.content.split("\n").map(s => s.trim()).filter(Boolean);
+          const lines = mine.content.split("\n").map((s) => s.trim()).filter(Boolean);
           setVerseLines(lines);
           return;
         }
@@ -1761,19 +1692,27 @@ const deleteSelectedTodos = async () => {
       }
     };
 
-    run();
+    const defer = () => run();
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(defer, { timeout: 1200 });
+    } else {
+      setTimeout(defer, 0);
+    }
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
   useEffect(() => {
     if (!me?.id) return;
+
     const myGrade = Number(profile?.grade_code);
-    const isSecondGrade = (myGrade === 2);
+    const isSecondGrade = myGrade === 2;
+
     if (!isSecondGrade) {
       setHomeworkItems([]);
-      setWeekHwImgUrl("");     
-      setWeekHwImgOpen(false); 
+      setWeekHwImgUrl("");
+      setWeekHwImgOpen(false);
       return;
     }
+
     const run = async () => {
       try {
         const { data, error } = await supabase
@@ -1794,6 +1733,7 @@ const deleteSelectedTodos = async () => {
           .filter((x) => x.subject.length > 0 && x.content.length > 0);
 
         setHomeworkItems(normalized);
+
         const weekStart = getWeekStartDayKeyFromSelected(selectedDayKey);
 
         const { data: imgRow, error: imgErr } = await supabase
@@ -1809,7 +1749,6 @@ const deleteSelectedTodos = async () => {
         } else {
           setWeekHwImgUrl(String(imgRow?.image_url ?? ""));
         }
-
       } catch (err) {
         console.error("load daily_homeworks error:", err);
         setHomeworkItems([]);
@@ -1817,7 +1756,12 @@ const deleteSelectedTodos = async () => {
       }
     };
 
-    run();
+    const defer = () => run();
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(defer, { timeout: 1200 });
+    } else {
+      setTimeout(defer, 0);
+    }
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
   const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
@@ -1831,7 +1775,6 @@ const deleteSelectedTodos = async () => {
     } catch (e) {
       console.warn("프로필 캐시 삭제 실패", e);
     }
-
     navigate("/login");
   };
 
@@ -1843,23 +1786,20 @@ const deleteSelectedTodos = async () => {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
-  // 푸터
+  // 푸터: 그레이프시드 열기
   const openGrapeSeed = () => {
     const ua = navigator.userAgent.toLowerCase();
-    const studentWeb = "https://students.grapeseed.com"; // 공식 학생 웹(일반적으로 이쪽이 기본)
+    const studentWeb = "https://students.grapeseed.com";
     const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn";
-    const appStore  = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
+    const appStore = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
     const isAndroid = ua.includes("android");
     const isIOS = ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
+
     window.location.href = studentWeb;
+
     setTimeout(() => {
-      if (isAndroid) {
-        window.location.href = playStore;
-      } else if (isIOS) {
-        window.location.href = appStore;
-      } else {
-        // 
-      }
+      if (isAndroid) window.location.href = playStore;
+      else if (isIOS) window.location.href = appStore;
     }, 1500);
   };
 
@@ -1876,7 +1816,6 @@ const deleteSelectedTodos = async () => {
             초등 스터디 플래너
           </h1>
 
-        {/* 관리자버튼 */}
           <div className="top-right">
             {(me?.email === "kara@kara.com" || profile?.is_admin === true) && (
               <button
@@ -1888,13 +1827,11 @@ const deleteSelectedTodos = async () => {
                 관리자
               </button>
             )}
-            
-           
+
             <div ref={refHamburgerMenu}>
-             <HamburgerMenu />
+              <HamburgerMenu />
             </div>
           </div>
-
         </div>
 
         <div className="sub-row">
@@ -1915,11 +1852,17 @@ const deleteSelectedTodos = async () => {
             <div className="today-row" title="선택한 날짜">
               <span className="today">{formatSelectedKorean()}</span>
 
-               <div className="weather" title="오늘의 날씨">
+              <div className="weather" title="오늘의 날씨">
                 <WeatherIcon code={weatherCode} size={40} />
               </div>
 
-              <button type="button" className="cal-btn" ref={refCalendarBtn} onClick={openCalendar} title="달력 열기">
+              <button
+                type="button"
+                className="cal-btn"
+                ref={refCalendarBtn}
+                onClick={openCalendar}
+                title="달력 열기"
+              >
                 <svg
                   className="cal-btn-ico"
                   width="16"
@@ -1950,7 +1893,7 @@ const deleteSelectedTodos = async () => {
             className="preset-btn preset-btn-primary"
             ref={refLoadBtn}
             onClick={openLoadModal}
-            disabled={importingSample || busyMyList || isPastSelected} 
+            disabled={importingSample || busyMyList || isPastSelected}
           >
             {importingSample || busyMyList ? "불러오는 중..." : "📂 목록 불러오기"}
           </button>
@@ -2021,8 +1964,6 @@ const deleteSelectedTodos = async () => {
             </>
           )}
         </div>
-
-        
       </div>
 
       <div ref={refTodoList}>
@@ -2051,7 +1992,6 @@ const deleteSelectedTodos = async () => {
         )}
 
         <div className="todo-bottom-row">
-          {/* ===== 왼쪽: 삭제 영역 ===== */}
           <div className="todo-bottom-left">
             {!deleteMode ? (
               <button
@@ -2112,7 +2052,6 @@ const deleteSelectedTodos = async () => {
                     선택 삭제 ({selectedDeleteIds.size})
                   </button>
 
-
                   <button
                     type="button"
                     className="filter-btn"
@@ -2128,7 +2067,6 @@ const deleteSelectedTodos = async () => {
             )}
           </div>
 
-          {/* ===== 오른쪽: 순서 변경하기 ===== */}
           <div className="todo-bottom-right">
             {filter === "all" && !deleteMode && (
               <button
@@ -2165,7 +2103,9 @@ const deleteSelectedTodos = async () => {
               }}
               title="눌러서 수정하기"
             >
-              {afterStudyText.trim() ? afterStudyText : "수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 놀기~"}
+              {afterStudyText.trim()
+                ? afterStudyText
+                : "수학 10문제 55초 / 리딩레이스 30km!! / 영어듣기 22분 / 숙제 다하면 놀기~"}
             </div>
           ) : (
             <input
@@ -2206,34 +2146,35 @@ const deleteSelectedTodos = async () => {
         </div>
       </div>
 
-      {/* 명예의 전당 */}
-      <HallOfFameCard hofLoading={hofLoading} hof={hof} meId={me?.id} cutName6={cutName6} />
+      <Suspense fallback={null}>
+        <HallOfFameCard hofLoading={hofLoading} hof={hof} meId={me?.id} cutName6={cutName6} />
+      </Suspense>
 
-      {/* 학습 도구들 */}
-      <StudyTools
-        formatTime={formatTime}
-        elapsedMs={elapsedMs}
-        isRunning={isRunning}
-        startStopwatch={startStopwatch}
-        stopStopwatch={stopStopwatch}
-        resetStopwatch={resetStopwatch}
-        TIMER_PRESETS={TIMER_PRESETS}
-        timerMin={timerMin}
-        setTimerMin={setTimerMin}
-        timerRunning={timerRunning}
-        formatMMSS={formatMMSS}
-        remainingSec={remainingSec}
-        startTimer={startTimer}
-        pauseTimer={pauseTimer}
-        resetTimer={resetTimer}
-        timerSoundOn={timerSoundOn}
-        setTimerSoundOn={setTimerSoundOn}
-        hagadaCount={hagadaCount}
-        increaseHagada={increaseHagada}
-        resetHagada={resetHagada}
-      />
+      <Suspense fallback={null}>
+        <StudyTools
+          formatTime={formatTime}
+          elapsedMs={elapsedMs}
+          isRunning={isRunning}
+          startStopwatch={startStopwatch}
+          stopStopwatch={stopStopwatch}
+          resetStopwatch={resetStopwatch}
+          TIMER_PRESETS={TIMER_PRESETS}
+          timerMin={timerMin}
+          setTimerMin={setTimerMin}
+          timerRunning={timerRunning}
+          formatMMSS={formatMMSS}
+          remainingSec={remainingSec}
+          startTimer={startTimer}
+          pauseTimer={pauseTimer}
+          resetTimer={resetTimer}
+          timerSoundOn={timerSoundOn}
+          setTimerSoundOn={setTimerSoundOn}
+          hagadaCount={hagadaCount}
+          increaseHagada={increaseHagada}
+          resetHagada={resetHagada}
+        />
+      </Suspense>
 
-      {/* 오늘 숙제 (2학년만) */}
       {Number(profile?.grade_code) === 2 && (
         <div className="homework-box" aria-label="오늘 숙제">
           <div className="homework-title">오늘 숙제</div>
@@ -2257,35 +2198,28 @@ const deleteSelectedTodos = async () => {
                 className="weekly-hw-btn"
                 onClick={() => setWeekHwImgOpen(true)}
               >
-                🖼️ 일주일 전체 숙제 
+                🖼️ 일주일 전체 숙제
               </button>
+
               <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)}>
                 ✍️ 오늘의 받아쓰기
               </button>
-
 
               {weekHwImgOpen && (
                 <div
                   className="weekly-hw-overlay"
                   role="dialog"
                   aria-modal="true"
-                  onClick={() => setWeekHwImgOpen(false)} 
+                  onClick={() => setWeekHwImgOpen(false)}
                 >
-                  <div
-                    className="weekly-hw-card"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="weekly-hw-card" onClick={(e) => e.stopPropagation()}>
                     <div className="weekly-hw-image-wrap">
-                      <img
-                        src={weekHwImgUrl}
-                        alt="주간 숙제"
-                        className="weekly-hw-image"
-                      />
+                      <img src={weekHwImgUrl} alt="주간 숙제" className="weekly-hw-image" />
                     </div>
 
                     <button
                       type="button"
-                      onClick={() => setWeekHwImgOpen(false)} 
+                      onClick={() => setWeekHwImgOpen(false)}
                       className="weekly-hw-close"
                     >
                       닫기
@@ -2293,25 +2227,16 @@ const deleteSelectedTodos = async () => {
                   </div>
                 </div>
               )}
-
             </>
           )}
-
-
         </div>
       )}
 
-      {/* 오늘의 말씀 (2학년만) */}
       {Number(profile?.grade_code) === 2 && verseLines.length > 0 && (
         <div className="verse-box" aria-label="오늘의 말씀">
-         <div className="verse-header">
+          <div className="verse-header">
             <span className="verse-title">오늘의 말씀</span>
-
-            {verseRef && (
-              <span className="verse-ref">
-                {verseRef}
-              </span>
-            )}
+            {verseRef && <span className="verse-ref">{verseRef}</span>}
           </div>
 
           <div className="verse-text">
@@ -2321,63 +2246,67 @@ const deleteSelectedTodos = async () => {
                 className="verse-chunk"
                 style={{ color: pickStableColor(`${selectedDayKey}:${idx}`) }}
               >
-                {line}{idx < verseLines.length - 1 ? " " : ""}
+                {line}
+                {idx < verseLines.length - 1 ? " " : ""}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      <LoadScheduleModal
-        open={showLoadModal}
-        onClose={closeLoadModal}
-        selectedDayKey={selectedDayKey}
-        loadChoice={loadChoice}
-        setLoadChoice={setLoadChoice}
-        hasMyList={hasMyList}
-        sampleModeReplace={sampleModeReplace}
-        setSampleModeReplace={setSampleModeReplace}
-        loadReplace={loadReplace}
-        setLoadReplace={setLoadReplace}
-        importingSample={importingSample}
-        busyMyList={busyMyList}
-        importMySingleList={importMySingleList}
-        importSampleTodos={importSampleTodos}
-        userId={me?.id}
-      />
+      <Suspense fallback={null}>
+        <LoadScheduleModal
+          open={showLoadModal}
+          onClose={closeLoadModal}
+          selectedDayKey={selectedDayKey}
+          loadChoice={loadChoice}
+          setLoadChoice={setLoadChoice}
+          hasMyList={hasMyList}
+          sampleModeReplace={sampleModeReplace}
+          setSampleModeReplace={setSampleModeReplace}
+          loadReplace={loadReplace}
+          setLoadReplace={setLoadReplace}
+          importingSample={importingSample}
+          busyMyList={busyMyList}
+          importMySingleList={importMySingleList}
+          importSampleTodos={importSampleTodos}
+          userId={me?.id}
+        />
 
-      <MyListSaveModal
-        open={showMyListModal}
-        onClose={closeMyListModal}
-        busyMyList={busyMyList}
-        onSaveMyList={saveMySingleList}
-      />
+        <MyListSaveModal
+          open={showMyListModal}
+          onClose={closeMyListModal}
+          busyMyList={busyMyList}
+          onSaveMyList={saveMySingleList}
+        />
 
-      <CalendarModal
-        open={showCalendarModal}
-        onClose={closeCalendar}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-        calMonth={calMonth}
-        setCalMonth={setCalMonth}
-        doneDayKeys={doneDayKeys}
-      />
+        <CalendarModal
+          open={showCalendarModal}
+          onClose={closeCalendar}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          calMonth={calMonth}
+          setCalMonth={setCalMonth}
+          doneDayKeys={doneDayKeys}
+        />
 
-      <HelpModal open={showHelpModal} onClose={closeHelp} />
+        <HelpModal open={showHelpModal} onClose={closeHelp} />
 
-      <OnboardingTour
-        open={tourOpen}
-        stepIndex={tourStep}
-        steps={tourSteps}
-        onClose={closeTour}
-        onChangeStep={setTourStep}
-      />
+        <OnboardingTour
+          open={tourOpen}
+          stepIndex={tourStep}
+          steps={tourSteps}
+          onClose={closeTour}
+          onChangeStep={setTourStep}
+        />
+      </Suspense>
 
-      {/* 레벨업 트로피 모달 */}
       {levelUpOpen && (
         <div className="levelup-overlay" role="dialog" aria-modal="true" aria-label="레벨 업">
           <div className="levelup-card">
-            <div className="levelup-trophy-emoji" aria-hidden="true">🏆</div>
+            <div className="levelup-trophy-emoji" aria-hidden="true">
+              🏆
+            </div>
 
             <div className="levelup-title">레벨이 올랐습니다!</div>
             <div className="levelup-sub">축하해요 🎉 지금은</div>
@@ -2409,10 +2338,11 @@ const deleteSelectedTodos = async () => {
             className="footer-link-secondary"
             href="https://rd.dreamschool.or.kr/"
             target="_blank"
+            rel="noreferrer"
             role="button"
             title="리딩레이스"
           >
-           🏃‍♂️리딩레이스
+            🏃‍♂️리딩레이스
           </a>
           <span>|</span>
           <a
@@ -2424,15 +2354,14 @@ const deleteSelectedTodos = async () => {
             🍇그레이프시드
           </a>
           <span>|</span>
-        
+
           <a onClick={openHelp}>❓도움말</a>
-           <span>|</span>
+          <span>|</span>
 
           <a onClick={handleLogout}>로그아웃</a>
         </div>
         <div className="footer-copy">© {new Date().getFullYear()} Study Planner</div>
       </footer>
-      
     </div>
   );
 }
