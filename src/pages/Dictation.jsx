@@ -448,11 +448,9 @@ export default function Dictation() {
 
       <div className="dictationGuideBox">
         <p className="keypoint">
-          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.
-          <br />
-          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.
-        </p>
-        <p>모든 받아쓰기를 마친 뒤에는 암호를 입력해 정답을 확인할 수 있습니다.</p>
+          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.<br />
+          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.  <br />
+          모든 받아쓰기를 마친 30초 후에 암호를 입력해 정답을 확인할 수 있습니다.</p>
       </div>
 
       <div className="dictationSpeedBar">

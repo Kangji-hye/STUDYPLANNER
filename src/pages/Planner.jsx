@@ -25,10 +25,6 @@ import { calcLevelFromStamps } from "../utils/leveling";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import { useAppSounds } from "../hooks/useAppSounds";
 
-/*
-  무거운 컴포넌트들은 처음부터 번들에 포함시키지 않고,
-  실제로 열릴 때만 로딩되도록 lazy 처리합니다.
-*/
 const LoadScheduleModal = lazy(() => import("../components/planner/LoadScheduleModal"));
 const MyListSaveModal = lazy(() => import("../components/planner/MyListSaveModal"));
 const CalendarModal = lazy(() => import("../components/planner/CalendarModal"));
