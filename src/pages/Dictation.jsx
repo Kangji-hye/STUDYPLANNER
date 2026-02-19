@@ -15,10 +15,11 @@ function ymd(date = new Date()) {
 const TTS_SPEED_STORAGE_KEY = "dictation_tts_speed_v1";
 const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
 
+// 1) 빠르게 속도 조정: 1.8 → 1.3 (너무 튀는 느낌을 줄임)
 const TTS_SPEED_PRESETS = [
   { key: "slow", label: "느리게", rate: 0.6 },
   { key: "normal", label: "보통", rate: 0.95 },
-  { key: "fast", label: "빠르게", rate: 1.8 },
+  { key: "fast", label: "빠르게", rate: 1.3 },
 ];
 const DEFAULT_TTS_SPEED_KEY = "normal";
 
@@ -31,8 +32,8 @@ const PUNCT_REGEX = /[,.!?，。！？…]/;
 
 const PER_ITEM_SECONDS = 120;
 
+// 비밀번호는 그대로 유지
 const ANSWER_PIN = "486";
-const ANSWER_BTN_DELAY_MS = 30_000; //정답보여주기 30초 대기
 
 function stopSpeaking() {
   try {
@@ -189,11 +190,13 @@ export default function Dictation() {
   const [startedById, setStartedById] = useState({});
   const timersRef = useRef({});
 
-  // 정답 게이트 타이머
-  const gateTimerRef = useRef(null);
+  // ✅ 정답 잠금/표시 토글 상태
+  const [unlocked, setUnlocked] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
-  // ✅ 정답 PIN 상수 누락 보완(원본에 없어서 에러/오작동 방지)
-  const ANSWER_PIN_LOCAL = ANSWER_PIN;
+  // PIN 모달
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pin, setPin] = useState("");
 
   const pauseAllTimersExcept = useCallback((keepId) => {
     const all = timersRef.current || {};
@@ -209,13 +212,6 @@ export default function Dictation() {
     const all = timersRef.current || {};
     Object.keys(all).forEach((k) => clearInterval(all[k]));
     timersRef.current = {};
-  }, []);
-
-  const clearGateTimer = useCallback(() => {
-    if (gateTimerRef.current) {
-      clearTimeout(gateTimerRef.current);
-      gateTimerRef.current = null;
-    }
   }, []);
 
   const startTimerFor = useCallback(
@@ -258,64 +254,12 @@ export default function Dictation() {
     setStartedById({});
   }, [clearAllTimers]);
 
-  const [pressedById, setPressedById] = useState({});
-  const [pressSeq, setPressSeq] = useState(0);
-
-  const [showAnswerGateBtn, setShowAnswerGateBtn] = useState(false);
-  const [unlocked, setUnlocked] = useState(false);
-
-  const [pinOpen, setPinOpen] = useState(false);
-  const [pin, setPin] = useState("");
-
-  const resetAnswerGate = useCallback(() => {
-    clearGateTimer();
-    setPressedById({});
-    setPressSeq(0);
-    setShowAnswerGateBtn(false);
-    setUnlocked(false);
-    setPinOpen(false);
-    setPin("");
-  }, [clearGateTimer]);
-
-  const allSpeakersPressedAtLeastOnce = useMemo(() => {
-    if (!list || list.length === 0) return false;
-    for (const r of list) {
-      if (!pressedById?.[r.id]) return false;
-    }
-    return true;
-  }, [list, pressedById]);
-
-  const shouldShowGateBtn = useMemo(() => {
-    return showAnswerGateBtn && !unlocked && allSpeakersPressedAtLeastOnce;
-  }, [showAnswerGateBtn, unlocked, allSpeakersPressedAtLeastOnce]);
-
-  // 1분 뒤 정답보기 버튼 예약
-  useEffect(() => {
-    clearGateTimer();
-
-    if (unlocked) return;
-    if (!allSpeakersPressedAtLeastOnce) return;
-    if (pressSeq <= 0) return;
-
-    gateTimerRef.current = setTimeout(() => {
-      setShowAnswerGateBtn(true);
-    }, ANSWER_BTN_DELAY_MS);
-
-    return () => clearGateTimer();
-  }, [pressSeq, allSpeakersPressedAtLeastOnce, unlocked, clearGateTimer]);
-
   const onPressSpeaker = useCallback(
     (id, text) => {
-      clearGateTimer();
-      setShowAnswerGateBtn(false);
-
-      setPressedById((prev) => ({ ...prev, [id]: true }));
-      setPressSeq((v) => v + 1);
-
       startTimerFor(id);
       speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
     },
-    [clearGateTimer, startTimerFor, ttsSpeed.rate, punctReadOn]
+    [startTimerFor, ttsSpeed.rate, punctReadOn]
   );
 
   const pressDigit = useCallback((d) => {
@@ -335,17 +279,28 @@ export default function Dictation() {
   }, []);
 
   const confirmPin = useCallback(() => {
-    if (String(pin) === ANSWER_PIN_LOCAL) {
+    if (String(pin) === ANSWER_PIN) {
       setUnlocked(true);
+      setShowAnswers(true); // 잠금 해제 직후에는 보여주고, 버튼으로 다시 숨길 수 있게
       setPinOpen(false);
-      setShowAnswerGateBtn(false);
       setPin("");
-      clearGateTimer();
-      clearAllTimers(); // 정답 보여줄 때는 초도 안 보이게
+      clearAllTimers(); // 정답 확인할 때 타이머는 깔끔하게 정리
       return;
     }
     alert("비밀번호가 달라요.");
-  }, [pin, clearGateTimer, clearAllTimers, ANSWER_PIN_LOCAL]);
+  }, [pin, clearAllTimers]);
+
+  const openAnswerUI = useCallback(() => {
+    // 2) 정답보기 버튼은 항상 하단에 보이게.
+    //    잠금 전: PIN 모달 오픈
+    //    잠금 후: 정답 보기/숨기기 토글
+    if (!unlocked) {
+      setPinOpen(true);
+      setPin("");
+      return;
+    }
+    setShowAnswers((v) => !v);
+  }, [unlocked]);
 
   // ✅ 데이터 로딩: ymd를 viewYmd로 조회
   useEffect(() => {
@@ -390,13 +345,19 @@ export default function Dictation() {
         alert("받아쓰기 데이터를 불러오지 못했어요.");
         setList([]);
         resetPerItemStates();
-        resetAnswerGate();
+        setUnlocked(false);
+        setShowAnswers(false);
+        setPinOpen(false);
+        setPin("");
         setLoading(false);
         return;
       }
 
       resetPerItemStates();
-      resetAnswerGate();
+      setUnlocked(false);
+      setShowAnswers(false);
+      setPinOpen(false);
+      setPin("");
       setList(rows ?? []);
       setLoading(false);
     };
@@ -412,9 +373,8 @@ export default function Dictation() {
     return () => {
       stopSpeaking();
       clearAllTimers();
-      clearGateTimer();
     };
-  }, [navigate, viewYmd, resetPerItemStates, resetAnswerGate, clearAllTimers, clearGateTimer]);
+  }, [navigate, viewYmd, resetPerItemStates, clearAllTimers]);
 
   const canUseTTS = useMemo(() => {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -423,6 +383,11 @@ export default function Dictation() {
   const hasAnyPunct = useMemo(() => {
     return (list || []).some((r) => PUNCT_REGEX.test(String(r?.text ?? "")));
   }, [list]);
+
+  const answerBtnText = useMemo(() => {
+    if (!unlocked) return "정답보기";
+    return showAnswers ? "정답 숨기기" : "정답 보기";
+  }, [unlocked, showAnswers]);
 
   return (
     <div className="dictationPage">
@@ -449,8 +414,9 @@ export default function Dictation() {
       <div className="dictationGuideBox">
         <p className="keypoint">
           소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.<br />
-          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.  <br />
-          모든 받아쓰기를 마친 30초 후에 암호를 입력해 정답을 확인할 수 있습니다.</p>
+          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.<br />
+          정답은 아래의 ‘정답보기’ 버튼을 눌러 비밀번호로 확인할 수 있고, 확인 후에는 다시 숨길 수 있습니다.
+        </p>
       </div>
 
       <div className="dictationSpeedBar">
@@ -520,11 +486,13 @@ export default function Dictation() {
                 </div>
 
                 <div className="dictationRowRight">
-                  {unlocked && (
+                  {/* 잠금 해제 + showAnswers가 켜져 있을 때만 정답 노출 */}
+                  {unlocked && showAnswers && (
                     <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>
                   )}
 
-                  {!unlocked && started && (
+                  {/* 정답을 숨긴 상태면, 기존처럼 타이머만 보여주기 */}
+                  {(!unlocked || !showAnswers) && started && (
                     <div className={`dictationTimer ${expired ? "is-expired" : ""}`}>
                       {expired ? "시간 종료" : fmtMMSS(remain)}
                     </div>
@@ -536,18 +504,14 @@ export default function Dictation() {
         </div>
       )}
 
-      {shouldShowGateBtn && (
-        <div className="dictationAnswerGateBar">
-          <button
-            type="button"
-            className="dictationAnswerGateBtn"
-            onClick={() => setPinOpen(true)}
-          >
-            정답보기
-          </button>
-        </div>
-      )}
+      {/* 2) 하단 버튼은 항상 보이게 */}
+      <div className="dictationAnswerGateBar">
+        <button type="button" className="dictationAnswerGateBtn" onClick={openAnswerUI}>
+          {answerBtnText}
+        </button>
+      </div>
 
+      {/* PIN 모달: 잠금 상태에서만 열림 */}
       {pinOpen && !unlocked && (
         <div className="dictationPinOverlay" role="dialog" aria-modal="true">
           <div className="dictationPinModal">
@@ -579,11 +543,7 @@ export default function Dictation() {
             </div>
 
             <div className="dictationPinActions">
-              <button
-                type="button"
-                className="dictationPinCancel"
-                onClick={() => setPinOpen(false)}
-              >
+              <button type="button" className="dictationPinCancel" onClick={() => setPinOpen(false)}>
                 닫기
               </button>
               <button type="button" className="dictationPinOk" onClick={confirmPin}>
