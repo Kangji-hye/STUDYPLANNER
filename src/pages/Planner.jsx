@@ -1805,9 +1805,7 @@ function Planner() {
       <header className="top-header">
         <div className="top-row">
           <h1
-            className="app-title app-title-link"
-            title="마이페이지로 이동"
-            onClick={() => navigate("/mypage")}
+            className="app-title "
           >
             초등 스터디 플래너
           </h1>
