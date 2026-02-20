@@ -1,4 +1,4 @@
-// src/pages/Dictation.jsx (모바일 발음 보정 + 모바일/PC 속도 5단계 적용)
+// src/pages/Dictation.jsx (모바일/PC 속도 5단계 적용, 발음 보정 제거 버전)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import supabase from "../supabaseClient";
@@ -17,18 +17,18 @@ const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
 
 const TTS_SPEED_PRESETS_MOBILE = [
   { key: "m2", label: "-2", rate: 0.45 },
-  { key: "m1", label: "-1", rate: 0.6 },
+  { key: "m1", label: "-1 (느리게)", rate: 0.6 },
   { key: "m0", label: "보통", rate: 0.78 },
   { key: "p1", label: "+1", rate: 0.95 },
-  { key: "p2", label: "+2", rate: 1.12 },
+  { key: "p2", label: "+2 (빠르게)", rate: 1.12 },
 ];
 
 const TTS_SPEED_PRESETS_DESKTOP = [
   { key: "m2", label: "-2", rate: 0.6 },
-  { key: "m1", label: "-1", rate: 0.8 },
+  { key: "m1", label: "-1 (느리게)", rate: 0.8 },
   { key: "m0", label: "보통", rate: 1.0 },
   { key: "p1", label: "+1", rate: 1.3 },
-  { key: "p2", label: "+2", rate: 1.6 },
+  { key: "p2", label: "+2 (빠르게)", rate: 1.6 },
 ];
 
 const DEFAULT_TTS_SPEED_KEY = "m0";
@@ -79,13 +79,6 @@ function normalizePunctToWords(text) {
   return out;
 }
 
-function normalizeForTts(text) {
-  let out = String(text ?? "");
-  out = out.replace(/맨발로/g, "맨 발로");
-  out = out.replace(/\s+/g, " ").trim();
-  return out;
-}
-
 function pickKoreanVoice() {
   const voices = window.speechSynthesis?.getVoices?.() || [];
   return voices.find((v) => (v.lang || "").toLowerCase().startsWith("ko")) || null;
@@ -128,8 +121,6 @@ function speakKoreanWithQuestionLift(
     } else {
       out = (out + (endP || "")).replace(/\s+/g, " ").trim();
     }
-
-    out = normalizeForTts(out);
 
     if (!out) return;
 
@@ -197,17 +188,13 @@ export default function Dictation() {
   useEffect(() => {
     try {
       localStorage.setItem(TTS_SPEED_STORAGE_KEY, ttsSpeedKey);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [ttsSpeedKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(TTS_PUNCT_STORAGE_KEY, punctReadOn ? "1" : "0");
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [punctReadOn]);
 
   const viewYmd = useMemo(() => {
@@ -391,9 +378,7 @@ export default function Dictation() {
 
     try {
       window.speechSynthesis?.getVoices?.();
-    } catch {
-      // ignore
-    }
+    } catch {}
 
     return () => {
       stopSpeaking();
@@ -442,8 +427,7 @@ export default function Dictation() {
           <br />
           다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.
           <br />
-          정답은 아래의 ‘정답보기’ 버튼을 눌러 비밀번호로 확인할 수 있고, 확인 후에는 다시 숨길 수
-          있습니다.
+          정답은 아래의 ‘정답보기’ 버튼을 눌러 비밀번호로 확인할 수 있고, 확인 후에는 다시 숨길 수 있습니다.
         </p>
       </div>
 
