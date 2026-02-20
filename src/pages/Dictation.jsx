@@ -17,18 +17,18 @@ const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
 
 const TTS_SPEED_PRESETS_MOBILE = [
   { key: "m2", label: "-2", rate: 0.45 },
-  { key: "m1", label: "-1 (느리게)", rate: 0.6 },
+  { key: "m1", label: "-1", rate: 0.6 },
   { key: "m0", label: "보통", rate: 0.78 },
   { key: "p1", label: "+1", rate: 0.95 },
-  { key: "p2", label: "+2 (빠르게)", rate: 1.12 },
+  { key: "p2", label: "+2", rate: 1.12 },
 ];
 
 const TTS_SPEED_PRESETS_DESKTOP = [
   { key: "m2", label: "-2", rate: 0.6 },
-  { key: "m1", label: "-1 (느리게)", rate: 0.8 },
+  { key: "m1", label: "-1", rate: 0.8 },
   { key: "m0", label: "보통", rate: 1.0 },
   { key: "p1", label: "+1", rate: 1.3 },
-  { key: "p2", label: "+2 (빠르게)", rate: 1.6 },
+  { key: "p2", label: "+2", rate: 1.6 },
 ];
 
 const DEFAULT_TTS_SPEED_KEY = "m0";
