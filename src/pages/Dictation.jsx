@@ -1,4 +1,4 @@
-// src/pages/Dictation.jsx
+// src/pages/Dictation.jsx (모바일/PC 속도 5단계: -2, -1(느리게), 보통, +1, +2(빠르게))
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import supabase from "../supabaseClient";
@@ -15,13 +15,33 @@ function ymd(date = new Date()) {
 const TTS_SPEED_STORAGE_KEY = "dictation_tts_speed_v1";
 const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
 
-// 1) 빠르게 속도 조정: 1.8 → 1.3 (너무 튀는 느낌을 줄임)
-const TTS_SPEED_PRESETS = [
-  { key: "slow", label: "느리게", rate: 0.6 },
-  { key: "normal", label: "보통", rate: 0.95 },
-  { key: "fast", label: "빠르게", rate: 1.3 },
+const TTS_SPEED_PRESETS_MOBILE = [
+  { key: "m2", label: "-2", rate: 0.65 },
+  { key: "m1", label: "-1 (느리게)", rate: 0.78 },
+  { key: "m0", label: "보통", rate: 0.9 },
+  { key: "p1", label: "+1", rate: 1.02 },
+  { key: "p2", label: "+2 (빠르게)", rate: 1.12 },
 ];
-const DEFAULT_TTS_SPEED_KEY = "normal";
+
+const TTS_SPEED_PRESETS_DESKTOP = [
+  { key: "m2", label: "-2", rate: 0.6 },
+  { key: "m1", label: "-1 (느리게)", rate: 0.8 },
+  { key: "m0", label: "보통", rate: 1.0 },
+  { key: "p1", label: "+1", rate: 1.3 },
+  { key: "p2", label: "+2 (빠르게)", rate: 1.6 },
+];
+
+const DEFAULT_TTS_SPEED_KEY = "m0";
+
+function isMobileLike() {
+  try {
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches;
+    const small = window.matchMedia?.("(max-width: 820px)")?.matches;
+    return Boolean(coarse && small);
+  } catch {
+    return false;
+  }
+}
 
 const TTS_PUNCT_PRESETS = [
   { key: "off", label: "X", value: false },
@@ -32,7 +52,6 @@ const PUNCT_REGEX = /[,.!?，。！？…]/;
 
 const PER_ITEM_SECONDS = 120;
 
-// 비밀번호는 그대로 유지
 const ANSWER_PIN = "486";
 
 function stopSpeaking() {
@@ -110,7 +129,6 @@ function speakKoreanWithQuestionLift(
     u.rate = rate;
     u.volume = volume;
 
-    // 물음표는 끝을 올려 말하는 느낌
     if (endP === "?") {
       u.pitch = 1.45;
       u.rate = rate * 0.98;
@@ -140,10 +158,16 @@ export default function Dictation() {
   const [nickname, setNickname] = useState("");
   const [list, setList] = useState([]);
 
+  const speedPresets = useMemo(() => {
+    return isMobileLike() ? TTS_SPEED_PRESETS_MOBILE : TTS_SPEED_PRESETS_DESKTOP;
+  }, []);
+
   const [ttsSpeedKey, setTtsSpeedKey] = useState(() => {
     try {
       const saved = localStorage.getItem(TTS_SPEED_STORAGE_KEY);
-      return saved || DEFAULT_TTS_SPEED_KEY;
+      if (!saved) return DEFAULT_TTS_SPEED_KEY;
+      const ok = speedPresets.some((x) => x.key === saved);
+      return ok ? saved : DEFAULT_TTS_SPEED_KEY;
     } catch {
       return DEFAULT_TTS_SPEED_KEY;
     }
@@ -158,8 +182,8 @@ export default function Dictation() {
   });
 
   const ttsSpeed = useMemo(() => {
-    return TTS_SPEED_PRESETS.find((x) => x.key === ttsSpeedKey) || TTS_SPEED_PRESETS[1];
-  }, [ttsSpeedKey]);
+    return speedPresets.find((x) => x.key === ttsSpeedKey) || speedPresets[2];
+  }, [ttsSpeedKey, speedPresets]);
 
   useEffect(() => {
     try {
@@ -177,7 +201,6 @@ export default function Dictation() {
     }
   }, [punctReadOn]);
 
-  // ✅ Planner에서 넘어온 날짜(ymd=YYYY-MM-DD)가 있으면 그 날짜를, 없으면 오늘을 사용
   const viewYmd = useMemo(() => {
     const qs = new URLSearchParams(location.search);
     const q = String(qs.get("ymd") ?? "").trim();
@@ -185,16 +208,13 @@ export default function Dictation() {
     return ymd(new Date());
   }, [location.search]);
 
-  // 문항별 타이머
   const [remainById, setRemainById] = useState({});
   const [startedById, setStartedById] = useState({});
   const timersRef = useRef({});
 
-  // ✅ 정답 잠금/표시 토글 상태
   const [unlocked, setUnlocked] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false);
 
-  // PIN 모달
   const [pinOpen, setPinOpen] = useState(false);
   const [pin, setPin] = useState("");
 
@@ -281,19 +301,16 @@ export default function Dictation() {
   const confirmPin = useCallback(() => {
     if (String(pin) === ANSWER_PIN) {
       setUnlocked(true);
-      setShowAnswers(true); // 잠금 해제 직후에는 보여주고, 버튼으로 다시 숨길 수 있게
+      setShowAnswers(true);
       setPinOpen(false);
       setPin("");
-      clearAllTimers(); // 정답 확인할 때 타이머는 깔끔하게 정리
+      clearAllTimers();
       return;
     }
     alert("비밀번호가 달라요.");
   }, [pin, clearAllTimers]);
 
   const openAnswerUI = useCallback(() => {
-    // 2) 정답보기 버튼은 항상 하단에 보이게.
-    //    잠금 전: PIN 모달 오픈
-    //    잠금 후: 정답 보기/숨기기 토글
     if (!unlocked) {
       setPinOpen(true);
       setPin("");
@@ -302,7 +319,6 @@ export default function Dictation() {
     setShowAnswers((v) => !v);
   }, [unlocked]);
 
-  // ✅ 데이터 로딩: ymd를 viewYmd로 조회
   useEffect(() => {
     const run = async () => {
       setLoading(true);
@@ -413,21 +429,27 @@ export default function Dictation() {
 
       <div className="dictationGuideBox">
         <p className="keypoint">
-          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.<br />
-          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.<br />
-          정답은 아래의 ‘정답보기’ 버튼을 눌러 비밀번호로 확인할 수 있고, 확인 후에는 다시 숨길 수 있습니다.
+          소리 버튼을 누르면 받아쓰기 문장을 읽어줍니다.
+          <br />
+          다 받아 적었으면, 타이머와 상관 없이 다음 소리 버튼을 눌러 주세요.
+          <br />
+          정답은 아래의 ‘정답보기’ 버튼을 눌러 비밀번호로 확인할 수 있고, 확인 후에는 다시 숨길 수
+          있습니다.
         </p>
       </div>
 
       <div className="dictationSpeedBar">
         <span className="dictationSpeedLabel">속도 :</span>
 
-        {TTS_SPEED_PRESETS.map((p) => (
+        {speedPresets.map((p) => (
           <button
             key={p.key}
             type="button"
             className={`dictationSpeedBtn ${ttsSpeedKey === p.key ? "is-active" : ""}`}
-            onClick={() => setTtsSpeedKey(p.key)}
+            onClick={() => {
+              stopSpeaking();
+              setTtsSpeedKey(p.key);
+            }}
             disabled={!canUseTTS}
             title={`읽기 속도: ${p.label}`}
           >
@@ -486,12 +508,10 @@ export default function Dictation() {
                 </div>
 
                 <div className="dictationRowRight">
-                  {/* 잠금 해제 + showAnswers가 켜져 있을 때만 정답 노출 */}
                   {unlocked && showAnswers && (
                     <span className="dictationInlineAnswer">{String(r.text ?? "")}</span>
                   )}
 
-                  {/* 정답을 숨긴 상태면, 기존처럼 타이머만 보여주기 */}
                   {(!unlocked || !showAnswers) && started && (
                     <div className={`dictationTimer ${expired ? "is-expired" : ""}`}>
                       {expired ? "시간 종료" : fmtMMSS(remain)}
@@ -504,14 +524,12 @@ export default function Dictation() {
         </div>
       )}
 
-      {/* 2) 하단 버튼은 항상 보이게 */}
       <div className="dictationAnswerGateBar">
         <button type="button" className="dictationAnswerGateBtn" onClick={openAnswerUI}>
           {answerBtnText}
         </button>
       </div>
 
-      {/* PIN 모달: 잠금 상태에서만 열림 */}
       {pinOpen && !unlocked && (
         <div className="dictationPinOverlay" role="dialog" aria-modal="true">
           <div className="dictationPinModal">
