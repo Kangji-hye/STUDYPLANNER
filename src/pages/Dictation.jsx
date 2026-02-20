@@ -1,4 +1,4 @@
-// src/pages/Dictation.jsx (모바일/PC 속도 5단계: -2, -1(느리게), 보통, +1, +2(빠르게))
+// src/pages/Dictation.jsx (모바일 발음 보정 + 모바일/PC 속도 5단계 적용)
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import supabase from "../supabaseClient";
@@ -16,10 +16,10 @@ const TTS_SPEED_STORAGE_KEY = "dictation_tts_speed_v1";
 const TTS_PUNCT_STORAGE_KEY = "dictation_tts_punct_v1";
 
 const TTS_SPEED_PRESETS_MOBILE = [
-  { key: "m2", label: "-2", rate: 0.65 },
-  { key: "m1", label: "-1 (느리게)", rate: 0.78 },
-  { key: "m0", label: "보통", rate: 0.9 },
-  { key: "p1", label: "+1", rate: 1.02 },
+  { key: "m2", label: "-2", rate: 0.45 },
+  { key: "m1", label: "-1 (느리게)", rate: 0.6 },
+  { key: "m0", label: "보통", rate: 0.78 },
+  { key: "p1", label: "+1", rate: 0.95 },
   { key: "p2", label: "+2 (빠르게)", rate: 1.12 },
 ];
 
@@ -79,6 +79,13 @@ function normalizePunctToWords(text) {
   return out;
 }
 
+function normalizeForTts(text) {
+  let out = String(text ?? "");
+  out = out.replace(/맨발로/g, "맨 발로");
+  out = out.replace(/\s+/g, " ").trim();
+  return out;
+}
+
 function pickKoreanVoice() {
   const voices = window.speechSynthesis?.getVoices?.() || [];
   return voices.find((v) => (v.lang || "").toLowerCase().startsWith("ko")) || null;
@@ -121,6 +128,8 @@ function speakKoreanWithQuestionLift(
     } else {
       out = (out + (endP || "")).replace(/\s+/g, " ").trim();
     }
+
+    out = normalizeForTts(out);
 
     if (!out) return;
 
@@ -466,7 +475,10 @@ export default function Dictation() {
                 key={p.key}
                 type="button"
                 className={`dictationSpeedBtn ${punctReadOn === p.value ? "is-active" : ""}`}
-                onClick={() => setPunctReadOn(p.value)}
+                onClick={() => {
+                  stopSpeaking();
+                  setPunctReadOn(p.value);
+                }}
                 disabled={!canUseTTS}
                 title="쉼표/마침표/물음표 등을 말로 읽어줍니다"
               >
