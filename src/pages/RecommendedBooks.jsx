@@ -1,369 +1,520 @@
-/* src/pages/RecommendedBooks.jsx */
-import { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/RecommendedBooks.jsx
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./RecommendedBooks.css";
 
-// 학년 옵션 (프로젝트에서 grade_code를 다르게 쓰고 있다면 여기만 맞춰주면 됩니다)
-const GRADE_OPTIONS = [
-  { label: "1학년", value: 1 },
-  { label: "2학년", value: 2 },
-  { label: "3학년", value: 3 },
-  { label: "4학년", value: 4 },
-  { label: "5학년", value: 5 },
-  { label: "6학년", value: 6 },
+const DEFAULT_GRADE_CODE = 2;
+
+// HTML의 statusFilter 옵션 값을 그대로 유지합니다.
+const STATUS_FILTER_OPTIONS = [
+  { value: "yes_child", label: "소장도서 + 어린이자료실" },
+  { value: "yes", label: "소장도서만" },
+  { value: "no", label: "미소장도서만" },
+  { value: "all", label: "전체" },
 ];
 
-// HTML에서 쓰던 상태 필터를 그대로 가져옵니다.
-const STATUS_FILTERS = [
-  { label: "소장도서 + 어린이자료실", value: "yes_child" },
-  { label: "소장도서만", value: "yes" },
-  { label: "미소장", value: "no" },
-  { label: "보존서고", value: "preserve" },
-];
+function norm(s) {
+  return String(s ?? "").trim();
+}
+
+function includesIgnoreCase(haystack, needle) {
+  const h = norm(haystack).toLowerCase();
+  const n = norm(needle).toLowerCase();
+  if (!n) return true;
+  return h.includes(n);
+}
+
+function isOwned(statusText) {
+  // "✅ 소장" / "❌ 미소장" 형태를 사용한다고 가정
+  return norm(statusText).includes("✅");
+}
+
+function isChildRoom(locationText) {
+  return norm(locationText).includes("어린이자료실");
+}
+
+function getColsStorageKey(userId) {
+  // 사용자별로 저장 (같은 브라우저에서 유지)
+  return `recommended_books_visible_cols_v1:${userId || "guest"}`;
+}
+
+function safeParseCols(jsonStr) {
+  try {
+    const v = JSON.parse(jsonStr);
+    if (!v || typeof v !== "object") return null;
+
+    return {
+      no: v.no !== false,
+      author: v.author !== false,
+      publisher: v.publisher !== false,
+      status: v.status !== false,
+      location: v.location !== false,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default function RecommendedBooks() {
   const navigate = useNavigate();
 
-  const [gradeCode, setGradeCode] = useState(2);
+  const [userId, setUserId] = useState(null);
 
+  const [gradeCode, setGradeCode] = useState(DEFAULT_GRADE_CODE);
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("yes_child");
   const [onlyUnchecked, setOnlyUnchecked] = useState(false);
-  const [search, setSearch] = useState("");
 
-  const [loading, setLoading] = useState(true);
-  const [savingMap, setSavingMap] = useState(() => new Map()); // book_no별 저장중 표시
-  const [books, setBooks] = useState([]);
+  // 책 목록(Supabase에서 로드)
+  const [booksForGrade, setBooksForGrade] = useState([]);
+  const [loadingBooks, setLoadingBooks] = useState(false);
+  const [booksError, setBooksError] = useState("");
+
+  // "대여" 체크(행 체크)
   const [checkedSet, setCheckedSet] = useState(() => new Set());
+  const [loadingChecks, setLoadingChecks] = useState(false);
 
-  const [errorMsg, setErrorMsg] = useState("");
+  // 열 표시 체크(번호/작가/출판사/구성도서관/자료실 위치)
+  const [visibleCols, setVisibleCols] = useState({
+    no: true,
+    author: true,
+    publisher: true,
+    status: true,
+    location: true,
+  });
 
-  // 입력 디바운스(모바일 버벅임 방지)
-  const searchTimerRef = useRef(null);
-  const [searchDebounced, setSearchDebounced] = useState("");
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
 
-  useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
-      setSearchDebounced(search.trim().toLowerCase());
-    }, 200);
-
-    return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    };
-  }, [search]);
-
-  // 1) 현재 로그인 사용자 확인
-  async function getUserId() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    if (!data?.user?.id) throw new Error("로그인이 필요합니다.");
-    return data.user.id;
-  }
-
-  // 2) 추천도서 목록 불러오기 (학년별)
-  async function loadBooks(grade) {
-    const { data, error } = await supabase
-      .from("recommended_books")
-      .select("grade_code, book_no, title, author, publisher, status_class, status_text, callno, location, library")
-      .eq("grade_code", grade)
-      .order("book_no", { ascending: true });
-
-    if (error) throw error;
-    return data ?? [];
-  }
-
-  // 3) 내 체크 상태 불러오기 (학년별)
-  async function loadChecks(userId, grade) {
-    const { data, error } = await supabase
-      .from("recommended_book_checks")
-      .select("book_no, is_checked")
-      .eq("user_id", userId)
-      .eq("grade_code", grade);
-
-    if (error) throw error;
-
-    const set = new Set();
-    (data ?? []).forEach((row) => {
-      if (row.is_checked) set.add(row.book_no);
-    });
-    return set;
-  }
-
-  // 4) 화면 진입/학년 변경 시 로딩
+  // 로그인 사용자 확인
   useEffect(() => {
     let alive = true;
 
-    async function run() {
-      setLoading(true);
-      setErrorMsg("");
+    (async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (!alive) return;
 
-      try {
-        const userId = await getUserId();
-
-        const [b, checks] = await Promise.all([
-          loadBooks(gradeCode),
-          loadChecks(userId, gradeCode),
-        ]);
-
-        if (!alive) return;
-
-        setBooks(b);
-        setCheckedSet(checks);
-      } catch (e) {
-        if (!alive) return;
-        setErrorMsg(e?.message || "불러오기 실패");
-      } finally {
-        if (!alive) return;
-        setLoading(false);
+      if (error) {
+        console.error(error);
+        setUserId(null);
+        return;
       }
-    }
 
-    run();
+      setUserId(data?.user?.id ?? null);
+    })();
+
     return () => {
       alive = false;
     };
-  }, [gradeCode]);
+  }, []);
 
-  // 5) 체크 저장 (업서트)
-  async function toggleCheck(bookNo) {
-    setErrorMsg("");
+  // 사용자별 열 표시 상태 불러오기
+  useEffect(() => {
+    const key = getColsStorageKey(userId);
+    const saved = localStorage.getItem(key);
+    const parsed = saved ? safeParseCols(saved) : null;
 
-    // 화면은 먼저 바꿔서 빠르게 반응하게 합니다.
-    setCheckedSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(bookNo)) next.delete(bookNo);
-      else next.add(bookNo);
-      return next;
-    });
+    if (parsed) setVisibleCols(parsed);
+  }, [userId]);
 
-    setSavingMap((prev) => {
-      const next = new Map(prev);
-      next.set(bookNo, true);
-      return next;
-    });
+  // 사용자별 열 표시 상태 저장하기
+  useEffect(() => {
+    const key = getColsStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(visibleCols));
+  }, [userId, visibleCols]);
+
+  // Supabase에서 학년별 책 목록 불러오기
+  const loadBooks = useCallback(async () => {
+    setLoadingBooks(true);
+    setBooksError("");
 
     try {
-      const userId = await getUserId();
-
-      // 지금 최신 상태(토글 후)를 계산
-      const willBeChecked = !checkedSet.has(bookNo);
-
-      const payload = {
-        user_id: userId,
-        grade_code: gradeCode,
-        book_no: bookNo,
-        is_checked: willBeChecked,
-        checked_at: willBeChecked ? new Date().toISOString() : null,
-      };
-
-      const { error } = await supabase
-        .from("recommended_book_checks")
-        .upsert(payload, { onConflict: "user_id,grade_code,book_no" });
+      const { data, error } = await supabase
+        .from("recommended_books")
+        .select("book_no, title, author, publisher, library_status, callno, location")
+        .eq("grade_code", gradeCode)
+        .order("book_no", { ascending: true });
 
       if (error) throw error;
+
+      const mapped = (data ?? []).map((row) => ({
+        no: Number(row.book_no),
+        title: row.title ?? "",
+        author: row.author ?? "",
+        publisher: row.publisher ?? "",
+        status: row.library_status ?? "",
+        callno: row.callno ?? "",
+        location: row.location ?? "",
+      }));
+
+      setBooksForGrade(mapped);
     } catch (e) {
-      // 실패하면 원래대로 되돌립니다.
-      setCheckedSet((prev) => {
-        const next = new Set(prev);
-        // 방금 바꾼 걸 다시 되돌림
-        if (next.has(bookNo)) next.delete(bookNo);
-        else next.add(bookNo);
-        return next;
-      });
-      setErrorMsg(e?.message || "저장 실패");
+      console.error(e);
+      setBooksForGrade([]);
+      setBooksError("도서 목록을 불러오지 못했어요. (Supabase 테이블/정책/컬럼명을 확인해 주세요)");
     } finally {
-      setSavingMap((prev) => {
-        const next = new Map(prev);
-        next.delete(bookNo);
-        return next;
-      });
+      setLoadingBooks(false);
     }
-  }
+  }, [gradeCode]);
 
-  // 6) HTML의 필터 로직을 그대로 React로 옮긴 것
-  const filteredBooks = useMemo(() => {
-    return (books ?? []).filter((b) => {
-      const text = `${b.title ?? ""} ${b.author ?? ""} ${b.publisher ?? ""}`.toLowerCase();
+  useEffect(() => {
+    loadBooks();
+  }, [loadBooks]);
 
-      // (1) 검색
-      const matchText = !searchDebounced || text.includes(searchDebounced);
+  // Supabase에서 체크 상태(대여 체크) 불러오기
+  const loadChecks = useCallback(async () => {
+    if (!userId) {
+      setCheckedSet(new Set());
+      return;
+    }
 
-      // (2) 상태 필터
-      const locationText = (b.location ?? "").trim();
-      let matchStatus = true;
+    setLoadingChecks(true);
+    try {
+      const { data, error } = await supabase
+        .from("recommended_book_checks")
+        .select("book_no, checked")
+        .eq("user_id", userId)
+        .eq("grade_code", gradeCode)
+        .eq("checked", true);
 
-      if (statusFilter === "yes") {
-        matchStatus = b.status_class === "yes";
-      } else if (statusFilter === "no") {
-        matchStatus = b.status_class === "no";
-      } else if (statusFilter === "yes_child") {
-        matchStatus = b.status_class === "yes" && locationText.includes("어린이자료실");
-      } else if (statusFilter === "preserve") {
-        matchStatus = locationText.includes("보존서고");
+      if (error) throw error;
+
+      const s = new Set();
+      (data ?? []).forEach((row) => {
+        if (row?.checked) s.add(Number(row.book_no));
+      });
+
+      setCheckedSet(s);
+    } catch (e) {
+      console.error(e);
+      setCheckedSet(new Set());
+    } finally {
+      setLoadingChecks(false);
+    }
+  }, [userId, gradeCode]);
+
+  useEffect(() => {
+    loadChecks();
+  }, [loadChecks]);
+
+  // 체크 토글 저장(대여 체크)
+  const toggleCheck = useCallback(
+    async (bookNo) => {
+      const no = Number(bookNo);
+
+      if (!userId) {
+        alert("로그인 후 사용할 수 있어요.");
+        navigate("/login");
+        return;
       }
 
-      // (3) 대여 안 한 것만(체크 안 된 것만)
-      const isChecked = checkedSet.has(b.book_no);
-      const matchBorrow = !onlyUnchecked || !isChecked;
+      // 화면 먼저 반영
+      setCheckedSet((prev) => {
+        const next = new Set(prev);
+        if (next.has(no)) next.delete(no);
+        else next.add(no);
+        return next;
+      });
 
-      return matchText && matchStatus && matchBorrow;
+      try {
+        // setState는 비동기라서, 여기서는 "현재 checkedSet" 기준으로 next를 계산
+        const nextChecked = !checkedSet.has(no);
+
+        const payload = {
+          user_id: userId,
+          grade_code: gradeCode,
+          book_no: no,
+          checked: nextChecked,
+          checked_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from("recommended_book_checks")
+          .upsert(payload, { onConflict: "user_id,grade_code,book_no" });
+
+        if (error) throw error;
+      } catch (e) {
+        console.error(e);
+        // 실패 시 서버 상태 다시 로드해서 화면 복구
+        loadChecks();
+        alert("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    },
+    [userId, gradeCode, navigate, checkedSet, loadChecks]
+  );
+
+  const filteredBooks = useMemo(() => {
+    let list = booksForGrade;
+
+    list = list.filter((b) => {
+      const owned = isOwned(b.status);
+      const child = isChildRoom(b.location);
+
+      if (statusFilter === "yes_child") return owned && child;
+      if (statusFilter === "yes") return owned;
+      if (statusFilter === "no") return !owned;
+      return true;
     });
-  }, [books, checkedSet, onlyUnchecked, searchDebounced, statusFilter]);
 
-  const totalCount = books.length;
-  const checkedCount = useMemo(() => {
-    // 현재 학년의 책 중 체크된 것만 카운트
-    const allNos = new Set(books.map((b) => b.book_no));
-    let n = 0;
-    checkedSet.forEach((no) => {
-      if (allNos.has(no)) n++;
+    if (norm(searchTerm)) {
+      list = list.filter((b) => {
+        return (
+          includesIgnoreCase(b.title, searchTerm) ||
+          includesIgnoreCase(b.author, searchTerm) ||
+          includesIgnoreCase(b.publisher, searchTerm)
+        );
+      });
+    }
+
+    if (onlyUnchecked) {
+      list = list.filter((b) => !checkedSet.has(Number(b.no)));
+    }
+
+    if (sortKey) {
+      const dir = sortDir === "desc" ? -1 : 1;
+      const key = sortKey;
+
+      list = [...list].sort((a, b) => {
+        const av = a[key];
+        const bv = b[key];
+
+        if (key === "no") return (Number(av) - Number(bv)) * dir;
+
+        const as = norm(av);
+        const bs = norm(bv);
+
+        if (key === "status") {
+          const ao = isOwned(as) ? 0 : 1;
+          const bo = isOwned(bs) ? 0 : 1;
+          if (ao !== bo) return (ao - bo) * dir;
+          return as.localeCompare(bs, "ko") * dir;
+        }
+
+        return as.localeCompare(bs, "ko") * dir;
+      });
+    }
+
+    return list;
+  }, [booksForGrade, statusFilter, searchTerm, onlyUnchecked, checkedSet, sortKey, sortDir]);
+
+  const stats = useMemo(() => {
+    const total = booksForGrade.length;
+    const owned = booksForGrade.filter((b) => isOwned(b.status)).length;
+    const notOwned = total - owned;
+    const childRoom = booksForGrade.filter((b) => isChildRoom(b.location)).length;
+    const checked = checkedSet.size;
+
+    const shown = filteredBooks.length;
+    return { total, owned, notOwned, childRoom, checked, shown };
+  }, [booksForGrade, checkedSet, filteredBooks]);
+
+  const onSort = useCallback((key) => {
+    setSortKey((prevKey) => {
+      if (prevKey !== key) {
+        setSortDir("asc");
+        return key;
+      }
+      setSortDir((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
+      return prevKey;
     });
-    return n;
-  }, [books, checkedSet]);
+  }, []);
 
-  const visibleCount = filteredBooks.length;
-
-  const gradeLabel = useMemo(() => {
-    const found = GRADE_OPTIONS.find((g) => g.value === gradeCode);
-    return found ? found.label : `${gradeCode}학년`;
-  }, [gradeCode]);
+  const toggleCol = useCallback((key) => {
+    setVisibleCols((v) => ({ ...v, [key]: !v[key] }));
+  }, []);
 
   return (
     <div className="booksPage">
-      <header className="booksHeader">
-        <div className="booksHeaderTop">
-          <h1>카라 {gradeLabel} 추천 도서목록</h1>
-          <div className="booksHeaderRight">
-            <HamburgerMenu />
-          </div>
+      <div className="booksHeaderWrap">
+        <div className="hamburgerAbs">
+          <HamburgerMenu />
         </div>
 
-        <p className="booksHeaderSub">
-          구성도서관 소장 현황 기반 · 체크는 로그인한 아이(계정)별로 저장됩니다.
-        </p>
-      </header>
-
-      <div className="booksControls">
-        <div className="controlsRow">
-          <label className="control">
-            <span className="controlLabel">학년</span>
-            <select value={gradeCode} onChange={(e) => setGradeCode(Number(e.target.value))}>
-              {GRADE_OPTIONS.map((g) => (
-                <option key={g.value} value={g.value}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="control grow">
-            <span className="controlLabel">검색</span>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="제목/작가/출판사 검색"
-            />
-          </label>
-
-          <label className="control">
-            <span className="controlLabel">상태</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              {STATUS_FILTERS.map((s) => (
-                <option key={s.value} value={s.value}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="control checkboxControl">
-            <input
-              type="checkbox"
-              checked={onlyUnchecked}
-              onChange={(e) => setOnlyUnchecked(e.target.checked)}
-            />
-            <span>대여 안 한 것만</span>
-          </label>
+        <div className="header">
+          <h1>📚 카라 {gradeCode}학년 추천 도서목록</h1>
+          <p>
+            구성도서관(용인특례시) 소장 현황 &nbsp;|&nbsp; 총 {stats.total}권
+          </p>
+          <div className="legend"></div>
         </div>
-
-        <div className="statsRow">
-          <span className="pill">총 {totalCount}권</span>
-          <span className="pill">표시 {visibleCount}권</span>
-          <span className="pill">완료 {checkedCount}권</span>
-          <span className="pill">남은 {Math.max(totalCount - checkedCount, 0)}권</span>
-
-          <button className="ghostBtn" onClick={() => navigate(-1)}>
-            뒤로
-          </button>
-        </div>
-
-        {errorMsg ? <div className="errorBox">{errorMsg}</div> : null}
       </div>
 
-      <main className="booksMain">
-        {loading ? (
-          <div className="loadingBox">불러오는 중...</div>
+      <div className="controls">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="🔍 제목, 작가, 출판사 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
+        <select
+          id="gradeFilter"
+          value={gradeCode}
+          onChange={(e) => setGradeCode(Number(e.target.value))}
+        >
+          <option value={1}>1학년</option>
+          <option value={2}>2학년</option>
+          <option value={3}>3학년</option>
+          <option value={4}>4학년</option>
+          <option value={5}>5학년</option>
+          <option value={6}>6학년</option>
+        </select>
+
+        <select
+          id="statusFilter"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          {STATUS_FILTER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+
+        <label className="borrowFilter">
+          <input
+            type="checkbox"
+            id="onlyNotBorrowed"
+            checked={onlyUnchecked}
+            onChange={(e) => setOnlyUnchecked(e.target.checked)}
+          />
+          <span>대여 안한것만</span>
+        </label>
+
+        <div className="stats" aria-live="polite">
+          <span className="badge">표시: {stats.shown}권</span>
+          <span className="badge green">소장: {stats.owned}권</span>
+          <span className="badge red">미소장: {stats.notOwned}권</span>
+          <span className="badge">어린이자료실: {stats.childRoom}권</span>
+          <span className="badge blue">
+            완료: {stats.checked}권{loadingChecks ? " (불러오는 중)" : ""}
+          </span>
+        </div>
+      </div>
+
+      {/* columnToggles만 sticky로 만들고 싶다면, CSS에서 .controls sticky 제거하고
+          .columnToggles에 position:sticky 적용하면 됩니다(현재 구조는 바깥으로 이미 분리되어 있어요). */}
+      <div className="columnToggles" aria-label="열 표시 설정">
+        <label>
+          <input type="checkbox" checked={visibleCols.no} onChange={() => toggleCol("no")} />
+          번호
+        </label>
+        <label>
+          <input type="checkbox" checked={visibleCols.author} onChange={() => toggleCol("author")} />
+          작가
+        </label>
+        <label>
+          <input type="checkbox" checked={visibleCols.publisher} onChange={() => toggleCol("publisher")} />
+          출판사
+        </label>
+        <label>
+          <input type="checkbox" checked={visibleCols.status} onChange={() => toggleCol("status")} />
+          구성도서관
+        </label>
+        <label>
+          <input type="checkbox" checked={visibleCols.location} onChange={() => toggleCol("location")} />
+          자료실
+        </label>
+      </div>
+
+      <div className="tableWrap">
+        {loadingBooks ? (
+          <div className="no-result">도서 목록 불러오는 중...</div>
+        ) : booksError ? (
+          <div className="no-result">{booksError}</div>
+        ) : booksForGrade.length === 0 ? (
+          <div className="emptyState">
+            <h2>아직 준비중이에요</h2>
+            <p>선택한 학년의 추천도서 데이터가 아직 없어요.</p>
+          </div>
         ) : (
-          <>
-            {filteredBooks.length === 0 ? (
-              <div className="noResult">조건에 맞는 도서가 없습니다.</div>
-            ) : (
-              <div className="tableWrap">
-                <table className="booksTable">
-                  <thead>
-                    <tr>
-                      <th className="colChk">대여</th>
-                      <th className="colNo">번호</th>
-                      <th>제목</th>
-                      <th className="colAuthor">작가</th>
-                      <th className="colPub">출판사</th>
-                      <th className="colStatus">소장여부</th>
-                      <th className="colCallno">청구기호</th>
-                      <th className="colLoc">위치</th>
-                    </tr>
-                  </thead>
+          <table id="booksTable">
+            <thead>
+              <tr>
+                {/* 대여 열 폭: inline style은 CSS보다 강해서 공간이 커집니다.
+                   여기서는 inline style 제거하고 CSS에서 th/td 폭을 잡는 게 좋아요. */}
+                <th className="borrowCol">대여</th>
 
-                  <tbody>
-                    {filteredBooks.map((b) => {
-                      const checked = checkedSet.has(b.book_no);
-                      const saving = savingMap.get(b.book_no) === true;
+                {visibleCols.no && (
+                  <th onClick={() => onSort("no")} role="button" tabIndex={0}>
+                    번호 ↕
+                  </th>
+                )}
 
-                      return (
-                        <tr key={b.book_no} className={checked ? "rowChecked" : ""}>
-                          <td className="colChk">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={saving}
-                              onChange={() => toggleCheck(b.book_no)}
-                            />
-                          </td>
+                <th onClick={() => onSort("title")} role="button" tabIndex={0}>
+                  책제목 ↕
+                </th>
 
-                          <td className="colNo">{b.book_no}</td>
-                          <td className="colTitle">{b.title}</td>
-                          <td className="colAuthor">{b.author}</td>
-                          <td className="colPub">{b.publisher}</td>
+                {visibleCols.author && (
+                  <th onClick={() => onSort("author")} role="button" tabIndex={0}>
+                    작가 ↕
+                  </th>
+                )}
 
-                          <td className="colStatus">
-                            <span className={b.status_class === "yes" ? "status yes" : "status no"}>
-                              {b.status_text}
-                            </span>
-                          </td>
+                {visibleCols.publisher && (
+                  <th onClick={() => onSort("publisher")} role="button" tabIndex={0}>
+                    출판사 ↕
+                  </th>
+                )}
 
-                          <td className="colCallno">{b.callno || "-"}</td>
-                          <td className="colLoc">{b.location || "-"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </>
+                {visibleCols.status && (
+                  <th onClick={() => onSort("status")} role="button" tabIndex={0}>
+                    구성도서관
+                  </th>
+                )}
+
+                <th onClick={() => onSort("callno")} role="button" tabIndex={0}>
+                  청구기호 ↕
+                </th>
+
+                {visibleCols.location && (
+                  <th onClick={() => onSort("location")} role="button" tabIndex={0}>
+                    자료실 위치
+                  </th>
+                )}
+              </tr>
+            </thead>
+
+            <tbody id="tableBody">
+              {filteredBooks.map((b) => {
+                const no = Number(b.no);
+                const checked = checkedSet.has(no);
+
+                return (
+                  <tr key={no} className={checked ? "rowChecked" : ""}>
+                    <td className="borrowCol">
+                      <input
+                        type="checkbox"
+                        className="borrowChk"
+                        checked={checked}
+                        onChange={() => toggleCheck(no)}
+                      />
+                    </td>
+
+                    {visibleCols.no && <td>{b.no}</td>}
+                    <td className="titleCell">{b.title}</td>
+                    {visibleCols.author && <td>{b.author}</td>}
+                    {visibleCols.publisher && <td>{b.publisher}</td>}
+
+                    {visibleCols.status && (
+                      <td className={isOwned(b.status) ? "owned" : "notOwned"}>
+                        {b.status}
+                      </td>
+                    )}
+
+                    <td>{b.callno}</td>
+                    {visibleCols.location && <td>{b.location}</td>}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         )}
-      </main>
+      </div>
     </div>
   );
 }

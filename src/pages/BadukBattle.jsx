@@ -9,7 +9,7 @@ import "./BadukGame.css";
 import "./BadukBattle.css";
 
 const BOARD_SIZE = 9;
-const STALE_MS = 2 * 60 * 1000; // 2분
+const STALE_MS = 60 * 1000; // 1분 (폴백용)
 
 
 export default function BadukBattle() {
@@ -47,12 +47,14 @@ export default function BadukBattle() {
   const staleTimerRef = useRef(null);
   const pollRef = useRef(null);
   const myRoleRef = useRef(null);
+  const myIdRef = useRef(null);
   const roomIdRef = useRef(null);
   const isSubmittingRef = useRef(false);
   const winSavedRef = useRef(false);
 
   // refs 동기화
   useEffect(() => { myRoleRef.current = myRole; }, [myRole]);
+  useEffect(() => { myIdRef.current = myId; }, [myId]);
   useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
 
   // 로그인 사용자 정보 로드
@@ -155,7 +157,37 @@ export default function BadukBattle() {
         if (d.status === "playing") setScreen("playing");
         if (d.status === "finished") setScreen("result");
       })
-      .subscribe();
+      .on("presence", { event: "leave" }, async ({ leftPresences }) => {
+        const myR = myRoleRef.current;
+        // 플레이어(host/guest)만 처리
+        if (myR !== "host" && myR !== "guest") return;
+        // 상대방 role이 나갔는지 확인
+        const opRole = myR === "host" ? "guest" : "host";
+        const opLeft = leftPresences.some((p) => p.role === opRole);
+        if (!opLeft) return;
+        // 방이 아직 playing 상태인지 확인
+        const { data: fresh } = await supabase
+          .from("baduk_rooms")
+          .select("status")
+          .eq("id", rId)
+          .maybeSingle();
+        if (!fresh || fresh.status !== "playing") return;
+        // 내가 승자
+        await supabase.from("baduk_rooms").update({
+          status: "finished",
+          winner: myR,
+          updated_at: new Date().toISOString(),
+        }).eq("id", rId);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          const uid = myIdRef.current;
+          const role = myRoleRef.current;
+          if (uid && role && role !== "spectator") {
+            await ch.track({ user_id: uid, role });
+          }
+        }
+      });
     channelRef.current = ch;
   }, []);
 

@@ -52,6 +52,7 @@ export default function HamburgerMenu() {
     if (key === "ranking") return navigate("/ranking");
 
     if (key === "share") return navigate("/share");
+    if (key === "recommended-books") return navigate("/recommended-books");
 
     if (key === "readingrace") {
         window.open(
@@ -113,6 +114,10 @@ export default function HamburgerMenu() {
             😊 마이페이지
           </button>
 
+          <button className="hamburger-item" onClick={() => go("recommended-books")} role="menuitem">
+            📚 추천도서
+          </button>
+
           <button className="hamburger-item" onClick={() => go("ranking")} role="menuitem">
             🏆 랭킹보기
           </button>
@@ -120,16 +125,6 @@ export default function HamburgerMenu() {
           <button className="hamburger-item" onClick={() => go("share")} role="menuitem">
             🔗 공유하기
           </button>
-
-          {/*<div className="hamburger-divider" />
-
-           <button className="hamburger-item" onClick={() => go("readingrace")} role="menuitem">
-            📚 리딩레이스
-          </button>
-
-          <button className="hamburger-item" onClick={() => go("grapeseed")} role="menuitem">
-            🍇 그레이프시드
-          </button> */}
 
           <div className="hamburger-divider" />
 
