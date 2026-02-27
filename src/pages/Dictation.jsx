@@ -59,7 +59,9 @@ const ANSWER_PIN = "486";
 function stopSpeaking() {
   try {
     window.speechSynthesis?.cancel?.();
-  } catch {}
+  } catch (e) {
+    console.error("Failed to cancel speech synthesis:", e);
+  }
 }
 
 function normalizePunctToWords(text) {
@@ -188,13 +190,17 @@ export default function Dictation() {
   useEffect(() => {
     try {
       localStorage.setItem(TTS_SPEED_STORAGE_KEY, ttsSpeedKey);
-    } catch {}
+    } catch (e) {
+      console.error("Failed to save TTS speed:", e);
+    }
   }, [ttsSpeedKey]);
 
   useEffect(() => {
     try {
       localStorage.setItem(TTS_PUNCT_STORAGE_KEY, punctReadOn ? "1" : "0");
-    } catch {}
+    } catch (e) {
+      console.error("Failed to save TTS punctuation setting:", e);
+    }
   }, [punctReadOn]);
 
   const viewYmd = useMemo(() => {
@@ -217,7 +223,9 @@ export default function Dictation() {
     if (helpOpen) {
       try {
         localStorage.setItem(HELP_SEEN_STORAGE_KEY, "1");
-      } catch {}
+      } catch (e) {
+        console.error("Failed to save help seen status:", e);
+      }
     }
   }, [helpOpen]);
 
@@ -225,7 +233,9 @@ export default function Dictation() {
     setHelpOpen((v) => !v);
     try {
       localStorage.setItem(HELP_SEEN_STORAGE_KEY, "1");
-    } catch {}
+    } catch (e) {
+      console.error("Failed to save help seen status:", e);
+    }
   }, []);
 
   const [remainById, setRemainById] = useState({});
@@ -402,7 +412,9 @@ export default function Dictation() {
 
     try {
       window.speechSynthesis?.getVoices?.();
-    } catch {}
+    } catch {
+      //
+    }
 
     return () => {
       stopSpeaking();
