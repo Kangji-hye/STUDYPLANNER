@@ -165,6 +165,10 @@ export default function HamburgerMenu() {
           <button className="hamburger-item" type="button" onClick={() => navigate("/baduk")}>
             ⚪ 바둑
           </button>
+
+          <button className="hamburger-item" type="button" onClick={() => navigate("/baduk-battle")}>
+            ⚔️ 바둑대전
+          </button>
           <div className="hamburger-divider" />
 
           <button className="hamburger-item danger" onClick={() => go("logout")} role="menuitem">

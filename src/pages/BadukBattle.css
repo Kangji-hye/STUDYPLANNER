@@ -1,0 +1,338 @@
+/* src/pages/BadukBattle.css */
+/* BadukGame.css의 board/stone/button 스타일을 공유하고 대전 전용 스타일만 추가 */
+
+.baduk-battle-page {
+  padding: 16px;
+  color: var(--text);
+}
+
+/* ─── 재접속 배너 ─── */
+.rejoin-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, rgba(255, 122, 162, 0.08), rgba(255, 95, 143, 0.12));
+  border: 2px solid rgba(255, 122, 162, 0.45);
+  border-radius: 18px;
+  text-align: center;
+}
+
+.rejoin-text {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.rejoin-btn {
+  width: 100%;
+  max-width: 240px;
+}
+
+/* ─── 방 만들기 버튼 ─── */
+.battle-create-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  font-size: 1.1rem;
+}
+
+.battle-btn {
+  min-width: 120px;
+  height: 48px;
+  padding: 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.08s ease, box-shadow 0.1s ease;
+}
+
+.battle-btn:active {
+  transform: translateY(1px);
+}
+
+.battle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.battle-btn.primary {
+  background: linear-gradient(135deg, var(--primary), #ff5f8f);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(255, 122, 162, 0.35);
+}
+
+.battle-error {
+  color: #e53e3e;
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0;
+}
+
+/* ─── 대기 화면 ─── */
+.battle-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 20px;
+  margin-top: 8px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.battle-waiting-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.battle-waiting-hint {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
+}
+
+/* 방 이름 표시 */
+.room-name-display {
+  display: inline-block;
+  padding: 14px 28px;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+  color: var(--text);
+}
+
+/* ─── 대국 화면 — 플레이어 배너 ─── */
+.battle-players-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 12px 14px;
+  margin-bottom: 10px;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.battle-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.battle-player.active-turn {
+  background: rgba(255, 122, 162, 0.09);
+  outline: 2px solid rgba(255, 122, 162, 0.50);
+}
+
+.battle-stone-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.battle-stone-icon.black {
+  background: #111;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.18), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.battle-stone-icon.white {
+  background: #fff;
+  border: 2px solid #ccc;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.battle-player-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+}
+
+.battle-cap {
+  font-size: 0.80rem;
+  color: var(--muted);
+}
+
+.battle-vs {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* 두 번째 플레이어 — 오른쪽 정렬 */
+.battle-players-banner .battle-player:last-of-type {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.battle-players-banner .battle-player:last-of-type .battle-player-name,
+.battle-players-banner .battle-player:last-of-type .battle-cap {
+  text-align: right;
+}
+
+/* ─── 방 목록 (대기·관전) ─── */
+.spectate-section {
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.spectate-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.spectate-section-title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.spectate-refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  line-height: 1;
+}
+
+.spectate-refresh-btn:hover {
+  background: var(--line);
+}
+
+.spectate-refresh-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.spectate-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 8px 0 4px;
+}
+
+.spectate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spectate-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  gap: 10px;
+}
+
+.spectate-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.spectate-names {
+  font-size: 0.92rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spectate-vs {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85rem;
+  margin: 0 4px;
+}
+
+/* 상태 뱃지 */
+.room-status-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+.room-status-badge.waiting {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.room-status-badge.playing {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.spectate-my-room {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.spectate-watch-btn {
+  min-width: 64px;
+  height: 36px;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* ─── 반응형 ─── */
+@media (max-width: 420px) {
+  .room-name-display {
+    font-size: 1.1rem;
+    padding: 12px 20px;
+  }
+
+  .battle-player-name {
+    max-width: 66px;
+    font-size: 0.85rem;
+  }
+
+  .battle-cap {
+    font-size: 0.75rem;
+  }
+}

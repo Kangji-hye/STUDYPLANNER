@@ -19,12 +19,14 @@ import GameGuard from "./components/GameGuard";
 import GugudanGame from "./pages/GugudanGame";
 import OmokGame from "./pages/OmokGame";
 import BadukGame from "./pages/BadukGame";
+import BadukBattle from "./pages/BadukBattle";
 import EnglishWordGame from "./pages/EnglishWordGame";
 import WordChain from './pages/WordChain';
 import WordChainRanking from './pages/WordChainRanking';
 import HanjaGame from "./pages/HanjaGame";
 import HanjaRanking from "./pages/HanjaRanking";
 import BadukRanking from "./pages/BadukRanking";
+import BadukBattleRanking from "./pages/BadukBattleRanking";
 import OmokRanking from "./pages/OmokRanking";
 import BibleQuiz from "./pages/BibleQuiz";
 import BibleRanking from "./pages/BibleRanking";
@@ -128,6 +130,8 @@ const App = () => {
             <Route path="/hanja" element={<ProtectedRoute><GameGuard><HanjaGame /></GameGuard></ProtectedRoute>} />
             <Route path="/omok" element={<ProtectedRoute><GameGuard><OmokGame /></GameGuard></ProtectedRoute>} />
             <Route path="/baduk" element={<ProtectedRoute><GameGuard><BadukGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/baduk-battle" element={<ProtectedRoute><GameGuard><BadukBattle /></GameGuard></ProtectedRoute>} />
+            <Route path="/baduk-battle-ranking" element={<ProtectedRoute><BadukBattleRanking /></ProtectedRoute>} />
             <Route
               path="/hanja-ranking"
               element={

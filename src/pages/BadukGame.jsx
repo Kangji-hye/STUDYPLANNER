@@ -5,6 +5,7 @@ import HamburgerMenu from "../components/common/HamburgerMenu";
 import "./BadukGame.css";
 import supabase from "../supabaseClient";
 import { saveBestScore } from "../utils/saveBestScore";
+import { makeEmptyBoard, tryPlaceAndCapture } from "../utils/badukLogic";
 
 /*
   난이도 버튼은 "상-중-하" 순서로 보여주고,
@@ -383,10 +384,6 @@ export default function BadukGame() {
   );
 }
 
-function makeEmptyBoard(size) {
-  return Array.from({ length: size }, () => Array.from({ length: size }, () => null));
-}
-
 function countStones(board) {
   let n = 0;
   for (const row of board) for (const v of row) if (v) n++;
@@ -398,94 +395,7 @@ function isFull(board) {
   return true;
 }
 
-function inRange(r, c, size) {
-  return r >= 0 && r < size && c >= 0 && c < size;
-}
-
-function neighbors(r, c, size) {
-  const d = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ];
-  const out = [];
-  for (const [dr, dc] of d) {
-    const rr = r + dr;
-    const cc = c + dc;
-    if (inRange(rr, cc, size)) out.push([rr, cc]);
-  }
-  return out;
-}
-
-function floodGroup(board, r, c, size) {
-  const color = board[r][c];
-  if (!color) return { stones: [], liberties: 0 };
-
-  const q = [[r, c]];
-  const seen = new Set([`${r},${c}`]);
-
-  const stones = [];
-  let liberties = 0;
-
-  while (q.length) {
-    const [cr, cc] = q.pop();
-    stones.push([cr, cc]);
-
-    for (const [nr, nc] of neighbors(cr, cc, size)) {
-      const v = board[nr][nc];
-      if (v === null) {
-        liberties++;
-        continue;
-      }
-      if (v !== color) continue;
-
-      const key = `${nr},${nc}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      q.push([nr, nc]);
-    }
-  }
-
-  return { stones, liberties };
-}
-
-function cloneBoard(board) {
-  return board.map((row) => [...row]);
-}
-
-function removeStones(board, stones) {
-  for (const [r, c] of stones) board[r][c] = null;
-}
-
-function tryPlaceAndCapture(board, r, c, stone) {
-  const size = board.length;
-  if (board[r][c] !== null) return { ok: false, board, captured: 0 };
-
-  const next = cloneBoard(board);
-  next[r][c] = stone;
-
-  const opp = stone === "B" ? "W" : "B";
-
-  let captured = 0;
-  for (const [nr, nc] of neighbors(r, c, size)) {
-    if (next[nr][nc] !== opp) continue;
-    const g = floodGroup(next, nr, nc, size);
-    if (g.liberties === 0) {
-      captured += g.stones.length;
-      removeStones(next, g.stones);
-    }
-  }
-
-  const myGroup = floodGroup(next, r, c, size);
-  if (myGroup.liberties === 0) {
-    return { ok: false, board, captured: 0 };
-  }
-
-  return { ok: true, board: next, captured };
-}
-
-/* 아래 AI 관련 함수들은 기존 그대로 사용 */
+/* AI 관련 함수들 */
 function pickAiMove(board, level, size) {
   const candidates = getCandidateMoves(board, size, level === "hard" ? 2 : 1);
   if (!candidates.length) return null;
