@@ -234,7 +234,40 @@ async function fetchBookInfo(isbn) {
   return null;
 }
 
-// ── Supabase 목록 검색 ────────────────────────────────────────────────────────
+// ── ISBN으로 Supabase 직접 조회 ───────────────────────────────────────────────
+async function searchByIsbn(isbn) {
+  const clean = isbn.replace(/-/g, "").trim();
+
+  const [rb, jrb, rrb, jrrb] = await Promise.all([
+    supabase.from("recommended_books").select("grade_code,book_no,title,author").eq("isbn", clean),
+    supabase.from("jangmi_recommended_books").select("grade_code,book_no,title,author").eq("isbn", clean),
+    supabase.from("reading_race_books").select("title,author,level").eq("isbn", clean),
+    supabase.from("jangmi_reading_race_books").select("title,author,level").eq("isbn", clean),
+  ]);
+
+  const seen = new Set();
+  const recommended = [...(rb.data ?? []), ...(jrb.data ?? [])].filter((r) => {
+    const key = `${r.grade_code}-${r.book_no}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const rSeen = new Set();
+  const race = [...(rrb.data ?? []), ...(jrrb.data ?? [])].filter((r) => {
+    const key = `${r.level}-${r.title}`;
+    if (rSeen.has(key)) return false;
+    rSeen.add(key);
+    return true;
+  });
+
+  const first = recommended[0] ?? race[0];
+  const bookInfo = first ? { title: first.title, author: first.author, thumbnail: "" } : null;
+
+  return { recommended, race, bookInfo };
+}
+
+// ── Supabase 제목 검색 ────────────────────────────────────────────────────────
 const GRADE_LABEL = {
   "-1": "유치원",
   "1": "1학년", "2": "2학년", "3": "3학년",
@@ -318,6 +351,16 @@ export default function BookScanner() {
     setResults(null);
     setManualTitle("");
 
+    // 1순위: ISBN으로 DB 직접 조회 (빠름, 정확)
+    const direct = await searchByIsbn(clean);
+    if (direct.recommended.length > 0 || direct.race.length > 0) {
+      setBookInfo(direct.bookInfo);
+      setResults({ recommended: direct.recommended, race: direct.race });
+      setLoading(false);
+      return;
+    }
+
+    // 2순위: 외부 API로 제목 조회 후 제목으로 DB 검색 (폴백)
     const info = await fetchBookInfo(clean);
     if (info) {
       setBookInfo(info);
@@ -477,40 +520,43 @@ export default function BookScanner() {
           }}>
             ISBN 번호
           </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              value={isbn}
-              onChange={(e) => setIsbn(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doSearch()}
-              placeholder="예: 9788936434120"
-              style={{
-                flex: 1, padding: "12px 14px", borderRadius: "10px",
-                border: "1.5px solid #d5c9b0", background: "#faf8f3",
-                fontFamily: "monospace", fontSize: "15px",
-                letterSpacing: "0.08em", outline: "none",
-              }}
-            />
-            <button
-              onClick={() => setShowCamera(true)}
-              title="카메라로 스캔"
-              style={{
-                background: "#c9a96e", color: "#1a1a2e", border: "none",
-                padding: "12px 16px", borderRadius: "10px",
-                cursor: "pointer", fontSize: "20px", flexShrink: 0,
-              }}
-            >📷</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <input
+                value={isbn}
+                onChange={(e) => setIsbn(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && doSearch()}
+                placeholder="예: 9788936434120"
+                style={{
+                  flex: 1, minWidth: 0, padding: "12px 14px", borderRadius: "10px",
+                  border: "1.5px solid #d5c9b0", background: "#faf8f3",
+                  fontFamily: "monospace", fontSize: "15px",
+                  letterSpacing: "0.08em", outline: "none",
+                }}
+              />
+              <button
+                onClick={() => setShowCamera(true)}
+                title="카메라로 스캔"
+                style={{
+                  background: "#c9a96e", color: "#1a1a2e", border: "none",
+                  padding: "12px 16px", borderRadius: "10px",
+                  cursor: "pointer", fontSize: "20px", flexShrink: 0,
+                }}
+              >📷</button>
+            </div>
             <button
               onClick={() => doSearch()}
               disabled={loading || !isbn.trim()}
               style={{
-                background: loading || !isbn.trim() ? "#ccc" : "#1a1a2e",
+                width: "100%", background: loading || !isbn.trim() ? "#ccc" : "#1a1a2e",
                 color: "#c9a96e", border: "none",
-                padding: "12px 20px", borderRadius: "10px",
-                cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif",
-                fontSize: "14px", fontWeight: 700, flexShrink: 0,
+                padding: "13px", borderRadius: "10px",
+                cursor: loading || !isbn.trim() ? "default" : "pointer",
+                fontFamily: "'Noto Sans KR',sans-serif",
+                fontSize: "15px", fontWeight: 700,
               }}
             >
-              {loading ? "조회 중…" : "조회"}
+              {loading ? "조회 중…" : "🔍 조회"}
             </button>
           </div>
         </div>
@@ -564,14 +610,15 @@ export default function BookScanner() {
             }}>
               ⚠️ 책 정보를 찾지 못했어요. 제목으로 직접 검색해보세요.
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <input
                 value={manualTitle}
                 onChange={(e) => setManualTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && doManualSearch()}
                 placeholder="책 제목을 입력하세요"
                 style={{
-                  flex: 1, padding: "10px 13px", borderRadius: "8px",
+                  width: "100%", boxSizing: "border-box",
+                  padding: "10px 13px", borderRadius: "8px",
                   border: "1.5px solid #d5c9b0", background: "#faf8f3",
                   fontFamily: "'Noto Sans KR',sans-serif", fontSize: "14px", outline: "none",
                 }}
@@ -580,10 +627,10 @@ export default function BookScanner() {
                 onClick={doManualSearch}
                 disabled={loading || !manualTitle.trim()}
                 style={{
-                  background: "#1a1a2e", color: "#c9a96e", border: "none",
-                  padding: "10px 18px", borderRadius: "8px",
+                  width: "100%", background: "#1a1a2e", color: "#c9a96e", border: "none",
+                  padding: "11px", borderRadius: "8px",
                   cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif",
-                  fontSize: "13px", fontWeight: 700,
+                  fontSize: "14px", fontWeight: 700,
                 }}
               >검색</button>
             </div>
@@ -762,14 +809,15 @@ export default function BookScanner() {
                 }}>
                   🔍 제목으로 다시 검색
                 </div>
-                <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <input
                     value={manualTitle}
                     onChange={(e) => setManualTitle(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && doManualSearch()}
                     placeholder="책 제목 일부를 입력하세요"
                     style={{
-                      flex: 1, padding: "9px 12px", borderRadius: "8px",
+                      width: "100%", boxSizing: "border-box",
+                      padding: "9px 12px", borderRadius: "8px",
                       border: "1.5px solid #d5c9b0", background: "#faf8f3",
                       fontFamily: "'Noto Sans KR',sans-serif", fontSize: "13px", outline: "none",
                     }}
@@ -778,8 +826,8 @@ export default function BookScanner() {
                     onClick={doManualSearch}
                     disabled={loading || !manualTitle.trim()}
                     style={{
-                      background: "#1a1a2e", color: "#c9a96e", border: "none",
-                      padding: "9px 16px", borderRadius: "8px",
+                      width: "100%", background: "#1a1a2e", color: "#c9a96e", border: "none",
+                      padding: "10px", borderRadius: "8px",
                       cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif",
                       fontSize: "13px", fontWeight: 700,
                     }}
