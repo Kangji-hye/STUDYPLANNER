@@ -188,24 +188,50 @@ function CameraScanner({ onDetected, onClose, polyfillReady }) {
   );
 }
 
-// ── 책 정보 조회 (Google Books API — 키 없이 무료) ──────────────────────────
+// ── 책 정보 조회 ─────────────────────────────────────────────────────────────
+// 1순위: 도서관 정보나루 API (한국 도서에 강함, lib_apikey 있을 때)
+// 2순위: Google Books API (키 없이 무료, 폴백)
+const LIB_API = "https://www.data4library.kr/api";
+
 async function fetchBookInfo(isbn) {
   const clean = isbn.replace(/-/g, "").trim();
+
+  // 1순위: 도서관 정보나루 API
+  const apiKey = localStorage.getItem("lib_apikey") || "";
+  if (apiKey) {
+    try {
+      const res = await fetch(
+        `${LIB_API}/srchBooks?authKey=${apiKey}&isbn=${clean}&format=json`
+      );
+      const data = await res.json();
+      const doc = data?.response?.docs?.[0]?.doc;
+      if (doc) {
+        return {
+          title: doc.bookname ?? "",
+          author: doc.authors ?? "",
+          thumbnail: doc.bookImageURL ?? "",
+        };
+      }
+    } catch { /* ignore, try next */ }
+  }
+
+  // 2순위: Google Books API
   try {
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
     );
     const data = await res.json();
     const item = data?.items?.[0]?.volumeInfo;
-    if (!item) return null;
-    return {
-      title: item.title ?? "",
-      author: (item.authors ?? []).join(", "),
-      thumbnail: (item.imageLinks?.thumbnail ?? "").replace("http:", "https:"),
-    };
-  } catch {
-    return null;
-  }
+    if (item) {
+      return {
+        title: item.title ?? "",
+        author: (item.authors ?? []).join(", "),
+        thumbnail: (item.imageLinks?.thumbnail ?? "").replace("http:", "https:"),
+      };
+    }
+  } catch { /* ignore */ }
+
+  return null;
 }
 
 // ── Supabase 목록 검색 ────────────────────────────────────────────────────────
