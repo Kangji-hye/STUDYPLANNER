@@ -197,7 +197,7 @@ async function fetchBookInfo(isbn) {
   const clean = isbn.replace(/-/g, "").trim();
 
   // 1순위: 도서관 정보나루 API
-  const apiKey = localStorage.getItem("lib_apikey") || "";
+  const apiKey = localStorage.getItem("lib_apikey") || import.meta.env.VITE_LIB_APIKEY || "";
   if (apiKey) {
     try {
       const res = await fetch(
@@ -290,7 +290,7 @@ export default function BookScanner() {
   const navigate = useNavigate();
   const polyfillReady = usePolyfill();
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lib_apikey") || "");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lib_apikey") || import.meta.env.VITE_LIB_APIKEY || "");
   const [apiInput, setApiInput] = useState(() => localStorage.getItem("lib_apikey") || "");
   const [showApiSetup, setShowApiSetup] = useState(false);
 

@@ -178,6 +178,65 @@ td:first-child {
   z-index:1000;
 }
 
+/* ===== 탭 (추천도서 / 리딩레이스 셀렉트) ===== */
+.booksTabs {
+  display: flex;
+  gap: 4px;
+  padding: 14px 20px 0;
+  background: linear-gradient(135deg, #1a6b3c, #2ea55a);
+}
+
+.booksTab {
+  padding: 9px 24px;
+  border: 2px solid rgba(255,255,255,0.45);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.75);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.booksTab:hover {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border-color: rgba(255,255,255,0.65);
+}
+
+.booksTabActive {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border-color: rgba(255,255,255,0.85);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+}
+
+/* .badge 스타일 (stats 뱃지) */
+.badge {
+  background: #f0f8f3;
+  border: 1px solid #b8e0c6;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-weight: 600;
+  color: #1a6b3c;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+.badge.green { background: #d4edda; border-color: #8cc9a0; color: #155724; }
+.badge.red   { background: #f8d7da; border-color: #f0a0a8; color: #721c24; }
+.badge.blue  { background: #d1ecf1; border-color: #8ec8d0; color: #0c5460; }
+
+/* emptyState */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+}
+.emptyState h2 { font-size: 1.3rem; margin-bottom: 10px; color: #555; }
+.emptyState p  { font-size: 0.95rem; }
+
 /* 혹시 first-child 방식으로 남아있을 때도 동작하게 */
 .booksHeaderWrap > *:first-child{
   position:absolute;
@@ -236,4 +295,20 @@ td:first-child {
 .borrowCol{
   width: 32px;
   text-align: center;
+}
+
+/* 소장 상태 안내 문구 */
+.statusNote {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  background: #f8fdf9;
+  border-bottom: 1px solid #e0f0e8;
+  font-size: 0.82rem;
+  color: #555;
+}
+.statusNoteSep {
+  color: #ccc;
 }
