@@ -36,6 +36,7 @@ import GugudanRanking from "./pages/GugudanRanking";
 import EnglishRanking from "./pages/EnglishRanking";
 import Dictation from "./pages/Dictation";
 import RecommendedBooks from "./pages/RecommendedBooks";
+import BookScanner from "./pages/BookScanner";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -98,6 +99,7 @@ const App = () => {
               }
             />
             <Route path="/recommended-books" element={<RecommendedBooks />} />
+            <Route path="/book-scanner" element={<BookScanner />} />
             <Route
               path="/share"
               element={

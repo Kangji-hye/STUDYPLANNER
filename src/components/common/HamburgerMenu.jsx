@@ -118,6 +118,10 @@ export default function HamburgerMenu() {
             📚 추천도서
           </button>
 
+          <button className="hamburger-item" onClick={() => navigate("/book-scanner")} role="menuitem">
+            📷 바코드로 책 인식
+          </button>
+
           <button className="hamburger-item" onClick={() => go("ranking")} role="menuitem">
             🏆 랭킹보기
           </button>
