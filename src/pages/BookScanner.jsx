@@ -290,6 +290,10 @@ export default function BookScanner() {
   const navigate = useNavigate();
   const polyfillReady = usePolyfill();
 
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lib_apikey") || "");
+  const [apiInput, setApiInput] = useState(() => localStorage.getItem("lib_apikey") || "");
+  const [showApiSetup, setShowApiSetup] = useState(false);
+
   const [isbn, setIsbn] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -297,6 +301,12 @@ export default function BookScanner() {
   const [noBookInfo, setNoBookInfo] = useState(false);
   const [results, setResults] = useState(null);
   const [manualTitle, setManualTitle] = useState("");
+
+  const saveApiKey = () => {
+    localStorage.setItem("lib_apikey", apiInput);
+    setApiKey(apiInput);
+    setShowApiSetup(false);
+  };
 
   const doSearch = useCallback(async (isbnVal) => {
     const clean = (isbnVal || isbn).replace(/-/g, "").trim();
@@ -329,7 +339,9 @@ export default function BookScanner() {
     setLoading(false);
   }, [manualTitle]);
 
+  // 바코드 인식 → 카메라 즉시 닫고 자동 조회 (논스톱)
   const handleDetected = useCallback((val) => {
+    setShowCamera(false);
     setIsbn(val);
     doSearch(val);
   }, [doSearch]);
@@ -376,6 +388,81 @@ export default function BookScanner() {
       </div>
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "24px 16px" }}>
+
+        {/* API 키 설정 */}
+        {!apiKey && !showApiSetup && (
+          <div style={{
+            background: "#fff8e8", border: "1px solid #e8d5a0",
+            borderRadius: "12px", padding: "12px 16px", marginBottom: "16px",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: "13px", color: "#856404", fontFamily: "'Noto Sans KR',sans-serif" }}>
+              ⚠️ API 키 설정 필요 (ISBN 조회용)
+            </span>
+            <button
+              onClick={() => setShowApiSetup(true)}
+              style={{
+                background: "#1a1a2e", color: "#c9a96e", border: "none",
+                padding: "6px 14px", borderRadius: "8px", cursor: "pointer",
+                fontFamily: "'Noto Sans KR',sans-serif", fontSize: "12px", fontWeight: 700,
+              }}
+            >설정하기</button>
+          </div>
+        )}
+        {showApiSetup && (
+          <div style={{
+            background: "#fff8e8", border: "1px solid #e8d5a0",
+            borderRadius: "12px", padding: "16px 20px", marginBottom: "16px",
+          }}>
+            <div style={{
+              fontSize: "13px", color: "#856404",
+              fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 700, marginBottom: "8px",
+            }}>🔑 도서관 정보나루 API 키</div>
+            <p style={{
+              margin: "0 0 10px", fontSize: "12px", color: "#78350f",
+              fontFamily: "'Noto Sans KR',sans-serif", lineHeight: 1.7,
+            }}>
+              <a href="https://www.data4library.kr" target="_blank" rel="noreferrer"
+                style={{ color: "#b45309" }}>data4library.kr</a>에서 무료 발급받을 수 있어요.
+            </p>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                value={apiInput}
+                onChange={(e) => setApiInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveApiKey()}
+                placeholder="인증키를 붙여넣으세요"
+                style={{
+                  flex: 1, padding: "9px 12px", borderRadius: "8px",
+                  border: "1.5px solid #d5c9b0", background: "#faf8f3",
+                  fontFamily: "monospace", fontSize: "13px", outline: "none",
+                }}
+              />
+              <button onClick={saveApiKey} style={{
+                background: "#1a1a2e", color: "#c9a96e", border: "none",
+                padding: "9px 16px", borderRadius: "8px", cursor: "pointer",
+                fontFamily: "'Noto Sans KR',sans-serif", fontSize: "13px", fontWeight: 700,
+              }}>저장</button>
+              <button onClick={() => setShowApiSetup(false)} style={{
+                background: "none", border: "1px solid #ccc", color: "#888",
+                padding: "9px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "13px",
+              }}>취소</button>
+            </div>
+          </div>
+        )}
+        {apiKey && (
+          <div style={{
+            textAlign: "right", marginBottom: "8px",
+          }}>
+            <button
+              onClick={() => { setShowApiSetup(v => !v); setApiInput(apiKey); }}
+              style={{
+                background: "none", border: "none", color: "#aaa",
+                fontSize: "11px", cursor: "pointer",
+                fontFamily: "'Noto Sans KR',sans-serif",
+              }}
+            >🔑 API 키 변경</button>
+          </div>
+        )}
 
         {/* ISBN 입력 */}
         <div style={{
