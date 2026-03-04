@@ -197,7 +197,7 @@ async function fetchBookInfo(isbn) {
   const clean = isbn.replace(/-/g, "").trim();
 
   // 1순위: 도서관 정보나루 API
-  const apiKey = localStorage.getItem("lib_apikey") || import.meta.env.VITE_LIB_APIKEY || "";
+  const apiKey = import.meta.env.VITE_LIB_APIKEY || "";
   if (apiKey) {
     try {
       const res = await fetch(
@@ -340,9 +340,8 @@ export default function BookScanner() {
   const navigate = useNavigate();
   const polyfillReady = usePolyfill();
 
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("lib_apikey") || import.meta.env.VITE_LIB_APIKEY || "");
-  const [apiInput, setApiInput] = useState(() => localStorage.getItem("lib_apikey") || "");
-  const [showApiSetup, setShowApiSetup] = useState(false);
+  // API 키: 환경변수에서만 읽음 (사용자 UI 불필요)
+  const apiKey = import.meta.env.VITE_LIB_APIKEY || "";
 
   const [isbn, setIsbn] = useState("");
   const [showCamera, setShowCamera] = useState(false);
@@ -361,12 +360,6 @@ export default function BookScanner() {
   const [libResults, setLibResults] = useState({}); // { libId: "available"|"unavailable"|"none"|"error"|"loading" }
   const [libLoading, setLibLoading] = useState(false);
   const currentIsbnRef = useRef(""); // 현재 조회 중인 ISBN 추적
-
-  const saveApiKey = () => {
-    localStorage.setItem("lib_apikey", apiInput);
-    setApiKey(apiInput);
-    setShowApiSetup(false);
-  };
 
   // 체크박스 토글 + localStorage 저장
   const toggleLib = (id) => {
@@ -508,81 +501,6 @@ export default function BookScanner() {
       </div>
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "24px 16px" }}>
-
-        {/* API 키 설정 */}
-        {!apiKey && !showApiSetup && (
-          <div style={{
-            background: "#fff8e8", border: "1px solid #e8d5a0",
-            borderRadius: "12px", padding: "12px 16px", marginBottom: "16px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-          }}>
-            <span style={{ fontSize: "13px", color: "#856404", fontFamily: "'Noto Sans KR',sans-serif" }}>
-              ⚠️ API 키 설정 필요 (ISBN 조회용)
-            </span>
-            <button
-              onClick={() => setShowApiSetup(true)}
-              style={{
-                background: "#1a1a2e", color: "#c9a96e", border: "none",
-                padding: "6px 14px", borderRadius: "8px", cursor: "pointer",
-                fontFamily: "'Noto Sans KR',sans-serif", fontSize: "12px", fontWeight: 700,
-              }}
-            >설정하기</button>
-          </div>
-        )}
-        {showApiSetup && (
-          <div style={{
-            background: "#fff8e8", border: "1px solid #e8d5a0",
-            borderRadius: "12px", padding: "16px 20px", marginBottom: "16px",
-          }}>
-            <div style={{
-              fontSize: "13px", color: "#856404",
-              fontFamily: "'Noto Sans KR',sans-serif", fontWeight: 700, marginBottom: "8px",
-            }}>🔑 도서관 정보나루 API 키</div>
-            <p style={{
-              margin: "0 0 10px", fontSize: "12px", color: "#78350f",
-              fontFamily: "'Noto Sans KR',sans-serif", lineHeight: 1.7,
-            }}>
-              <a href="https://www.data4library.kr" target="_blank" rel="noreferrer"
-                style={{ color: "#b45309" }}>data4library.kr</a>에서 무료 발급받을 수 있어요.
-            </p>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <input
-                value={apiInput}
-                onChange={(e) => setApiInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && saveApiKey()}
-                placeholder="인증키를 붙여넣으세요"
-                style={{
-                  flex: 1, padding: "9px 12px", borderRadius: "8px",
-                  border: "1.5px solid #d5c9b0", background: "#faf8f3",
-                  fontFamily: "monospace", fontSize: "13px", outline: "none",
-                }}
-              />
-              <button onClick={saveApiKey} style={{
-                background: "#1a1a2e", color: "#c9a96e", border: "none",
-                padding: "9px 16px", borderRadius: "8px", cursor: "pointer",
-                fontFamily: "'Noto Sans KR',sans-serif", fontSize: "13px", fontWeight: 700,
-              }}>저장</button>
-              <button onClick={() => setShowApiSetup(false)} style={{
-                background: "none", border: "1px solid #ccc", color: "#888",
-                padding: "9px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "13px",
-              }}>취소</button>
-            </div>
-          </div>
-        )}
-        {apiKey && (
-          <div style={{
-            textAlign: "right", marginBottom: "8px",
-          }}>
-            <button
-              onClick={() => { setShowApiSetup(v => !v); setApiInput(apiKey); }}
-              style={{
-                background: "none", border: "none", color: "#aaa",
-                fontSize: "11px", cursor: "pointer",
-                fontFamily: "'Noto Sans KR',sans-serif",
-              }}
-            >🔑 API 키 변경</button>
-          </div>
-        )}
 
         {/* ISBN 입력 */}
         <div style={{
@@ -950,32 +868,21 @@ export default function BookScanner() {
                   ))}
                 </div>
                 {/* 조회 버튼 */}
-                {!apiKey ? (
-                  <div style={{
-                    fontSize: "12px", color: "#856404",
+                <button
+                  onClick={doLibSearch}
+                  disabled={libLoading || selectedLibs.length === 0 || !currentIsbnRef.current}
+                  style={{
+                    width: "100%",
+                    background: libLoading || selectedLibs.length === 0 ? "#ccc" : "#1a1a2e",
+                    color: "#c9a96e", border: "none",
+                    padding: "11px", borderRadius: "10px",
+                    cursor: libLoading || selectedLibs.length === 0 ? "default" : "pointer",
                     fontFamily: "'Noto Sans KR',sans-serif",
-                    background: "#fff8e8", padding: "8px 12px",
-                    borderRadius: "8px",
-                  }}>
-                    ⚠️ 도서관 정보나루 API 키를 설정하면 소장 여부를 확인할 수 있어요.
-                  </div>
-                ) : (
-                  <button
-                    onClick={doLibSearch}
-                    disabled={libLoading || selectedLibs.length === 0 || !currentIsbnRef.current}
-                    style={{
-                      width: "100%",
-                      background: libLoading || selectedLibs.length === 0 ? "#ccc" : "#1a1a2e",
-                      color: "#c9a96e", border: "none",
-                      padding: "11px", borderRadius: "10px",
-                      cursor: libLoading || selectedLibs.length === 0 ? "default" : "pointer",
-                      fontFamily: "'Noto Sans KR',sans-serif",
-                      fontSize: "14px", fontWeight: 700,
-                    }}
-                  >
-                    {libLoading ? "조회 중…" : "📍 소장 여부 확인"}
-                  </button>
-                )}
+                    fontSize: "14px", fontWeight: 700,
+                  }}
+                >
+                  {libLoading ? "조회 중…" : "📍 소장 여부 확인"}
+                </button>
               </div>
 
               {/* 조회 결과 */}
