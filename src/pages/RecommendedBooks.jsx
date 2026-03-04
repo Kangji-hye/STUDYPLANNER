@@ -439,7 +439,7 @@ export default function RecommendedBooks() {
               value={raceLevel}
               onChange={(e) => setRaceLevel(Number(e.target.value))}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((lv) => (
+              {[1, 2, 3].map((lv) => (
                 <option key={lv} value={lv}>{lv}단계</option>
               ))}
             </select>
