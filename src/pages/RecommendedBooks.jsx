@@ -88,12 +88,12 @@ function mapBookRow(row) {
 export default function RecommendedBooks() {
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("recommend"); // "recommend" | "reading_race"
+  const [activeTab, setActiveTab] = useState("reading_race"); // "recommend" | "reading_race"
   const [userId, setUserId] = useState(null);
 
   const [gradeCode, setGradeCode] = useState(DEFAULT_GRADE_CODE);
   const [libraryCode, setLibraryCode] = useState("guseong"); // "guseong" | "cheongdeok" | "jangmi"
-  const [raceLevel, setRaceLevel] = useState(1);
+  const [raceLevel, setRaceLevel] = useState(2);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("yes_child");
 
@@ -363,16 +363,16 @@ export default function RecommendedBooks() {
         {/* 탭 */}
         <div className="booksTabs">
           <button
-            className={`booksTab${!isRaceTab ? " booksTabActive" : ""}`}
-            onClick={() => setActiveTab("recommend")}
-          >
-            독서수첩 추천도서
-          </button>
-          <button
             className={`booksTab${isRaceTab ? " booksTabActive" : ""}`}
             onClick={() => setActiveTab("reading_race")}
           >
             리딩레이스
+          </button>
+          <button
+            className={`booksTab${!isRaceTab ? " booksTabActive" : ""}`}
+            onClick={() => setActiveTab("recommend")}
+          >
+            독서수첩 추천도서
           </button>
         </div>
 
