@@ -684,7 +684,7 @@ export default function BookScanner() {
                           fontSize: "12px", fontWeight: 700,
                           fontFamily: "'Noto Sans KR',sans-serif", flexShrink: 0,
                         }}>
-                          {r.level}
+                          {r.level ? `${r.level}단계` : ""}
                         </span>
                       )}
                       <div>
