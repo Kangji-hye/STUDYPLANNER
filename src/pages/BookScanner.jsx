@@ -318,6 +318,23 @@ async function searchLists(title) {
   return { recommended, race };
 }
 
+// ── 도서관 소장 조회 ──────────────────────────────────────────────────────────
+// 메모리에 저장된 도서관 코드 하드코딩
+const LIBRARIES = [
+  { id: "guseong", name: "구성도서관", code: "141118" },
+  { id: "jangmi",  name: "장미도서관", code: "141219" },
+  { id: "cheongdeok", name: "청덕도서관", code: "141564" },
+];
+
+// 소장 상태별 라벨/색상
+const LIB_STATUS = {
+  loading:     { label: "조회 중…",    bg: "#e8e0d0", color: "#7a6a52" },
+  available:   { label: "✅ 대출 가능", bg: "#d4f0e2", color: "#1a6640" },
+  unavailable: { label: "🔴 대출 중",   bg: "#fde8e8", color: "#9b2335" },
+  none:        { label: "⬜ 미소장",    bg: "#eeeeee", color: "#888"    },
+  error:       { label: "⚠ 오류",      bg: "#fff3cd", color: "#856404" },
+};
+
 // ── 메인 페이지 ───────────────────────────────────────────────────────────────
 export default function BookScanner() {
   const navigate = useNavigate();
@@ -335,21 +352,81 @@ export default function BookScanner() {
   const [results, setResults] = useState(null);
   const [manualTitle, setManualTitle] = useState("");
 
+  // 도서관 소장 조회 상태
+  const [selectedLibs, setSelectedLibs] = useState(() => {
+    // localStorage에서 이전 선택 불러오기 (기본값: 전체 선택)
+    try { return JSON.parse(localStorage.getItem("lib_selected")) || ["guseong","jangmi","cheongdeok"]; }
+    catch { return ["guseong","jangmi","cheongdeok"]; }
+  });
+  const [libResults, setLibResults] = useState({}); // { libId: "available"|"unavailable"|"none"|"error"|"loading" }
+  const [libLoading, setLibLoading] = useState(false);
+  const currentIsbnRef = useRef(""); // 현재 조회 중인 ISBN 추적
+
   const saveApiKey = () => {
     localStorage.setItem("lib_apikey", apiInput);
     setApiKey(apiInput);
     setShowApiSetup(false);
   };
 
+  // 체크박스 토글 + localStorage 저장
+  const toggleLib = (id) => {
+    setSelectedLibs(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem("lib_selected", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // 도서관 소장 조회 실행
+  const doLibSearch = useCallback(async () => {
+    const clean = currentIsbnRef.current;
+    if (!clean || !apiKey || selectedLibs.length === 0) return;
+
+    setLibLoading(true);
+    // 선택된 도서관만 loading 상태로 초기화
+    const initState = {};
+    selectedLibs.forEach(id => { initState[id] = "loading"; });
+    setLibResults(initState);
+
+    // 선택된 도서관에 대해 병렬 조회
+    await Promise.all(
+      LIBRARIES.filter(lib => selectedLibs.includes(lib.id)).map(async (lib) => {
+        try {
+          const res = await fetch(
+            `${LIB_API}/bookExist?authKey=${apiKey}&libCode=${lib.code}&isbn13=${clean}&format=json`
+          );
+          const data = await res.json();
+          const result = data?.response?.result;
+          if (!result) {
+            setLibResults(p => ({ ...p, [lib.id]: "error" }));
+            return;
+          }
+          // hasBook: Y/N, loanAvailable: Y/N
+          const status = result.hasBook === "N" ? "none"
+            : result.loanAvailable === "Y" ? "available"
+            : "unavailable";
+          setLibResults(p => ({ ...p, [lib.id]: status }));
+        } catch {
+          setLibResults(p => ({ ...p, [lib.id]: "error" }));
+        }
+      })
+    );
+    setLibLoading(false);
+  }, [apiKey, selectedLibs]);
+
   const doSearch = useCallback(async (isbnVal) => {
     const clean = (isbnVal || isbn).replace(/-/g, "").trim();
     if (!clean) return;
+
+    // 새 ISBN 저장 (도서관 조회용)
+    currentIsbnRef.current = clean;
 
     setLoading(true);
     setBookInfo(null);
     setNoBookInfo(false);
     setResults(null);
     setManualTitle("");
+    setLibResults({}); // 이전 도서관 조회 결과 초기화
 
     // 1순위: ISBN으로 DB 직접 조회 (빠름, 정확)
     const direct = await searchByIsbn(clean);
@@ -641,7 +718,76 @@ export default function BookScanner() {
         {results && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
 
-            {/* 추천도서 결과 */}
+            {/* 리딩레이스 결과 (위로 이동) */}
+            <div style={{
+              background: "#fffdf7", border: `2px solid ${hasRace ? "#5b8dd9" : "#e0d5c0"}`,
+              borderRadius: "14px", overflow: "hidden",
+            }}>
+              <div style={{
+                padding: "14px 20px",
+                background: hasRace ? "#e8f0fc" : "#f5f0e8",
+                display: "flex", alignItems: "center", gap: "10px",
+              }}>
+                <span style={{ fontSize: "22px" }}>
+                  {hasRace ? "✅" : "❌"}
+                </span>
+                <div>
+                  <div style={{
+                    fontFamily: "'Noto Sans KR',sans-serif",
+                    fontSize: "15px", fontWeight: 700,
+                    color: hasRace ? "#1a3a6e" : "#666",
+                  }}>
+                    리딩레이스 목록
+                  </div>
+                  <div style={{
+                    fontFamily: "'Noto Sans KR',sans-serif",
+                    fontSize: "12px",
+                    color: hasRace ? "#2e507d" : "#999",
+                  }}>
+                    {hasRace
+                      ? `${results.race.length}건 일치`
+                      : "목록에 없어요"}
+                  </div>
+                </div>
+              </div>
+
+              {hasRace && (
+                <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {results.race.map((r, i) => (
+                    <div key={i} style={{
+                      background: "#eef3fc", borderRadius: "8px",
+                      padding: "10px 14px", display: "flex",
+                      alignItems: "center", gap: "12px",
+                    }}>
+                      {r.level && (
+                        <span style={{
+                          background: "#5b8dd9", color: "#fff",
+                          borderRadius: "6px", padding: "3px 10px",
+                          fontSize: "12px", fontWeight: 700,
+                          fontFamily: "'Noto Sans KR',sans-serif", flexShrink: 0,
+                        }}>
+                          {r.level}
+                        </span>
+                      )}
+                      <div>
+                        <div style={{
+                          fontFamily: "'Noto Sans KR',sans-serif",
+                          fontSize: "13px", color: "#1a2040", fontWeight: 600,
+                        }}>{r.title}</div>
+                        {r.author && (
+                          <div style={{
+                            fontFamily: "'Noto Sans KR',sans-serif",
+                            fontSize: "11px", color: "#666",
+                          }}>{r.author}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 추천도서 결과 (아래로 이동) */}
             <div style={{
               background: "#fffdf7", border: `2px solid ${hasRecommended ? "#4caf7d" : "#e0d5c0"}`,
               borderRadius: "14px", overflow: "hidden",
@@ -714,75 +860,6 @@ export default function BookScanner() {
               )}
             </div>
 
-            {/* 리딩레이스 결과 */}
-            <div style={{
-              background: "#fffdf7", border: `2px solid ${hasRace ? "#5b8dd9" : "#e0d5c0"}`,
-              borderRadius: "14px", overflow: "hidden",
-            }}>
-              <div style={{
-                padding: "14px 20px",
-                background: hasRace ? "#e8f0fc" : "#f5f0e8",
-                display: "flex", alignItems: "center", gap: "10px",
-              }}>
-                <span style={{ fontSize: "22px" }}>
-                  {hasRace ? "✅" : "❌"}
-                </span>
-                <div>
-                  <div style={{
-                    fontFamily: "'Noto Sans KR',sans-serif",
-                    fontSize: "15px", fontWeight: 700,
-                    color: hasRace ? "#1a3a6e" : "#666",
-                  }}>
-                    리딩레이스 목록
-                  </div>
-                  <div style={{
-                    fontFamily: "'Noto Sans KR',sans-serif",
-                    fontSize: "12px",
-                    color: hasRace ? "#2e507d" : "#999",
-                  }}>
-                    {hasRace
-                      ? `${results.race.length}건 일치`
-                      : "목록에 없어요"}
-                  </div>
-                </div>
-              </div>
-
-              {hasRace && (
-                <div style={{ padding: "12px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {results.race.map((r, i) => (
-                    <div key={i} style={{
-                      background: "#eef3fc", borderRadius: "8px",
-                      padding: "10px 14px", display: "flex",
-                      alignItems: "center", gap: "12px",
-                    }}>
-                      {r.level && (
-                        <span style={{
-                          background: "#5b8dd9", color: "#fff",
-                          borderRadius: "6px", padding: "3px 10px",
-                          fontSize: "12px", fontWeight: 700,
-                          fontFamily: "'Noto Sans KR',sans-serif", flexShrink: 0,
-                        }}>
-                          {r.level}
-                        </span>
-                      )}
-                      <div>
-                        <div style={{
-                          fontFamily: "'Noto Sans KR',sans-serif",
-                          fontSize: "13px", color: "#1a2040", fontWeight: 600,
-                        }}>{r.title}</div>
-                        {r.author && (
-                          <div style={{
-                            fontFamily: "'Noto Sans KR',sans-serif",
-                            fontSize: "11px", color: "#666",
-                          }}>{r.author}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* 둘 다 없을 때 */}
             {!hasRecommended && !hasRace && (
               <div style={{
@@ -835,6 +912,107 @@ export default function BookScanner() {
                 </div>
               </div>
             )}
+
+            {/* ── 도서관 소장 조회 섹션 ── */}
+            <div style={{
+              background: "#fffdf7", border: "1px solid #e0d5c0",
+              borderRadius: "14px", overflow: "hidden",
+            }}>
+              {/* 헤더 */}
+              <div style={{
+                padding: "14px 20px", background: "#f5f0e8",
+                borderBottom: "1px solid #e0d5c0",
+              }}>
+                <div style={{
+                  fontFamily: "'Noto Sans KR',sans-serif",
+                  fontSize: "14px", fontWeight: 700, color: "#1a1a2e",
+                  marginBottom: "10px",
+                }}>
+                  🏛 도서관 소장 확인
+                </div>
+                {/* 체크박스 목록 */}
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "12px" }}>
+                  {LIBRARIES.map(lib => (
+                    <label key={lib.id} style={{
+                      display: "flex", alignItems: "center", gap: "6px",
+                      cursor: "pointer", userSelect: "none",
+                      fontFamily: "'Noto Sans KR',sans-serif",
+                      fontSize: "14px", color: "#1a1a2e",
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedLibs.includes(lib.id)}
+                        onChange={() => toggleLib(lib.id)}
+                        style={{ width: "17px", height: "17px", cursor: "pointer", accentColor: "#1a1a2e" }}
+                      />
+                      {lib.name}
+                    </label>
+                  ))}
+                </div>
+                {/* 조회 버튼 */}
+                {!apiKey ? (
+                  <div style={{
+                    fontSize: "12px", color: "#856404",
+                    fontFamily: "'Noto Sans KR',sans-serif",
+                    background: "#fff8e8", padding: "8px 12px",
+                    borderRadius: "8px",
+                  }}>
+                    ⚠️ 도서관 정보나루 API 키를 설정하면 소장 여부를 확인할 수 있어요.
+                  </div>
+                ) : (
+                  <button
+                    onClick={doLibSearch}
+                    disabled={libLoading || selectedLibs.length === 0 || !currentIsbnRef.current}
+                    style={{
+                      width: "100%",
+                      background: libLoading || selectedLibs.length === 0 ? "#ccc" : "#1a1a2e",
+                      color: "#c9a96e", border: "none",
+                      padding: "11px", borderRadius: "10px",
+                      cursor: libLoading || selectedLibs.length === 0 ? "default" : "pointer",
+                      fontFamily: "'Noto Sans KR',sans-serif",
+                      fontSize: "14px", fontWeight: 700,
+                    }}
+                  >
+                    {libLoading ? "조회 중…" : "📍 소장 여부 확인"}
+                  </button>
+                )}
+              </div>
+
+              {/* 조회 결과 */}
+              {Object.keys(libResults).length > 0 && (
+                <div>
+                  {LIBRARIES.filter(lib => libResults[lib.id] !== undefined).map((lib, i, arr) => {
+                    const status = libResults[lib.id];
+                    const s = LIB_STATUS[status] || LIB_STATUS.error;
+                    return (
+                      <div key={lib.id} style={{
+                        display: "flex", alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "13px 20px",
+                        borderBottom: i < arr.length - 1 ? "1px solid #f0ebe0" : "none",
+                      }}>
+                        <span style={{
+                          fontFamily: "'Noto Sans KR',sans-serif",
+                          fontSize: "14px", color: "#1a1a2e",
+                        }}>
+                          {lib.name}
+                        </span>
+                        <span style={{
+                          padding: "4px 14px", borderRadius: "20px",
+                          fontSize: "12px", fontWeight: 700,
+                          background: s.bg, color: s.color,
+                          fontFamily: "'Noto Sans KR',sans-serif",
+                          whiteSpace: "nowrap",
+                        }}>
+                          {s.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
