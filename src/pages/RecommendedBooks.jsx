@@ -171,7 +171,8 @@ export default function RecommendedBooks() {
         .from(tableName)
         .select("book_no, title, author, publisher, library_status, callno, location")
         .eq("grade_code", gradeCode)
-        .order("book_no", { ascending: true });
+        .order("book_no", { ascending: true })
+        .range(0, 9999); // Supabase 기본 limit(1000) 우회
       if (error) throw error;
       setBooksForGrade((data ?? []).map(mapBookRow));
     } catch (e) {
@@ -200,7 +201,8 @@ export default function RecommendedBooks() {
         .from(tableName)
         .select("book_no, title, author, publisher, library_status, callno, location")
         .eq("level", String(raceLevel))
-        .order("book_no", { ascending: true });
+        .order("book_no", { ascending: true })
+        .range(0, 9999); // Supabase 기본 limit(1000) 우회
       if (error) throw error;
       setRaceBooksAll((data ?? []).map(mapBookRow));
     } catch (e) {
