@@ -203,3 +203,13 @@
   line-height: 1;
   font-size: 1.1rem;
 }
+
+/* 타이머 실행 중 멈춤 버튼 깜빡임 */
+@keyframes pause-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+.btn-pause-blink {
+  animation: pause-blink 1s ease-in-out infinite;
+}

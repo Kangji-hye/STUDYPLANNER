@@ -1281,9 +1281,12 @@ function Planner() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [remainingSec, setRemainingSec] = useState(10 * 60);
   const timerIntervalRef = useRef(null);
-
+  // timerMin이 변경된 경우에만 remainingSec를 초기화 (멈춤 시 초기화 방지)
+  const prevTimerMinRef = useRef(10);
   useEffect(() => {
-    if (timerRunning) return;
+    if (prevTimerMinRef.current === timerMin) return; // timerMin 변화 없으면 무시
+    prevTimerMinRef.current = timerMin;
+    if (timerRunning) return; // 실행 중엔 초기화 안 함
     setRemainingSec(timerMin * 60);
   }, [timerMin, timerRunning]);
 

@@ -66,7 +66,11 @@ export default function StudyTools({
 
         <div className="tool-actions">
           <button onClick={startTimer} disabled={timerRunning || remainingSec <= 0}>시작</button>
-          <button onClick={pauseTimer} disabled={!timerRunning}>멈춤</button>
+          <button
+            onClick={pauseTimer}
+            disabled={!timerRunning}
+            className={timerRunning ? "btn-pause-blink" : ""}
+          >멈춤</button>
           <button onClick={resetTimer}>처음부터</button>
         </div>
       </div>
