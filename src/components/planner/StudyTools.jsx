@@ -29,7 +29,11 @@ export default function StudyTools({
         <div className="tool-display">{formatTime(elapsedMs)}</div>
         <div className="tool-actions">
           <button onClick={startStopwatch} disabled={isRunning}>시작</button>
-          <button onClick={stopStopwatch} disabled={!isRunning}>멈춤</button>
+          <button
+            onClick={stopStopwatch}
+            disabled={!isRunning}
+            className={isRunning ? "btn-pause-blink" : ""}
+          >멈춤</button>
           <button onClick={resetStopwatch}>처음부터</button>
         </div>
       </div>
