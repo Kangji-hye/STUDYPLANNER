@@ -363,6 +363,33 @@ const LIB_STATUS = {
   error:       { label: "⚠ 오류",      bg: "#fff3cd", color: "#856404" },
 };
 
+// ── JSONP 헬퍼 (컴포넌트 바깥에 위치 — 클로저 문제 없음) ────────────────────
+function fetchJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = "_libcb_" + Math.random().toString(36).slice(2);
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      delete window[cbName];
+      script.remove();
+      reject(new Error("timeout"));
+    }, 8000);
+    window[cbName] = (data) => {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      resolve(data);
+    };
+    script.src = `${url}&callback=${cbName}`;
+    script.onerror = () => {
+      clearTimeout(timer);
+      delete window[cbName];
+      script.remove();
+      reject(new Error("script error"));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 // ── 메인 페이지 ───────────────────────────────────────────────────────────────
 export default function BookScanner() {
   const navigate = useNavigate();
@@ -399,32 +426,15 @@ export default function BookScanner() {
     });
   };
 
-  // JSONP 방식으로 도서관 정보나루 API 호출 (CORS 우회)
-  function fetchJsonp(url) {
-    return new Promise((resolve, reject) => {
-      const cbName = "_libcb_" + Math.random().toString(36).slice(2);
-      const script = document.createElement("script");
-      const timer = setTimeout(() => {
-        delete window[cbName];
-        script.remove();
-        reject(new Error("timeout"));
-      }, 8000);
-      window[cbName] = (data) => {
-        clearTimeout(timer);
-        delete window[cbName];
-        script.remove();
-        resolve(data);
-      };
-      script.src = `${url}&callback=${cbName}`;
-      script.onerror = () => { clearTimeout(timer); delete window[cbName]; script.remove(); reject(new Error("script error")); };
-      document.head.appendChild(script);
-    });
-  }
-
   // 도서관 소장 조회 실행
   const doLibSearch = useCallback(async () => {
     const clean = currentIsbnRef.current;
-    if (!clean || !apiKey || selectedLibs.length === 0) return;
+    const key = import.meta.env.VITE_LIB_APIKEY || "";
+    console.log("[도서관조회] ISBN:", clean, "/ API키 있음:", !!key, "/ 선택도서관:", selectedLibs);
+    if (!clean || !key || selectedLibs.length === 0) {
+      console.warn("[도서관조회] 조건 미충족으로 중단");
+      return;
+    }
 
     setLibLoading(true);
     // 선택된 도서관만 loading 상태로 초기화
@@ -436,9 +446,10 @@ export default function BookScanner() {
     await Promise.all(
       LIBRARIES.filter(lib => selectedLibs.includes(lib.id)).map(async (lib) => {
         try {
-          const data = await fetchJsonp(
-            `${LIB_API}/bookExist?authKey=${apiKey}&libCode=${lib.code}&isbn13=${clean}&format=jsonp`
-          );
+          const url = `${LIB_API}/bookExist?authKey=${key}&libCode=${lib.code}&isbn13=${clean}&format=jsonp`;
+          console.log("[도서관조회] 요청URL:", url);
+          const data = await fetchJsonp(url);
+          console.log("[도서관조회] 응답:", lib.name, data);
           const result = data?.response?.result;
           if (!result) {
             setLibResults(p => ({ ...p, [lib.id]: "error" }));
