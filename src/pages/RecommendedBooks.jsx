@@ -47,7 +47,9 @@ function safeParseCols(jsonStr) {
       author: v.author !== false,
       publisher: v.publisher !== false,
       status: v.status !== false,
+      callno: v.callno !== false,
       location: v.location !== false,
+      loan: v.loan !== false,
     };
   } catch {
     return null;
@@ -76,14 +78,17 @@ function sortList(list, sortKey, sortDir) {
 function mapBookRow(row) {
   return {
     no: Number(row.book_no),
+    bookId: row.book_id ?? null,  // 리딩레이스 체크용 고유 ID
     title: row.title ?? "",
     author: row.author ?? "",
     publisher: row.publisher ?? "",
     status: row.library_status ?? "",
     callno: row.callno ?? "",
     location: row.location ?? "",
+    isbn: row.isbn ?? "",         // 실시간 대출 조회용 ISBN
   };
 }
+
 
 export default function RecommendedBooks() {
   const navigate = useNavigate();
@@ -117,9 +122,13 @@ export default function RecommendedBooks() {
   const [loadingRace, setLoadingRace] = useState(false);
   const [raceError, setRaceError] = useState("");
 
-  // "대여" 체크(추천도서 탭 전용)
+  // "대여" 체크(추천도서 탭)
   const [checkedSet, setCheckedSet] = useState(() => new Set());
   const [loadingChecks, setLoadingChecks] = useState(false);
+
+  // "대여" 체크(리딩레이스 탭) — key: book_id
+  const [raceCheckedSet, setRaceCheckedSet] = useState(() => new Set());
+  const [loadingRaceChecks, setLoadingRaceChecks] = useState(false);
 
   // 열 표시 체크
   const [visibleCols, setVisibleCols] = useState({
@@ -127,11 +136,15 @@ export default function RecommendedBooks() {
     author: true,
     publisher: true,
     status: true,
+    callno: true,
     location: true,
+    loan: true,
   });
 
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
+
+  const apiKey = import.meta.env.VITE_LIB_APIKEY || "";
 
   // 로그인 사용자 확인
   useEffect(() => {
@@ -169,7 +182,7 @@ export default function RecommendedBooks() {
         : "recommended_books";
       const { data, error } = await supabase
         .from(tableName)
-        .select("book_no, title, author, publisher, library_status, callno, location")
+        .select("book_no, title, author, publisher, library_status, callno, location, isbn")
         .eq("grade_code", gradeCode)
         .order("book_no", { ascending: true })
         .range(0, 9999); // Supabase 기본 limit(1000) 우회
@@ -199,7 +212,7 @@ export default function RecommendedBooks() {
         : "reading_race_books";
       const { data, error } = await supabase
         .from(tableName)
-        .select("book_no, title, author, publisher, library_status, callno, location")
+        .select("book_no, book_id, title, author, publisher, library_status, callno, location, isbn")
         .eq("level", String(raceLevel))
         .order("book_no", { ascending: true })
         .range(0, 9999); // Supabase 기본 limit(1000) 우회
@@ -274,6 +287,62 @@ export default function RecommendedBooks() {
     }
   }, [userId, gradeCode, navigate, checkedSet, loadChecks]);
 
+  // 리딩레이스 체크 상태 로드
+  const loadRaceChecks = useCallback(async () => {
+    if (!userId) { setRaceCheckedSet(new Set()); return; }
+    setLoadingRaceChecks(true);
+    try {
+      const { data, error } = await supabase
+        .from("reading_race_checks")
+        .select("book_id, checked")
+        .eq("user_id", userId)
+        .eq("level", String(raceLevel))
+        .eq("checked", true);
+      if (error) throw error;
+      const s = new Set();
+      (data ?? []).forEach((row) => { if (row?.checked) s.add(Number(row.book_id)); });
+      setRaceCheckedSet(s);
+    } catch (e) {
+      console.error(e);
+      setRaceCheckedSet(new Set());
+    } finally {
+      setLoadingRaceChecks(false);
+    }
+  }, [userId, raceLevel]);
+
+  useEffect(() => {
+    loadRaceChecks();
+  }, [loadRaceChecks]);
+
+  // 리딩레이스 체크 토글
+  const toggleRaceCheck = useCallback(async (bookId, level) => {
+    const id = Number(bookId);
+    if (!userId) { alert("로그인 후 사용할 수 있어요."); navigate("/login"); return; }
+    // 낙관적 업데이트: 먼저 화면에 반영
+    setRaceCheckedSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+    try {
+      const nextChecked = !raceCheckedSet.has(id);
+      const { error } = await supabase
+        .from("reading_race_checks")
+        .upsert({
+          user_id: userId,
+          book_id: id,
+          level: String(level),
+          checked: nextChecked,
+          checked_at: new Date().toISOString(),
+        }, { onConflict: "user_id,book_id" });
+      if (error) throw error;
+    } catch (e) {
+      console.error(e);
+      loadRaceChecks(); // 실패 시 서버 상태로 복원
+      alert("저장에 실패했어요. 잠시 후 다시 시도해 주세요.");
+    }
+  }, [userId, raceLevel, navigate, raceCheckedSet, loadRaceChecks]);
+
   // 추천도서 필터링
   const filteredBooks = useMemo(() => {
     let list = booksForGrade.filter((b) => {
@@ -332,17 +401,19 @@ export default function RecommendedBooks() {
     const owned = raceBooksAll.filter((b) => isOwned(b.status)).length;
     const notOwned = total - owned;
     const childRoom = raceBooksAll.filter((b) => isChildRoom(b.location)).length;
+    const checked = raceCheckedSet.size;
     const shown = filteredRaceBooks.length;
-    return { total, owned, notOwned, childRoom, shown };
-  }, [raceBooksAll, filteredRaceBooks]);
+    return { total, owned, notOwned, childRoom, checked, shown };
+  }, [raceBooksAll, filteredRaceBooks, raceCheckedSet]);
 
   const onSort = useCallback((key) => {
-    setSortKey((prevKey) => {
-      if (prevKey !== key) { setSortDir("asc"); return key; }
-      setSortDir((prevDir) => (prevDir === "asc" ? "desc" : "asc"));
-      return prevKey;
-    });
-  }, []);
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir("asc");
+    } else {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    }
+  }, [sortKey]);
 
   const toggleCol = useCallback((key) => {
     setVisibleCols((v) => ({ ...v, [key]: !v[key] }));
@@ -383,7 +454,7 @@ export default function RecommendedBooks() {
             <>
               <h1>🏃 리딩레이스 {raceLevel}단계</h1>
               <p>
-                드림스쿨 리딩레이스 {raceLevel}단계 &nbsp;|&nbsp; 총 {currentStats.total}권
+                리딩레이스 {raceLevel}단계 &nbsp;|&nbsp; 총 {currentStats.total}권
               </p>
             </>
           ) : (
@@ -414,12 +485,7 @@ export default function RecommendedBooks() {
               value={gradeCode}
               onChange={(e) => setGradeCode(Number(e.target.value))}
             >
-              <option value={1}>1학년</option>
               <option value={2}>2학년</option>
-              <option value={3}>3학년</option>
-              <option value={4}>4학년</option>
-              <option value={5}>5학년</option>
-              <option value={6}>6학년</option>
             </select>
 
             <select
@@ -461,7 +527,7 @@ export default function RecommendedBooks() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          {STATUS_FILTER_OPTIONS.map((o) => (
+          {STATUS_FILTER_OPTIONS.filter((o) => libraryCode !== "jangmi" || o.value !== "yes_child").map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
@@ -476,7 +542,7 @@ export default function RecommendedBooks() {
               checked={onlyUnchecked}
               onChange={(e) => setOnlyUnchecked(e.target.checked)}
             />
-            <span>대여 안한것만</span>
+            <span>대출 안한것만</span>
           </label>
         )}
 
@@ -488,6 +554,11 @@ export default function RecommendedBooks() {
           {!isRaceTab && (
             <span className="badge blue">
               완료: {currentStats.checked}권{loadingChecks ? " (불러오는 중)" : ""}
+            </span>
+          )}
+          {isRaceTab && (
+            <span className="badge blue">
+              완료: {currentStats.checked}권{loadingRaceChecks ? " (불러오는 중)" : ""}
             </span>
           )}
         </div>
@@ -504,7 +575,7 @@ export default function RecommendedBooks() {
       <div className="columnToggles" aria-label="열 표시 설정">
         <label>
           <input type="checkbox" checked={visibleCols.no} onChange={() => toggleCol("no")} />
-          번호
+          No.
         </label>
         <label>
           <input type="checkbox" checked={visibleCols.author} onChange={() => toggleCol("author")} />
@@ -516,7 +587,11 @@ export default function RecommendedBooks() {
         </label>
         <label>
           <input type="checkbox" checked={visibleCols.status} onChange={() => toggleCol("status")} />
-          {libraryCode === "jangmi" ? "장미도서관" : "구성도서관"}
+          소장여부
+        </label>
+        <label>
+          <input type="checkbox" checked={visibleCols.callno} onChange={() => toggleCol("callno")} />
+          청구기호(위치)
         </label>
         {libraryCode !== "jangmi" && (
           <label>
@@ -524,6 +599,10 @@ export default function RecommendedBooks() {
             자료실
           </label>
         )}
+        <label>
+          <input type="checkbox" checked={visibleCols.loan} onChange={() => toggleCol("loan")} />
+          대출여부
+        </label>
       </div>
 
       <div className="tableWrap">
@@ -549,11 +628,11 @@ export default function RecommendedBooks() {
           <table id="booksTable">
             <thead>
               <tr>
-                {!isRaceTab && <th className="borrowCol">대여</th>}
+                <th className="borrowCol">대출</th>
 
                 {visibleCols.no && (
                   <th onClick={() => onSort("no")} role="button" tabIndex={0}>
-                    번호 ↕
+                    No. ↕
                   </th>
                 )}
 
@@ -579,35 +658,43 @@ export default function RecommendedBooks() {
                   </th>
                 )}
 
-                <th onClick={() => onSort("callno")} role="button" tabIndex={0}>
-                  청구기호 ↕
-                </th>
+                {visibleCols.callno && (
+                  <th onClick={() => onSort("callno")} role="button" tabIndex={0}>
+                    청구기호 ↕
+                  </th>
+                )}
 
                 {visibleCols.location && libraryCode !== "jangmi" && (
                   <th onClick={() => onSort("location")} role="button" tabIndex={0}>
                     자료실 위치
                   </th>
                 )}
+                {visibleCols.loan && <th className="loanCheckCol">대출여부</th>}
               </tr>
             </thead>
 
             <tbody id="tableBody">
               {currentBooks.map((b) => {
                 const no = Number(b.no);
-                const checked = !isRaceTab && checkedSet.has(no);
+                // 추천도서: book_no 기준 / 리딩레이스: book_id 기준
+                const checked = isRaceTab
+                  ? raceCheckedSet.has(Number(b.bookId))
+                  : checkedSet.has(no);
 
                 return (
-                  <tr key={`${activeTab}-${no}`} className={checked ? "rowChecked" : ""}>
-                    {!isRaceTab && (
-                      <td className="borrowCol">
-                        <input
-                          type="checkbox"
-                          className="borrowChk"
-                          checked={checked}
-                          onChange={() => toggleCheck(no)}
-                        />
-                      </td>
-                    )}
+                  <tr key={`${activeTab}-${isRaceTab ? b.bookId : no}`} className={checked ? "rowChecked" : ""}>
+                    <td className="borrowCol">
+                      <input
+                        type="checkbox"
+                        className="borrowChk"
+                        checked={checked}
+                        onChange={() =>
+                          isRaceTab
+                            ? toggleRaceCheck(b.bookId, raceLevel)
+                            : toggleCheck(no)
+                        }
+                      />
+                    </td>
 
                     {visibleCols.no && <td>{b.no}</td>}
                     <td className="titleCell">{b.title}</td>
@@ -616,12 +703,31 @@ export default function RecommendedBooks() {
 
                     {visibleCols.status && (
                       <td className={isOwned(b.status) ? "owned" : "notOwned"}>
-                        {b.status}
+                        {b.status.replace(/\(.*?\)/, "").trim()}
                       </td>
                     )}
 
-                    <td>{b.callno}</td>
+                    {visibleCols.callno && <td>{b.callno}</td>}
                     {visibleCols.location && libraryCode !== "jangmi" && <td>{b.location}</td>}
+                    {visibleCols.loan && (
+                      <td className="loanCheckCol">
+                        {isOwned(b.status) && (
+                          <a
+                            href={
+                              libraryCode === "jangmi"
+                                ? `https://roselib.winbook.kr/front/bookSearch/simple/list?SC_KEYWORD_FIRST=${encodeURIComponent(b.title)}`
+                                : `https://lib.yongin.go.kr/mobile/guseong/search/plusSearchResultList.do?searchType=SIMPLE&searchKey=TITLE&searchKeyword=${encodeURIComponent(b.title)}&searchRecordCount=50`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="loanLibLink"
+                            title={libraryCode === "jangmi" ? "장미도서관 홈페이지에서 직접 확인" : "구성도서관 홈페이지에서 직접 확인"}
+                          >
+                            🔗 도서관
+                          </a>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

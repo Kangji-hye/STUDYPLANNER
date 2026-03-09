@@ -3,6 +3,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+import "./BookScanner.css";
 
 // ── 바코드 폴리필 ────────────────────────────────────────────────────────────
 const POLYFILL_URL =
@@ -529,15 +530,6 @@ export default function BookScanner() {
                   letterSpacing: "0.08em", outline: "none",
                 }}
               />
-              <button
-                onClick={() => setShowCamera(true)}
-                title="카메라로 스캔"
-                style={{
-                  background: "#c9a96e", color: "#1a1a2e", border: "none",
-                  padding: "12px 16px", borderRadius: "10px",
-                  cursor: "pointer", fontSize: "20px", flexShrink: 0,
-                }}
-              >📷</button>
             </div>
             <button
               onClick={() => doSearch()}
@@ -940,6 +932,21 @@ export default function BookScanner() {
           </div>
         )}
       </div>
+
+      {/* ── 하단 고정 카메라 버튼 ── */}
+      {/* 카메라가 열려있을 때는 숨김, 나머지 상황에서는 항상 표시 */}
+      {!showCamera && (
+        <button
+          className="scanBtn"
+          onClick={() => setShowCamera(true)}
+          title="카메라로 바코드 스캔"
+        >
+          📷 <span>도서 바코드 스캔</span>
+        </button>
+      )}
+
+      {/* 하단 버튼 높이만큼 여백 확보 (내용이 버튼에 가리지 않도록) */}
+      <div style={{ height: "80px" }} />
     </div>
   );
 }

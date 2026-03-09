@@ -153,7 +153,7 @@ td:first-child {
 /* 열 표시 체크박스 줄 */
 .columnToggles {
   display:flex;
-  gap:16px;
+  gap:1px 10px;
   flex-wrap:wrap;
   margin-top:12px;
   font-size:0.9rem;
@@ -311,4 +311,59 @@ td:first-child {
 }
 .statusNoteSep {
   color: #ccc;
+}
+
+/* ===== 대여여부 버튼 ===== */
+.loanCheckCol {
+  width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* "확인" 버튼 */
+.loanCheckBtn {
+  background: #1a1a2e;
+  color: #c9a96e;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.loanCheckBtn:hover { background: #2e2e50; }
+.loanCheckBtn:disabled {
+  background: #ccc;
+  color: #999;
+  cursor: default;
+}
+
+/* 도서관 홈페이지 링크 */
+.loanLibLink {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #e8f0fc;
+  color: #3a5a9b;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.loanLibLink:hover { background: #c8d8f8; }
+
+/* 결과 배지 */
+.loanBadge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
 }

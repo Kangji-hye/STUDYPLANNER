@@ -1,0 +1,37 @@
+/* src/pages/BookScanner.css */
+
+/* 하단 고정 카메라 스캔 버튼 */
+.scanBtn {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  padding: 30px 0;       /* 세로 모드: 더 넉넉한 높이 */
+  background: #c9a96e;
+  color: #1a1a2e;
+  border: none;
+  font-size: 28px;       /* 글자 크게 */
+  font-weight: 700;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+
+.scanBtn:active {
+  background: #b8924a;
+}
+
+/* 가로 모드일 때: 버튼을 얇게 */
+@media (orientation: landscape) {
+  .scanBtn {
+    padding: 14px 0;     /* 세로 패딩 줄임 */
+    font-size: 20px;     /* 글자도 약간 작게 */
+  }
+}
