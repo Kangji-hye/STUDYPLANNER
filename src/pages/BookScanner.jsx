@@ -348,21 +348,34 @@ async function searchLists(title) {
 
 // ── 도서관 소장 조회 ──────────────────────────────────────────────────────────
 // 메모리에 저장된 도서관 코드 하드코딩
+// 도서관 검색용 제목 정제 — 괄호/부제목/특수기호 제거 후 핵심 단어만 남김
+function cleanTitleForSearch(title) {
+  return title
+    .replace(/\(.*?\)/g, "")   // (괄호 안 내용) 제거
+    .replace(/\[.*?\]/g, "")   // [괄호 안 내용] 제거
+    .replace(/【.*?】/g, "")   // 【괄호】 제거
+    .replace(/『.*?』/g, "")   // 『』 제거
+    .replace(/「.*?」/g, "")   // 「」 제거
+    .replace(/[!@#$%^&*_+={|}\\<>?/~`'"]/g, "") // 특수기호 제거
+    .replace(/\s+/g, " ")      // 연속 공백 하나로
+    .trim();
+}
+
 const LIBRARIES = [
   {
     id: "guseong", name: "구성도서관", code: "141118",
     searchUrl: (title) =>
-      `https://lib.yongin.go.kr/guseong/plusSearchResultList.do?searchKeyword=${encodeURIComponent(title)}&searchType=TITLE`,
+      `https://lib.yongin.go.kr/guseong/plusSearchResultList.do?searchKeyword=${encodeURIComponent(cleanTitleForSearch(title))}&searchType=TITLE`,
   },
   {
     id: "jangmi", name: "장미도서관", code: "141219",
     searchUrl: (title) =>
-      `https://roselib.winbook.kr/front/bookSearch/simple/list?CHKTYPEALL=ALL&CHKLENDINCLUDE=1&CHKRESERVEINCLUDE=1&SC_KEYWORD_FIRST=${encodeURIComponent(title)}`,
+      `https://roselib.winbook.kr/front/bookSearch/simple/list?CHKTYPEALL=ALL&CHKLENDINCLUDE=1&CHKRESERVEINCLUDE=1&SC_KEYWORD_FIRST=${encodeURIComponent(cleanTitleForSearch(title))}`,
   },
   {
     id: "cheongdeok", name: "청덕도서관", code: "141564",
     searchUrl: (title) =>
-      `https://lib.yongin.go.kr/cheongdeok/plusSearchResultList.do?searchKeyword=${encodeURIComponent(title)}&searchType=TITLE`,
+      `https://lib.yongin.go.kr/cheongdeok/plusSearchResultList.do?searchKeyword=${encodeURIComponent(cleanTitleForSearch(title))}&searchType=TITLE`,
   },
 ];
 
