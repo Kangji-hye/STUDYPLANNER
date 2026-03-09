@@ -351,18 +351,18 @@ async function searchLists(title) {
 const LIBRARIES = [
   {
     id: "guseong", name: "구성도서관", code: "141118",
-    searchUrl: (isbn) =>
-      `https://lib.yongin.go.kr/guseong/plusSearchResultList.do?searchKeyword=${isbn}&searchType=ISBNISSN`,
+    searchUrl: (title) =>
+      `https://lib.yongin.go.kr/guseong/plusSearchResultList.do?searchKeyword=${encodeURIComponent(title)}&searchType=TITLE`,
   },
   {
     id: "jangmi", name: "장미도서관", code: "141219",
-    searchUrl: (isbn) =>
-      `https://roselib.winbook.kr/front/bookSearch/simple/list?CHKTYPEALL=ALL&CHKLENDINCLUDE=1&CHKRESERVEINCLUDE=1&SC_KEYWORD_FIRST=${isbn}`,
+    searchUrl: (title) =>
+      `https://roselib.winbook.kr/front/bookSearch/simple/list?CHKTYPEALL=ALL&CHKLENDINCLUDE=1&CHKRESERVEINCLUDE=1&SC_KEYWORD_FIRST=${encodeURIComponent(title)}`,
   },
   {
     id: "cheongdeok", name: "청덕도서관", code: "141564",
-    searchUrl: (isbn) =>
-      `https://lib.yongin.go.kr/cheongdeok/plusSearchResultList.do?searchKeyword=${isbn}&searchType=ISBNISSN`,
+    searchUrl: (title) =>
+      `https://lib.yongin.go.kr/cheongdeok/plusSearchResultList.do?searchKeyword=${encodeURIComponent(title)}&searchType=TITLE`,
   },
 ];
 
@@ -425,6 +425,7 @@ export default function BookScanner() {
   const [libLoading, setLibLoading] = useState(false);
   const currentIsbnRef = useRef(""); // 현재 조회 중인 ISBN 추적
   const [currentIsbn, setCurrentIsbn] = useState(""); // 버튼 disabled 조건용 (ref는 리렌더링 안 일으킴)
+  const [currentTitle, setCurrentTitle] = useState(""); // 도서관 바로가기 URL용 책 제목
 
   // 체크박스 토글 + localStorage 저장
   const toggleLib = (id) => {
@@ -498,6 +499,8 @@ export default function BookScanner() {
     const direct = await searchByIsbn(clean);
     if (direct.recommended.length > 0 || direct.race.length > 0) {
       setBookInfo(direct.bookInfo);
+      // DB에서 찾은 경우 제목 저장 (도서관 바로가기용)
+      if (direct.bookInfo?.title) setCurrentTitle(direct.bookInfo.title);
       setResults({ recommended: direct.recommended, race: direct.race });
       setLoading(false);
       return;
@@ -507,6 +510,7 @@ export default function BookScanner() {
     const info = await fetchBookInfo(clean);
     if (info) {
       setBookInfo(info);
+      if (info.title) setCurrentTitle(info.title); // 도서관 바로가기용 제목 저장
       const res = await searchLists(info.title);
       setResults(res);
     } else {
@@ -1005,7 +1009,7 @@ export default function BookScanner() {
                           {/* 도서관 바로가기 버튼 — 소장 중일 때만 표시 */}
                           {canLink && (
                             <a
-                              href={lib.searchUrl(currentIsbn)}
+                              href={lib.searchUrl(currentTitle || currentIsbn)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{
