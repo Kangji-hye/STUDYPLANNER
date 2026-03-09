@@ -395,9 +395,6 @@ export default function BookScanner() {
   const navigate = useNavigate();
   const polyfillReady = usePolyfill();
 
-  // API 키: 환경변수에서만 읽음 (사용자 UI 불필요)
-  const apiKey = import.meta.env.VITE_LIB_APIKEY || "";
-
   const [isbn, setIsbn] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -426,47 +423,49 @@ export default function BookScanner() {
     });
   };
 
-  // 도서관 소장 조회 실행
+  // 도서관 소장 조회 실행 (Supabase Edge Function 경유 — CORS 문제 없음)
   const doLibSearch = useCallback(async () => {
     const clean = currentIsbnRef.current;
-    const key = import.meta.env.VITE_LIB_APIKEY || "";
-    console.log("[도서관조회] ISBN:", clean, "/ API키 있음:", !!key, "/ 선택도서관:", selectedLibs);
-    if (!clean || !key || selectedLibs.length === 0) {
-      console.warn("[도서관조회] 조건 미충족으로 중단");
-      return;
-    }
+    if (!clean || selectedLibs.length === 0) return;
 
     setLibLoading(true);
-    // 선택된 도서관만 loading 상태로 초기화
     const initState = {};
     selectedLibs.forEach(id => { initState[id] = "loading"; });
     setLibResults(initState);
 
-    // 선택된 도서관에 대해 병렬 조회 (JSONP 방식으로 CORS 우회)
-    await Promise.all(
-      LIBRARIES.filter(lib => selectedLibs.includes(lib.id)).map(async (lib) => {
-        try {
-          const url = `${LIB_API}/bookExist?authKey=${key}&libCode=${lib.code}&isbn13=${clean}&format=jsonp`;
-          console.log("[도서관조회] 요청URL:", url);
-          const data = await fetchJsonp(url);
-          console.log("[도서관조회] 응답:", lib.name, data);
-          const result = data?.response?.result;
-          if (!result) {
-            setLibResults(p => ({ ...p, [lib.id]: "error" }));
-            return;
-          }
-          // hasBook: Y/N, loanAvailable: Y/N
-          const status = result.hasBook === "N" ? "none"
-            : result.loanAvailable === "Y" ? "available"
-            : "unavailable";
-          setLibResults(p => ({ ...p, [lib.id]: status }));
-        } catch {
-          setLibResults(p => ({ ...p, [lib.id]: "error" }));
+    try {
+      // 선택된 도서관의 code 목록 추출
+      const libCodes = LIBRARIES
+        .filter(lib => selectedLibs.includes(lib.id))
+        .map(lib => lib.code);
+
+      const res = await fetch(
+        "https://yscbxaemcinondzvwoej.supabase.co/functions/v1/lib-book-exist",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isbn: clean, libCodes }),
         }
-      })
-    );
+      );
+      const data = await res.json();
+
+      // 응답 결과를 libId 기준으로 매핑
+      const codeToId = Object.fromEntries(LIBRARIES.map(lib => [lib.code, lib.id]));
+      const next = {};
+      (data.results ?? []).forEach(({ libCode, status }) => {
+        const id = codeToId[libCode];
+        if (id) next[id] = status;
+      });
+      setLibResults(next);
+    } catch {
+      // 전체 오류 시 모든 도서관 error 표시
+      const errState = {};
+      selectedLibs.forEach(id => { errState[id] = "error"; });
+      setLibResults(errState);
+    }
+
     setLibLoading(false);
-  }, [apiKey, selectedLibs]);
+  }, [selectedLibs]);
 
   const doSearch = useCallback(async (isbnVal) => {
     const clean = (isbnVal || isbn).replace(/-/g, "").trim();
