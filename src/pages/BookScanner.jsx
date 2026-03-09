@@ -349,9 +349,21 @@ async function searchLists(title) {
 // ── 도서관 소장 조회 ──────────────────────────────────────────────────────────
 // 메모리에 저장된 도서관 코드 하드코딩
 const LIBRARIES = [
-  { id: "guseong", name: "구성도서관", code: "141118" },
-  { id: "jangmi",  name: "장미도서관", code: "141219" },
-  { id: "cheongdeok", name: "청덕도서관", code: "141564" },
+  {
+    id: "guseong", name: "구성도서관", code: "141118",
+    searchUrl: (isbn) =>
+      `https://lib.yongin.go.kr/guseong/plusSearchResultList.do?searchKeyword=${isbn}&searchType=ISBNISSN`,
+  },
+  {
+    id: "jangmi", name: "장미도서관", code: "141219",
+    searchUrl: (isbn) =>
+      `https://roselib.winbook.kr/front/bookSearch/simple/list?CHKTYPEALL=ALL&CHKLENDINCLUDE=1&CHKRESERVEINCLUDE=1&SC_KEYWORD_FIRST=${isbn}`,
+  },
+  {
+    id: "cheongdeok", name: "청덕도서관", code: "141564",
+    searchUrl: (isbn) =>
+      `https://lib.yongin.go.kr/cheongdeok/plusSearchResultList.do?searchKeyword=${isbn}&searchType=ISBNISSN`,
+  },
 ];
 
 // 소장 상태별 라벨/색상
@@ -962,28 +974,53 @@ export default function BookScanner() {
                   {LIBRARIES.filter(lib => libResults[lib.id] !== undefined).map((lib, i, arr) => {
                     const status = libResults[lib.id];
                     const s = LIB_STATUS[status] || LIB_STATUS.error;
+                    const canLink = status !== "loading" && status !== "none" && status !== "error";
                     return (
                       <div key={lib.id} style={{
                         display: "flex", alignItems: "center",
-                        justifyContent: "space-between",
+                        justifyContent: "space-between", gap: "10px",
                         padding: "13px 20px",
                         borderBottom: i < arr.length - 1 ? "1px solid #f0ebe0" : "none",
                       }}>
+                        {/* 도서관명 */}
                         <span style={{
                           fontFamily: "'Noto Sans KR',sans-serif",
-                          fontSize: "14px", color: "#1a1a2e",
+                          fontSize: "14px", color: "#1a1a2e", flexShrink: 0,
                         }}>
                           {lib.name}
                         </span>
-                        <span style={{
-                          padding: "4px 14px", borderRadius: "20px",
-                          fontSize: "12px", fontWeight: 700,
-                          background: s.bg, color: s.color,
-                          fontFamily: "'Noto Sans KR',sans-serif",
-                          whiteSpace: "nowrap",
-                        }}>
-                          {s.label}
-                        </span>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {/* 소장 상태 뱃지 */}
+                          <span style={{
+                            padding: "4px 12px", borderRadius: "20px",
+                            fontSize: "12px", fontWeight: 700,
+                            background: s.bg, color: s.color,
+                            fontFamily: "'Noto Sans KR',sans-serif",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {s.label}
+                          </span>
+
+                          {/* 도서관 바로가기 버튼 — 소장 중일 때만 표시 */}
+                          {canLink && (
+                            <a
+                              href={lib.searchUrl(currentIsbn)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: "inline-block",
+                                padding: "4px 12px", borderRadius: "20px",
+                                background: "#1a1a2e", color: "#c9a96e",
+                                fontSize: "12px", fontWeight: 700,
+                                fontFamily: "'Noto Sans KR',sans-serif",
+                                textDecoration: "none", whiteSpace: "nowrap",
+                              }}
+                            >
+                              🔗 바로가기
+                            </a>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
