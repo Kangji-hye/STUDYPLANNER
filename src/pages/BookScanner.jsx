@@ -399,6 +399,28 @@ export default function BookScanner() {
     });
   };
 
+  // JSONP 방식으로 도서관 정보나루 API 호출 (CORS 우회)
+  function fetchJsonp(url) {
+    return new Promise((resolve, reject) => {
+      const cbName = "_libcb_" + Math.random().toString(36).slice(2);
+      const script = document.createElement("script");
+      const timer = setTimeout(() => {
+        delete window[cbName];
+        script.remove();
+        reject(new Error("timeout"));
+      }, 8000);
+      window[cbName] = (data) => {
+        clearTimeout(timer);
+        delete window[cbName];
+        script.remove();
+        resolve(data);
+      };
+      script.src = `${url}&callback=${cbName}`;
+      script.onerror = () => { clearTimeout(timer); delete window[cbName]; script.remove(); reject(new Error("script error")); };
+      document.head.appendChild(script);
+    });
+  }
+
   // 도서관 소장 조회 실행
   const doLibSearch = useCallback(async () => {
     const clean = currentIsbnRef.current;
@@ -410,14 +432,13 @@ export default function BookScanner() {
     selectedLibs.forEach(id => { initState[id] = "loading"; });
     setLibResults(initState);
 
-    // 선택된 도서관에 대해 병렬 조회
+    // 선택된 도서관에 대해 병렬 조회 (JSONP 방식으로 CORS 우회)
     await Promise.all(
       LIBRARIES.filter(lib => selectedLibs.includes(lib.id)).map(async (lib) => {
         try {
-          const res = await fetch(
-            `${LIB_API}/bookExist?authKey=${apiKey}&libCode=${lib.code}&isbn13=${clean}&format=json`
+          const data = await fetchJsonp(
+            `${LIB_API}/bookExist?authKey=${apiKey}&libCode=${lib.code}&isbn13=${clean}&format=jsonp`
           );
-          const data = await res.json();
           const result = data?.response?.result;
           if (!result) {
             setLibResults(p => ({ ...p, [lib.id]: "error" }));
@@ -538,11 +559,12 @@ export default function BookScanner() {
           disabled={showCamera}
           style={{
             width: "100%", marginBottom: "16px",
-            background: "#1a1a2e", color: "#c9a96e", border: "none",
+            background: "linear-gradient(135deg, #c9a96e, #e8c98a)",
+            color: "#1a1a2e", border: "none",
             padding: "16px", borderRadius: "14px",
             cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif",
             fontSize: "16px", fontWeight: 700,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            boxShadow: "0 4px 16px rgba(201,169,110,0.4)",
             display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
           }}
         >
