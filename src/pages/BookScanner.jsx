@@ -191,7 +191,8 @@ function CameraScanner({ onDetected, onClose, polyfillReady }) {
 
 // ── 책 정보 조회 ─────────────────────────────────────────────────────────────
 // 1순위: 도서관 정보나루 API (한국 도서에 강함, lib_apikey 있을 때)
-// 2순위: Google Books API (키 없이 무료, 폴백)
+// 2순위: 네이버 책 검색 API (표지 이미지 품질 좋음)
+// 3순위: Google Books API (키 없이 무료, 최종 폴백)
 const LIB_API = "https://www.data4library.kr/api";
 
 async function fetchBookInfo(isbn) {
@@ -216,7 +217,33 @@ async function fetchBookInfo(isbn) {
     } catch { /* ignore, try next */ }
   }
 
-  // 2순위: Google Books API
+  // 2순위: 네이버 책 검색 API (표지 이미지 고품질)
+  const naverClientId = import.meta.env.VITE_NAVER_CLIENT_ID || "";
+  const naverClientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET || "";
+  if (naverClientId && naverClientSecret) {
+    try {
+      const res = await fetch(
+        `https://openapi.naver.com/v1/search/book.json?query=${encodeURIComponent(clean)}&display=1`,
+        {
+          headers: {
+            "X-Naver-Client-Id": naverClientId,
+            "X-Naver-Client-Secret": naverClientSecret,
+          },
+        }
+      );
+      const data = await res.json();
+      const item = data?.items?.[0];
+      if (item) {
+        return {
+          title: item.title?.replace(/<[^>]*>/g, "") ?? "",  // HTML 태그 제거
+          author: item.author ?? "",
+          thumbnail: item.image ?? "",
+        };
+      }
+    } catch { /* ignore, try next */ }
+  }
+
+  // 3순위: Google Books API (최종 폴백)
   try {
     const res = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`
@@ -361,6 +388,7 @@ export default function BookScanner() {
   const [libResults, setLibResults] = useState({}); // { libId: "available"|"unavailable"|"none"|"error"|"loading" }
   const [libLoading, setLibLoading] = useState(false);
   const currentIsbnRef = useRef(""); // 현재 조회 중인 ISBN 추적
+  const [currentIsbn, setCurrentIsbn] = useState(""); // 버튼 disabled 조건용 (ref는 리렌더링 안 일으킴)
 
   // 체크박스 토글 + localStorage 저장
   const toggleLib = (id) => {
@@ -414,6 +442,7 @@ export default function BookScanner() {
 
     // 새 ISBN 저장 (도서관 조회용)
     currentIsbnRef.current = clean;
+    setCurrentIsbn(clean); // 버튼 disabled 조건 갱신용
 
     setLoading(true);
     setBookInfo(null);
@@ -502,6 +531,24 @@ export default function BookScanner() {
       </div>
 
       <div style={{ maxWidth: "600px", margin: "0 auto", padding: "24px 16px" }}>
+
+        {/* 바코드 스캔 버튼 */}
+        <button
+          onClick={() => setShowCamera(true)}
+          disabled={showCamera}
+          style={{
+            width: "100%", marginBottom: "16px",
+            background: "#1a1a2e", color: "#c9a96e", border: "none",
+            padding: "16px", borderRadius: "14px",
+            cursor: "pointer", fontFamily: "'Noto Sans KR',sans-serif",
+            fontSize: "16px", fontWeight: 700,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+          }}
+        >
+          <span style={{ fontSize: "22px" }}>📷</span>
+          <span>바코드로 책 인식</span>
+        </button>
 
         {/* ISBN 입력 */}
         <div style={{
@@ -862,10 +909,10 @@ export default function BookScanner() {
                 {/* 조회 버튼 */}
                 <button
                   onClick={doLibSearch}
-                  disabled={libLoading || selectedLibs.length === 0 || !currentIsbnRef.current}
+                  disabled={libLoading || selectedLibs.length === 0 || !currentIsbn}
                   style={{
                     width: "100%",
-                    background: libLoading || selectedLibs.length === 0 ? "#ccc" : "#1a1a2e",
+                    background: libLoading || selectedLibs.length === 0 || !currentIsbn ? "#ccc" : "#1a1a2e",
                     color: "#c9a96e", border: "none",
                     padding: "11px", borderRadius: "10px",
                     cursor: libLoading || selectedLibs.length === 0 ? "default" : "pointer",
@@ -933,20 +980,6 @@ export default function BookScanner() {
         )}
       </div>
 
-      {/* ── 하단 고정 카메라 버튼 ── */}
-      {/* 카메라가 열려있을 때는 숨김, 나머지 상황에서는 항상 표시 */}
-      {!showCamera && (
-        <button
-          className="scanBtn"
-          onClick={() => setShowCamera(true)}
-          title="카메라로 바코드 스캔"
-        >
-          📷 <span>도서 바코드 스캔</span>
-        </button>
-      )}
-
-      {/* 하단 버튼 높이만큼 여백 확보 (내용이 버튼에 가리지 않도록) */}
-      <div style={{ height: "80px" }} />
     </div>
   );
 }
