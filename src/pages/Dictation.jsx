@@ -128,28 +128,32 @@ function speakSequential(utterances, index = 0) {
 
 function speakKoreanWithQuestionLift(
   originalText,
-  { rate = 0.95, volume = 1.0, punctReadOn = false } = {}
+  { rate = 0.95, volume = 1.0, punctReadOn = false, onLog = null } = {}
 ) {
-  if (!originalText) return;
+  const log = (msg) => { try { onLog?.(msg); } catch {} };
+
+  if (!originalText) { log("❌ 텍스트 없음"); return; }
 
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
     alert("이 기기/브라우저는 음성 읽기를 지원하지 않아요.");
+    log("❌ SpeechSynthesis 미지원");
     return;
   }
 
+  log("▶ speak 시작");
   stopSpeaking();
   stopAndroidResumeHack();
 
-  // 안드로이드에서 getVoices()가 아직 로드 안 됐을 경우를 대비해
-  // voiceschanged 이벤트 후 재시도하는 함수로 분리
   const doSpeak = () => {
+    const allVoices = window.speechSynthesis?.getVoices?.() || [];
     const voice = pickKoreanVoice();
+    log(`음성목록 ${allVoices.length}개 / 한국어: ${voice ? voice.name : "없음(기본사용)"}`);
+
     const raw = String(originalText);
 
     const parts = [];
     const re = /([^.!?…]+)([.!?…]?)/g;
     let m;
-
     while ((m = re.exec(raw))) {
       const chunk = String(m[1] ?? "").trim();
       const endP = String(m[2] ?? "");
@@ -159,7 +163,6 @@ function speakKoreanWithQuestionLift(
 
     const toUtter = parts.length ? parts : [{ chunk: raw, endP: "" }];
 
-    // utterance 객체 미리 생성
     const utterances = [];
     toUtter.forEach(({ chunk, endP }) => {
       let out = chunk;
@@ -180,34 +183,37 @@ function speakKoreanWithQuestionLift(
       } else {
         u.pitch = 1.0;
       }
-      // voice가 있을 때만 지정 (null이면 기본 음성 사용)
       if (voice) u.voice = voice;
+
+      // 재생 결과 로그
+      u.onstart = () => log(`🔊 재생중: "${out.slice(0, 10)}"`);
+      u.onerror = (e) => log(`❌ 오류: ${e?.error ?? "unknown"}`);
 
       utterances.push(u);
     });
 
-    if (utterances.length === 0) return;
+    if (utterances.length === 0) { log("❌ utterance 없음"); return; }
 
-    // 안드로이드 멈춤 버그 우회 타이머 시작
+    log(`utterance ${utterances.length}개 생성, 재생 시작`);
     startAndroidResumeHack();
-    // 순차 재생 (onend 콜백 방식)
     speakSequential(utterances, 0);
   };
 
-  // 음성 목록이 이미 로드된 경우 바로 실행,
-  // 아직 없으면 voiceschanged 이벤트 한 번만 기다렸다가 실행
   const voices = window.speechSynthesis?.getVoices?.() || [];
   if (voices.length > 0) {
+    log(`voices 즉시 사용 (${voices.length}개)`);
     doSpeak();
   } else {
+    log("voices 로딩 대기중...");
     const onVoicesChanged = () => {
       window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+      log("voiceschanged 이벤트 수신");
       doSpeak();
     };
     window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
-    // 혹시 이벤트가 안 오는 기기를 대비해 500ms 후 fallback 실행
     setTimeout(() => {
       window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+      log("500ms fallback 실행");
       doSpeak();
     }, 500);
   }
@@ -376,7 +382,7 @@ export default function Dictation() {
   const onPressSpeaker = useCallback(
     (id, text) => {
       startTimerFor(id);
-      speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
+      speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn, onLog: addDebugLog });
     },
     [startTimerFor, ttsSpeed.rate, punctReadOn]
   );
@@ -493,6 +499,13 @@ export default function Dictation() {
 
   const canUseTTS = useMemo(() => {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+  }, []);
+
+  // 디버그: 안드로이드에서 TTS 상태를 화면에 표시
+  const [ttsDebugLog, setTtsDebugLog] = useState([]);
+  const addDebugLog = useCallback((msg) => {
+    const time = new Date().toISOString().slice(11, 19);
+    setTtsDebugLog((prev) => [...prev.slice(-6), `[${time}] ${msg}`]);
   }, []);
 
   const hasAnyPunct = useMemo(() => {
@@ -636,6 +649,29 @@ export default function Dictation() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* 🔧 임시 디버그 로그 박스 — 안드로이드 TTS 문제 진단 후 제거 예정 */}
+      {ttsDebugLog.length > 0 && (
+        <div style={{
+          margin: "8px 16px",
+          padding: "8px 10px",
+          background: "#1a1a2e",
+          color: "#a8ff78",
+          fontFamily: "monospace",
+          fontSize: "11px",
+          borderRadius: "8px",
+          lineHeight: 1.6,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-all",
+        }}>
+          {ttsDebugLog.map((line, i) => <div key={i}>{line}</div>)}
+          <button
+            type="button"
+            onClick={() => setTtsDebugLog([])}
+            style={{ marginTop: 4, fontSize: 10, opacity: 0.6, background: "none", border: "1px solid #a8ff78", color: "#a8ff78", borderRadius: 4, padding: "2px 8px", cursor: "pointer" }}
+          >지우기</button>
         </div>
       )}
 
