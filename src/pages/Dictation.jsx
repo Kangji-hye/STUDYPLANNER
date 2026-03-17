@@ -654,27 +654,31 @@ export default function Dictation() {
       )}
 
       {/* 🔧 임시 디버그 로그 박스 — 안드로이드 TTS 문제 진단 후 제거 예정 */}
-      {ttsDebugLog.length > 0 && (
-        <div style={{
-          margin: "8px 16px",
-          padding: "8px 10px",
-          background: "#1a1a2e",
-          color: "#a8ff78",
-          fontFamily: "monospace",
-          fontSize: "11px",
-          borderRadius: "8px",
-          lineHeight: 1.6,
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-all",
-        }}>
-          {ttsDebugLog.map((line, i) => <div key={i}>{line}</div>)}
+      <div style={{
+        margin: "8px 16px",
+        padding: "8px 10px",
+        background: "#1a1a2e",
+        color: "#a8ff78",
+        fontFamily: "monospace",
+        fontSize: "11px",
+        borderRadius: "8px",
+        lineHeight: 1.6,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-all",
+        minHeight: "32px",
+      }}>
+        {ttsDebugLog.length === 0
+          ? <span style={{opacity:0.4}}>🔧 소리 버튼을 누르면 여기에 로그가 표시돼요</span>
+          : ttsDebugLog.map((line, i) => <div key={i}>{line}</div>)
+        }
+        {ttsDebugLog.length > 0 && (
           <button
             type="button"
             onClick={() => setTtsDebugLog([])}
             style={{ marginTop: 4, fontSize: 10, opacity: 0.6, background: "none", border: "1px solid #a8ff78", color: "#a8ff78", borderRadius: 4, padding: "2px 8px", cursor: "pointer" }}
           >지우기</button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="dictationAnswerGateBar">
         <button type="button" className="dictationAnswerGateBtn" onClick={openAnswerUI}>
