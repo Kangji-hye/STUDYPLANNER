@@ -128,19 +128,15 @@ function speakSequential(utterances, index = 0) {
 
 function speakKoreanWithQuestionLift(
   originalText,
-  { rate = 0.95, volume = 1.0, punctReadOn = false, onLog = null } = {}
+  { rate = 0.95, volume = 1.0, punctReadOn = false } = {}
 ) {
-  const log = (msg) => { try { onLog?.(msg); } catch {} };
-
-  if (!originalText) { log("❌ 텍스트 없음"); return; }
+  if (!originalText) return;
 
   if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
     alert("이 기기/브라우저는 음성 읽기를 지원하지 않아요.");
-    log("❌ SpeechSynthesis 미지원");
     return;
   }
 
-  log("▶ speak 시작");
   stopSpeaking();
   stopAndroidResumeHack();
 
@@ -148,7 +144,6 @@ function speakKoreanWithQuestionLift(
     const allVoices = window.speechSynthesis?.getVoices?.() || [];
     // 1순위: 한국어 음성, 2순위: 기기 기본 음성(첫 번째), 3순위: null(지정 안 함)
     const voice = pickKoreanVoice() || allVoices[0] || null;
-    log(`음성목록 ${allVoices.length}개 / 사용음성: ${voice ? voice.name : "없음"}`);
 
     const raw = String(originalText);
 
@@ -187,35 +182,26 @@ function speakKoreanWithQuestionLift(
       }
       if (voice) u.voice = voice;
 
-      // 재생 결과 로그
-      u.onstart = () => log(`🔊 재생중: "${out.slice(0, 10)}"`);
-      u.onerror = (e) => log(`❌ 오류: ${e?.error ?? "unknown"}`);
-
       utterances.push(u);
     });
 
-    if (utterances.length === 0) { log("❌ utterance 없음"); return; }
+    if (utterances.length === 0) return;
 
-    log(`utterance ${utterances.length}개 생성, 재생 시작`);
     startAndroidResumeHack();
     speakSequential(utterances, 0);
   };
 
   const voices = window.speechSynthesis?.getVoices?.() || [];
   if (voices.length > 0) {
-    log(`voices 즉시 사용 (${voices.length}개)`);
     doSpeak();
   } else {
-    log("voices 로딩 대기중...");
     const onVoicesChanged = () => {
       window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
-      log("voiceschanged 이벤트 수신");
       doSpeak();
     };
     window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
     setTimeout(() => {
       window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
-      log("500ms fallback 실행");
       doSpeak();
     }, 500);
   }
@@ -383,10 +369,8 @@ export default function Dictation() {
 
   const onPressSpeaker = useCallback(
     (id, text) => {
-      // 버튼 클릭 자체가 되는지 확인
-      addDebugLog(`버튼 클릭됨 canUseTTS=${canUseTTS} text="${String(text ?? "").slice(0,8)}"`);
       startTimerFor(id);
-      speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn, onLog: addDebugLog });
+      speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn });
     },
     [startTimerFor, ttsSpeed.rate, punctReadOn]
   );
@@ -505,12 +489,8 @@ export default function Dictation() {
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
   }, []);
 
-  // 디버그: 안드로이드에서 TTS 상태를 화면에 표시
-  const [ttsDebugLog, setTtsDebugLog] = useState([]);
-  const addDebugLog = useCallback((msg) => {
-    const time = new Date().toISOString().slice(11, 19);
-    setTtsDebugLog((prev) => [...prev.slice(-6), `[${time}] ${msg}`]);
-  }, []);
+  // 디버그 로그 (진단 완료 후 비활성화)
+  const addDebugLog = useCallback((_msg) => {}, []);
 
   const hasAnyPunct = useMemo(() => {
     return (list || []).some((r) => PUNCT_REGEX.test(String(r?.text ?? "")));
@@ -655,32 +635,6 @@ export default function Dictation() {
         </div>
       )}
 
-      {/* 🔧 임시 디버그 로그 박스 — 안드로이드 TTS 문제 진단 후 제거 예정 */}
-      <div style={{
-        margin: "8px 16px",
-        padding: "8px 10px",
-        background: "#1a1a2e",
-        color: "#a8ff78",
-        fontFamily: "monospace",
-        fontSize: "11px",
-        borderRadius: "8px",
-        lineHeight: 1.6,
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-all",
-        minHeight: "32px",
-      }}>
-        {ttsDebugLog.length === 0
-          ? <span style={{opacity:0.4}}>🔧 소리 버튼을 누르면 여기에 로그가 표시돼요</span>
-          : ttsDebugLog.map((line, i) => <div key={i}>{line}</div>)
-        }
-        {ttsDebugLog.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setTtsDebugLog([])}
-            style={{ marginTop: 4, fontSize: 10, opacity: 0.6, background: "none", border: "1px solid #a8ff78", color: "#a8ff78", borderRadius: 4, padding: "2px 8px", cursor: "pointer" }}
-          >지우기</button>
-        )}
-      </div>
 
       <div className="dictationAnswerGateBar">
         <button type="button" className="dictationAnswerGateBtn" onClick={openAnswerUI}>
