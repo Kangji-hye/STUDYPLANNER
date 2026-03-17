@@ -146,8 +146,9 @@ function speakKoreanWithQuestionLift(
 
   const doSpeak = () => {
     const allVoices = window.speechSynthesis?.getVoices?.() || [];
-    const voice = pickKoreanVoice();
-    log(`음성목록 ${allVoices.length}개 / 한국어: ${voice ? voice.name : "없음(기본사용)"}`);
+    // 1순위: 한국어 음성, 2순위: 기기 기본 음성(첫 번째), 3순위: null(지정 안 함)
+    const voice = pickKoreanVoice() || allVoices[0] || null;
+    log(`음성목록 ${allVoices.length}개 / 사용음성: ${voice ? voice.name : "없음"}`);
 
     const raw = String(originalText);
 
@@ -174,7 +175,8 @@ function speakKoreanWithQuestionLift(
       if (!out) return;
 
       const u = new SpeechSynthesisUtterance(out);
-      u.lang = "ko-KR";
+      // 한국어 음성이 있으면 ko-KR, 없으면 voice의 lang을 따름 (강제 ko-KR시 거부 방지)
+      u.lang = voice?.lang || "ko-KR";
       u.rate = rate;
       u.volume = volume;
       if (endP === "?") {
