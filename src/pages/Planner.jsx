@@ -2188,6 +2188,10 @@ function Planner() {
             )}
           </div>
 
+          <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)}>
+            ✍️ 오늘의 받아쓰기
+          </button>
+
           {weekHwImgUrl && (
             <>
               <button
@@ -2196,10 +2200,6 @@ function Planner() {
                 onClick={() => setWeekHwImgOpen(true)}
               >
                 🖼️ 일주일 전체 숙제
-              </button>
-
-              <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)}>
-                ✍️ 오늘의 받아쓰기
               </button>
 
               {weekHwImgOpen && (
