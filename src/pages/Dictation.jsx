@@ -62,6 +62,7 @@ function stopSpeaking() {
   } catch (e) {
     console.error("Failed to cancel speech synthesis:", e);
   }
+  stopAndroidResumeHack(); // 멈춤 방지 타이머도 같이 정리
 }
 
 function normalizePunctToWords(text) {
@@ -81,9 +82,48 @@ function normalizePunctToWords(text) {
   return out;
 }
 
+// 안드로이드 Chrome: getVoices()가 처음엔 빈 배열을 반환하므로
+// voiceschanged 이벤트 이후 다시 시도하는 방식으로 음성을 가져옴
 function pickKoreanVoice() {
   const voices = window.speechSynthesis?.getVoices?.() || [];
   return voices.find((v) => (v.lang || "").toLowerCase().startsWith("ko")) || null;
+}
+
+// 안드로이드 Chrome SpeechSynthesis 멈춤 버그 우회용 resume 반복 타이머
+// speak() 도중 내부적으로 멈추는 현상을 resume()으로 강제 재개
+let _androidResumeTimer = null;
+function startAndroidResumeHack() {
+  stopAndroidResumeHack();
+  _androidResumeTimer = setInterval(() => {
+    try {
+      if (window.speechSynthesis?.speaking) {
+        window.speechSynthesis.pause();
+        window.speechSynthesis.resume();
+      }
+    } catch {
+      //
+    }
+  }, 5000); // 5초마다 resume() 호출
+}
+function stopAndroidResumeHack() {
+  if (_androidResumeTimer !== null) {
+    clearInterval(_androidResumeTimer);
+    _androidResumeTimer = null;
+  }
+}
+
+// utterance 목록을 onend 콜백으로 순차 재생
+// 안드로이드에서 큐에 한꺼번에 쌓으면 중간에 멈추는 문제 방지
+function speakSequential(utterances, index = 0) {
+  if (index >= utterances.length) {
+    // 모든 문장 재생 완료
+    stopAndroidResumeHack();
+    return;
+  }
+  const u = utterances[index];
+  u.onend = () => speakSequential(utterances, index + 1);
+  u.onerror = () => speakSequential(utterances, index + 1); // 에러 시 다음으로 건너뜀
+  window.speechSynthesis.speak(u);
 }
 
 function speakKoreanWithQuestionLift(
@@ -98,50 +138,79 @@ function speakKoreanWithQuestionLift(
   }
 
   stopSpeaking();
+  stopAndroidResumeHack();
 
-  const voice = pickKoreanVoice();
-  const raw = String(originalText);
+  // 안드로이드에서 getVoices()가 아직 로드 안 됐을 경우를 대비해
+  // voiceschanged 이벤트 후 재시도하는 함수로 분리
+  const doSpeak = () => {
+    const voice = pickKoreanVoice();
+    const raw = String(originalText);
 
-  const parts = [];
-  const re = /([^.!?…]+)([.!?…]?)/g;
-  let m;
+    const parts = [];
+    const re = /([^.!?…]+)([.!?…]?)/g;
+    let m;
 
-  while ((m = re.exec(raw))) {
-    const chunk = String(m[1] ?? "").trim();
-    const endP = String(m[2] ?? "");
-    if (!chunk && !endP) continue;
-    parts.push({ chunk, endP });
+    while ((m = re.exec(raw))) {
+      const chunk = String(m[1] ?? "").trim();
+      const endP = String(m[2] ?? "");
+      if (!chunk && !endP) continue;
+      parts.push({ chunk, endP });
+    }
+
+    const toUtter = parts.length ? parts : [{ chunk: raw, endP: "" }];
+
+    // utterance 객체 미리 생성
+    const utterances = [];
+    toUtter.forEach(({ chunk, endP }) => {
+      let out = chunk;
+      if (punctReadOn) {
+        out = normalizePunctToWords(out + (endP || ""));
+      } else {
+        out = (out + (endP || "")).replace(/\s+/g, " ").trim();
+      }
+      if (!out) return;
+
+      const u = new SpeechSynthesisUtterance(out);
+      u.lang = "ko-KR";
+      u.rate = rate;
+      u.volume = volume;
+      if (endP === "?") {
+        u.pitch = 1.45;
+        u.rate = rate * 0.98;
+      } else {
+        u.pitch = 1.0;
+      }
+      // voice가 있을 때만 지정 (null이면 기본 음성 사용)
+      if (voice) u.voice = voice;
+
+      utterances.push(u);
+    });
+
+    if (utterances.length === 0) return;
+
+    // 안드로이드 멈춤 버그 우회 타이머 시작
+    startAndroidResumeHack();
+    // 순차 재생 (onend 콜백 방식)
+    speakSequential(utterances, 0);
+  };
+
+  // 음성 목록이 이미 로드된 경우 바로 실행,
+  // 아직 없으면 voiceschanged 이벤트 한 번만 기다렸다가 실행
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  if (voices.length > 0) {
+    doSpeak();
+  } else {
+    const onVoicesChanged = () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+      doSpeak();
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
+    // 혹시 이벤트가 안 오는 기기를 대비해 500ms 후 fallback 실행
+    setTimeout(() => {
+      window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+      doSpeak();
+    }, 500);
   }
-
-  const toUtter = parts.length ? parts : [{ chunk: raw, endP: "" }];
-
-  toUtter.forEach(({ chunk, endP }) => {
-    let out = chunk;
-
-    if (punctReadOn) {
-      out = normalizePunctToWords(out + (endP || ""));
-    } else {
-      out = (out + (endP || "")).replace(/\s+/g, " ").trim();
-    }
-
-    if (!out) return;
-
-    const u = new SpeechSynthesisUtterance(out);
-    u.lang = "ko-KR";
-    u.rate = rate;
-    u.volume = volume;
-
-    if (endP === "?") {
-      u.pitch = 1.45;
-      u.rate = rate * 0.98;
-    } else {
-      u.pitch = 1.0;
-    }
-
-    if (voice) u.voice = voice;
-
-    window.speechSynthesis.speak(u);
-  });
 }
 
 function fmtMMSS(sec) {
