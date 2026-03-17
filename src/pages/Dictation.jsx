@@ -381,6 +381,8 @@ export default function Dictation() {
 
   const onPressSpeaker = useCallback(
     (id, text) => {
+      // 버튼 클릭 자체가 되는지 확인
+      addDebugLog(`버튼 클릭됨 canUseTTS=${canUseTTS} text="${String(text ?? "").slice(0,8)}"`);
       startTimerFor(id);
       speakKoreanWithQuestionLift(text, { rate: ttsSpeed.rate, punctReadOn, onLog: addDebugLog });
     },
@@ -626,7 +628,6 @@ export default function Dictation() {
                   <button
                     className="dictationSpeakBtn"
                     onClick={() => onPressSpeaker(r.id, r.text)}
-                    disabled={!canUseTTS}
                     type="button"
                     aria-label={`${r.item_no}번 읽기`}
                     title={`읽어주기 (${ttsSpeed.label}${punctReadOn ? " + 문장부호" : ""})`}
