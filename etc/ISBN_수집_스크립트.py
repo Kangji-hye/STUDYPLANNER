@@ -31,24 +31,32 @@ import sys
 import json
 import os
 
+# Windows 터미널 인코딩 문제 해결
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    from pathlib import Path
+    # etc/.env 먼저, 없으면 프로젝트 루트 .env 로드
+    load_dotenv(Path(__file__).parent / '.env')
+    load_dotenv(Path(__file__).parent.parent / '.env')
 except ImportError:
     pass
 
 # ── 설정 ───────────────────────────────────────────────────────────
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-LIB_APIKEY   = os.getenv("LIB_APIKEY", "")
+# VITE_ 접두사도 폴백으로 지원 (프로젝트 루트 .env 그대로 사용 가능)
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY", "")
+LIB_APIKEY   = os.getenv("LIB_APIKEY")   or os.getenv("VITE_LIB_APIKEY", "")
 
 # 없으면 직접 입력
 # SUPABASE_URL = "https://xxxx.supabase.co"
 # SUPABASE_KEY = "eyJhbGci..."
 # LIB_APIKEY   = "..."
 
-API_DELAY    = 1.2   # 도서관 API 요청 간격(초) — 너무 빠르면 차단될 수 있음
-BATCH_SIZE   = 200   # Supabase에서 한 번에 가져올 행 수
+API_DELAY     = 1.2   # 도서관 API 요청 간격(초) — 너무 빠르면 차단될 수 있음
+BATCH_SIZE    = 200   # Supabase에서 한 번에 가져올 행 수
+SAVE_INTERVAL = 250   # N권마다 중간 저장 (약 5분)
 PROGRESS_FILE = "isbn_progress.json"
 
 # 쪽수 업데이트 대상 테이블 (이미 값 있어도 API 값이 다르면 덮어씀)
@@ -239,6 +247,13 @@ def process_table(table: str, progress: dict):
                 print("❌ ISBN 없음")
 
             session_done += 1
+
+            # SAVE_INTERVAL권마다 중간 저장
+            if session_done % SAVE_INTERVAL == 0:
+                progress[table] = {"done": done + session_done, "found": found_total + session_found}
+                save_progress(progress)
+                print(f"\n  💾 중간 저장 완료 ({done + session_done}권 처리)\n")
+
             time.sleep(API_DELAY)
 
         # 이번 배치에서 isbn 없는 게 BATCH_SIZE 미만이면 다음 페이지 없음

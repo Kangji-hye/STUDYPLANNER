@@ -1,6 +1,22 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__supabase__list_tables",
+      "mcp__supabase__execute_sql",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "WebFetch(domain:www.data.go.kr)",
+      "WebSearch",
+      "WebFetch(domain:rd.dreamschool.or.kr)",
+      "WebFetch(domain:lib.yongin.go.kr)",
+      "mcp__supabase__deploy_edge_function",
+      "mcp__supabase__get_project_url",
+      "WebFetch(domain:roselib.winbook.kr)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
   ],
-  "enableAllProjectMcpServers": true
+  "outputStyle": "Beginner style"
 }

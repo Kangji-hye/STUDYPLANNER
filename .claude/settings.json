@@ -15,5 +15,23 @@
     "deny": [
       "Read(.env*)"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash /c/Users/강지혜/.claude/statusline-command.sh"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "COMMAND=$(jq -r '.tool_input.command // empty') && if echo \"$COMMAND\" | grep -qE '\\brm\\b|\\brmdir\\b|\\bunlink\\b'; then echo '⛔ 삭제 명령(rm, rmdir, unlink)은 차단됩니다.' >&2; exit 2; fi"
+          }
+        ]
+      }
+    ]
   }
 }
+

@@ -179,8 +179,11 @@ function Planner() {
   const [verseRef, setVerseRef] = useState("");
 
   const [homeworkItems, setHomeworkItems] = useState([]);
+  const [homeworkImages, setHomeworkImages] = useState([]); // 오늘 숙제 이미지 [{path, url}]
   const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
-  const [weekHwImgOpen, setWeekHwImgOpen] = useState(false);
+  // 이미지 뷰어 모달 (주간 숙제 + 오늘 숙제 이미지 공용)
+  const [imgViewerUrl, setImgViewerUrl] = useState("");
+  const [imgViewerOpen, setImgViewerOpen] = useState(false);
 
   useBootSplash(loading);
 
@@ -1707,8 +1710,9 @@ function Planner() {
 
     if (!isSecondGrade) {
       setHomeworkItems([]);
+      setHomeworkImages([]);
       setWeekHwImgUrl("");
-      setWeekHwImgOpen(false);
+      setImgViewerOpen(false);
       return;
     }
 
@@ -1716,7 +1720,7 @@ function Planner() {
       try {
         const { data, error } = await supabase
           .from("daily_homeworks")
-          .select("items")
+          .select("items, image_paths")
           .eq("day_key", selectedDayKey)
           .eq("grade_code", 2)
           .maybeSingle();
@@ -1732,6 +1736,10 @@ function Planner() {
           .filter((x) => x.subject.length > 0 && x.content.length > 0);
 
         setHomeworkItems(normalized);
+
+        // 오늘 숙제 이미지
+        const imgs = Array.isArray(data?.image_paths) ? data.image_paths : [];
+        setHomeworkImages(imgs.filter((x) => x?.path && x?.url));
 
         const weekStart = getWeekStartDayKeyFromSelected(selectedDayKey);
 
@@ -1751,6 +1759,7 @@ function Planner() {
       } catch (err) {
         console.error("load daily_homeworks error:", err);
         setHomeworkItems([]);
+        setHomeworkImages([]);
         setWeekHwImgUrl("");
       }
     };
@@ -2192,39 +2201,74 @@ function Planner() {
             ✍️ 오늘의 받아쓰기
           </button>
 
-          {weekHwImgUrl && (
-            <>
-              <button
-                type="button"
-                className="weekly-hw-btn"
-                onClick={() => setWeekHwImgOpen(true)}
-              >
-                🖼️ 일주일 전체 숙제
-              </button>
-
-              {weekHwImgOpen && (
-                <div
-                  className="weekly-hw-overlay"
-                  role="dialog"
-                  aria-modal="true"
-                  onClick={() => setWeekHwImgOpen(false)}
+          {/* 오늘 숙제 이미지 썸네일 */}
+          {homeworkImages.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+              {homeworkImages.map((img, i) => (
+                <button
+                  key={`hw-img-${i}`}
+                  type="button"
+                  style={{
+                    padding: 0,
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    display: "block",
+                  }}
+                  onClick={() => { setImgViewerUrl(img.url); setImgViewerOpen(true); }}
+                  aria-label={`숙제 이미지 ${i + 1} 크게 보기`}
                 >
-                  <div className="weekly-hw-card" onClick={(e) => e.stopPropagation()}>
-                    <div className="weekly-hw-image-wrap">
-                      <img src={weekHwImgUrl} alt="주간 숙제" className="weekly-hw-image" />
-                    </div>
+                  <img
+                    src={img.url}
+                    alt={`숙제 이미지 ${i + 1}`}
+                    style={{
+                      width: 72,
+                      height: 72,
+                      objectFit: "cover",
+                      borderRadius: 10,
+                      border: "1.5px solid rgba(0,0,0,0.1)",
+                      display: "block",
+                    }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
 
-                    <button
-                      type="button"
-                      onClick={() => setWeekHwImgOpen(false)}
-                      className="weekly-hw-close"
-                    >
-                      닫기
-                    </button>
-                  </div>
+          {weekHwImgUrl && (
+            <button
+              type="button"
+              className="weekly-hw-btn"
+              onClick={() => { setImgViewerUrl(weekHwImgUrl); setImgViewerOpen(true); }}
+            >
+              🖼️ 일주일 전체 숙제
+            </button>
+          )}
+
+          {/* 이미지 뷰어 모달 (주간 숙제 + 오늘 숙제 이미지 공용) */}
+          {imgViewerOpen && (
+            <div
+              className="weekly-hw-overlay"
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setImgViewerOpen(false)}
+            >
+              <div className="weekly-hw-card" onClick={(e) => e.stopPropagation()}>
+                <div className="weekly-hw-image-wrap">
+                  <img src={imgViewerUrl} alt="숙제 이미지" className="weekly-hw-image" />
                 </div>
-              )}
-            </>
+
+                <button
+                  type="button"
+                  onClick={() => setImgViewerOpen(false)}
+                  className="weekly-hw-close"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}

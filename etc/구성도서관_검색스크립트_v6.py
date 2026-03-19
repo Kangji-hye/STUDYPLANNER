@@ -188,10 +188,10 @@ def search_one(title: str, publisher: str = "") -> dict:
         found_pub = extract_publisher_from_text(item_text)
         pub_ok = publisher_match(publisher, found_pub) if publisher else False
 
-        # 청구기호
+        # 청구기호 (예: 아 388.1-미293ㅈ-3=2 전체를 잡도록 패턴 확장)
         callno = ""
         m = re.search(
-            r'(?:아\s+|유아\s+|아동\s+)?[0-9]{3}(?:\.[0-9]+)?[-\s][가-힣A-Za-z][가-힣A-Za-z0-9\-\.=]*',
+            r'(?:(?:아|유아|아동)\s+)?[0-9]{3}(?:\.[0-9]+)?[-\s][가-힣A-Za-z][가-힣A-Za-z0-9]*(?:[-=][가-힣A-Za-z0-9\.]*)*',
             item_text
         )
         if m:
@@ -286,15 +286,15 @@ def _fallback_parse(soup, title: str, publisher: str):
         found_pub = extract_publisher_from_text(ctx_text)
         pub_ok = publisher_match(publisher, found_pub) if publisher else False
 
-        # 청구기호
+        # 청구기호 (예: 아 388.1-미293ㅈ-3=2 전체를 잡도록 패턴 확장)
         callno = ""
         for l in reversed(context_lines[-10:]):
             m = re.search(
-                r'(?:아\s+|유아\s+|아동\s+)?[0-9]{3}(?:\.[0-9]+)?[-\s][가-힣A-Za-z][가-힣A-Za-z0-9\-\.=]*',
+                r'(?:(?:아|유아|아동)\s+)?[0-9]{3}(?:\.[0-9]+)?[-\s][가-힣A-Za-z][가-힣A-Za-z0-9]*(?:[-=][가-힣A-Za-z0-9\.]*)*',
                 l
             )
             if m:
-                callno = l.strip()
+                callno = m.group().strip()
                 break
 
         # 위치

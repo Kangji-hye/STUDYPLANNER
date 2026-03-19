@@ -286,13 +286,26 @@
   cursor: default;
 }
 
+/* 오늘 날짜: 빨간색 테두리 + 빨간 텍스트 */
 .admin-inline-cal-cell.is-today{
-  outline: 3px solid rgba(255, 122, 162, 0.22);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.07);
 }
 
+/* 선택된 날짜: 진한 핑크 채움 + 흰 텍스트 */
 .admin-inline-cal-cell.is-selected{
-  border-color: rgba(255, 122, 162, 0.55);
-  box-shadow: 0 0 0 6px rgba(255, 122, 162, 0.14);
+  background: var(--primary, #f06292);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(240, 98, 146, 0.35);
+}
+
+/* 오늘 날짜이면서 선택된 경우: 빨간 채움으로 명확히 구분 */
+.admin-inline-cal-cell.is-today.is-selected{
+  background: #ef4444;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
 .admin-hamburger-menu {
@@ -573,13 +586,26 @@
   cursor: default;
 }
 
+/* 오늘 날짜: 빨간색 테두리 + 빨간 텍스트 */
 .admin-inline-cal-cell.is-today{
-  outline: 3px solid rgba(255, 122, 162, 0.22);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.07);
 }
 
+/* 선택된 날짜: 진한 핑크 채움 + 흰 텍스트 */
 .admin-inline-cal-cell.is-selected{
-  border-color: rgba(255, 122, 162, 0.55);
-  box-shadow: 0 0 0 6px rgba(255, 122, 162, 0.14);
+  background: var(--primary, #f06292);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(240, 98, 146, 0.35);
+}
+
+/* 오늘 날짜이면서 선택된 경우: 빨간 채움으로 명확히 구분 */
+.admin-inline-cal-cell.is-today.is-selected{
+  background: #ef4444;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
 .admin-hamburger-menu {

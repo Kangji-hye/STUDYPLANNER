@@ -1,9 +1,38 @@
 // src/pages/Admin.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from "../supabaseClient";
 import "./Admin.css";
 import HamburgerMenu from "../components/common/HamburgerMenu";
+
+// 자동 저장 상태 배지 컴포넌트
+// status: "idle" | "pending" | "saving" | "saved" | "error"
+function SaveStatusBadge({ status }) {
+  if (status === "idle") return null;
+
+  const MAP = {
+    pending: { text: "저장 대기", color: "#999" },
+    saving: { text: "저장 중...", color: "#f59e0b" },
+    saved: { text: "저장됨 ✓", color: "#22c55e" },
+    error: { text: "저장 실패 ✗", color: "#ef4444" },
+  };
+
+  const info = MAP[status] ?? MAP.idle;
+
+  return (
+    <span
+      style={{
+        fontSize: 11,
+        color: info.color,
+        fontWeight: 600,
+        whiteSpace: "nowrap",
+        transition: "color 0.3s",
+      }}
+    >
+      {info.text}
+    </span>
+  );
+}
 
 const GRADE_OPTIONS = [
   { label: "6세", value: -1 },
@@ -129,6 +158,7 @@ export default function Admin() {
   const [verseText, setVerseText] = useState("");
 
   const loadVerse = async () => {
+    verseInitialized.current = false; // 로드 중에는 자동 저장 비활성화
     const { data, error } = await supabase
       .from("daily_verses")
       .select("ref_text, content")
@@ -148,17 +178,23 @@ export default function Admin() {
     setVerseRef(ref);
     setVerseText(txt);
 
+    // 300ms 후 자동 저장 활성화 (setState 반영 후)
+    setTimeout(() => { verseInitialized.current = true; }, 300);
+
     return Boolean(ref.trim() || txt.trim());
   };
 
-  const saveVerse = async () => {
+  // 말씀 저장 (silent=true이면 alert 없이 저장, 자동 저장에서 사용)
+  const saveVerse = async ({ silent = false } = {}) => {
     const text = String(verseText ?? "").trim();
     const refText = String(verseRef ?? "").trim();
 
     if (!text) {
-      alert("말씀 내용을 입력해 주세요.");
+      if (!silent) alert("말씀 내용을 입력해 주세요.");
       return;
     }
+
+    if (!silent) setVerseSaveStatus("saving");
 
     const { data: userData } = await supabase.auth.getUser();
     const user = userData?.user;
@@ -179,14 +215,19 @@ export default function Admin() {
 
     if (error) {
       console.error("saveVerse error:", error);
-      alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      if (!silent) {
+        setVerseSaveStatus("error");
+        alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      }
       return;
     }
 
-    alert(`말씀을 저장했습니다! (${dayKey} / ${gradeLabel})`);
-    const has = await loadVerse();
-    setOpenVerseInput(true);
-    if (!has) setOpenVerseInput(false);
+    if (!silent) {
+      setVerseSaveStatus("saved");
+      const has = await loadVerse();
+      setOpenVerseInput(true);
+      if (!has) setOpenVerseInput(false);
+    }
   };
 
   // =========================
@@ -197,9 +238,10 @@ export default function Admin() {
   const [hwItems, setHwItems] = useState([]);
 
   const loadHomework = async () => {
+    hwInitialized.current = false; // 로드 중에는 자동 저장 비활성화
     const { data, error } = await supabase
       .from("daily_homeworks")
-      .select("items")
+      .select("items, image_paths")
       .eq("day_key", dayKey)
       .eq("grade_code", Number(gradeCode))
       .maybeSingle();
@@ -218,31 +260,49 @@ export default function Admin() {
       }))
       .filter((x) => x.subject && x.content);
 
+    const imgs = Array.isArray(data?.image_paths) ? data.image_paths : [];
     setHwItems(normalized);
-    return normalized.length > 0;
+    setHwImages(imgs.filter((x) => x?.path && x?.url));
+
+    // 300ms 후 자동 저장 활성화
+    setTimeout(() => { hwInitialized.current = true; }, 300);
+
+    return normalized.length > 0 || imgs.length > 0;
   };
 
-  const saveHomework = async () => {
-    const cleaned = (hwItems ?? [])
+  const saveHomework = async ({ silent = false, overrideItems, overrideImages } = {}) => {
+    const cleaned = (overrideItems ?? hwItems ?? [])
       .map((x) => ({
         subject: String(x?.subject ?? "").trim(),
         content: String(x?.content ?? "").trim(),
       }))
       .filter((x) => x.subject && x.content);
 
+    const images = (overrideImages ?? hwImages ?? []).filter((x) => x?.path && x?.url);
+
+    if (!silent) setHwSaveStatus("saving");
+
     const { error } = await supabase
       .from("daily_homeworks")
-      .upsert({ day_key: dayKey, grade_code: Number(gradeCode), items: cleaned }, { onConflict: "day_key,grade_code" });
+      .upsert(
+        { day_key: dayKey, grade_code: Number(gradeCode), items: cleaned, image_paths: images },
+        { onConflict: "day_key,grade_code" }
+      );
 
     if (error) {
       console.error("saveHomework error:", error);
-      alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      if (!silent) {
+        setHwSaveStatus("error");
+        alert("저장 중 오류가 발생했습니다. (권한/RLS를 확인해 주세요)");
+      }
       return;
     }
 
-    alert(`숙제를 저장했습니다! (${dayKey} / ${gradeLabel})`);
-    const has = await loadHomework();
-    setOpenHomeworkInput(Boolean(has));
+    if (!silent) {
+      setHwSaveStatus("saved");
+      const has = await loadHomework();
+      setOpenHomeworkInput(Boolean(has));
+    }
   };
 
   // =========================
@@ -274,6 +334,7 @@ export default function Admin() {
   };
 
   const loadDictation = async () => {
+    dictInitialized.current = false; // 로드 중에는 자동 저장 비활성화
     const { data, error } = await supabase
       .from("dictation_items")
       .select("item_no, text")
@@ -299,48 +360,69 @@ export default function Admin() {
     setDictEditNo(0);
     setDictEditText("");
 
+    // 300ms 후 자동 저장 활성화
+    setTimeout(() => { dictInitialized.current = true; }, 300);
+
     return normalized.length > 0;
   };
 
-  const saveDictation = async () => {
-    const cleaned = (dictItems ?? [])
+  const saveDictation = async ({ silent = false, overrideItems } = {}) => {
+    const cleaned = (overrideItems ?? dictItems ?? [])
       .map((x) => ({
         item_no: Number(x?.item_no ?? 0),
         text: String(x?.text ?? "").trim(),
       }))
       .filter((x) => x.item_no >= 1 && x.text);
 
-    if (cleaned.length === 0) {
+    if (!silent && cleaned.length === 0) {
       alert("저장할 받아쓰기 문장이 없어요.");
       return;
     }
 
-    // 번호 중복 방지
-    const nums = cleaned.map((x) => x.item_no);
-    const dup = nums.find((n, i) => nums.indexOf(n) !== i);
-    if (dup) {
-      alert(`번호가 중복됐어요: ${dup}번`);
-      return;
+    // 번호 중복 방지 (수동 저장 시만 검증)
+    if (!silent) {
+      const nums = cleaned.map((x) => x.item_no);
+      const dup = nums.find((n, i) => nums.indexOf(n) !== i);
+      if (dup) {
+        alert(`번호가 중복됐어요: ${dup}번`);
+        return;
+      }
     }
 
-    const payload = cleaned.map((x) => ({
-      grade_code: Number(gradeCode),
-      ymd: dayKey,
-      item_no: x.item_no,
-      text: x.text,
-    }));
+    if (!silent) setDictSaveStatus("saving");
 
-    const { error } = await supabase.from("dictation_items").upsert(payload, { onConflict: "grade_code,ymd,item_no" });
+    try {
+      // 기존 항목 모두 삭제 후 재삽입 (삭제된 항목 반영)
+      const { error: delErr } = await supabase
+        .from("dictation_items")
+        .delete()
+        .eq("grade_code", Number(gradeCode))
+        .eq("ymd", dayKey);
+      if (delErr) throw delErr;
 
-    if (error) {
-      console.error("saveDictation error:", error);
-      alert("받아쓰기 저장 중 오류가 발생했습니다. (권한/RLS 또는 중복 여부 확인)");
-      return;
+      if (cleaned.length > 0) {
+        const payload = cleaned.map((x) => ({
+          grade_code: Number(gradeCode),
+          ymd: dayKey,
+          item_no: x.item_no,
+          text: x.text,
+        }));
+        const { error: insErr } = await supabase.from("dictation_items").insert(payload);
+        if (insErr) throw insErr;
+      }
+
+      if (!silent) {
+        setDictSaveStatus("saved");
+        const has = await loadDictation();
+        setOpenDictationInput(Boolean(has));
+      }
+    } catch (err) {
+      console.error("saveDictation error:", err);
+      if (!silent) {
+        setDictSaveStatus("error");
+        alert("받아쓰기 저장 중 오류가 발생했습니다. (권한/RLS 또는 중복 여부 확인)");
+      }
     }
-
-    alert(`받아쓰기를 저장했습니다! (${dayKey} / ${gradeLabel})`);
-    const has = await loadDictation();
-    setOpenDictationInput(Boolean(has));
   };
 
   const startEditDictLine = (it, idx) => {
@@ -385,14 +467,37 @@ export default function Admin() {
   // =========================
   const [weekImgFile, setWeekImgFile] = useState(null);
   const [weekImgUrl, setWeekImgUrl] = useState("");
+  const [weekImgPath, setWeekImgPath] = useState(""); // 스토리지 경로 (삭제용)
   const [weekImgUploading, setWeekImgUploading] = useState(false);
+  const [weekImgDeleting, setWeekImgDeleting] = useState(false);
+
+  // =========================
+  // 오늘 숙제 이미지 (최대 2장)
+  // =========================
+  const [hwImages, setHwImages] = useState([]); // [{path, url}, ...]
+  const [hwImgUploading, setHwImgUploading] = useState(false);
+
+  // =========================
+  // 자동 저장 상태
+  // =========================
+  const [verseSaveStatus, setVerseSaveStatus] = useState("idle"); // idle | saving | saved | error
+  const [dictSaveStatus, setDictSaveStatus] = useState("idle");
+  const [hwSaveStatus, setHwSaveStatus] = useState("idle");
+
+  // 자동 저장 초기화 플래그 (날짜/학년 변경 시 자동 저장 방지)
+  const verseInitialized = useRef(false);
+  const dictInitialized = useRef(false);
+  const hwInitialized = useRef(false);
+
+  // debounce 타이머 (말씀 암송용)
+  const verseTimer = useRef(null);
 
   const weekStartDayKey = useMemo(() => getWeekStartDayKey(dayKey), [dayKey]);
 
   const loadWeekImage = async () => {
     const { data, error } = await supabase
       .from("weekly_homework_images")
-      .select("image_url")
+      .select("image_url, image_path")
       .eq("week_start_day", weekStartDayKey)
       .eq("grade_code", Number(gradeCode))
       .maybeSingle();
@@ -400,12 +505,47 @@ export default function Admin() {
     if (error) {
       console.error("loadWeekImage error:", error);
       setWeekImgUrl("");
+      setWeekImgPath("");
       return false;
     }
 
     const url = String(data?.image_url ?? "");
+    const path = String(data?.image_path ?? "");
     setWeekImgUrl(url);
+    setWeekImgPath(path);
     return Boolean(url.trim());
+  };
+
+  const deleteWeekImage = async () => {
+    const ok = window.confirm("주간 숙제 사진을 삭제할까요?\n삭제하면 되돌릴 수 없어요.");
+    if (!ok) return;
+
+    setWeekImgDeleting(true);
+    try {
+      // 스토리지에서 파일 삭제
+      if (weekImgPath) {
+        const { error: storErr } = await supabase.storage.from("weekly-homework").remove([weekImgPath]);
+        if (storErr) console.warn("스토리지 삭제 오류 (무시):", storErr);
+      }
+
+      // DB 레코드 삭제
+      const { error: dbErr } = await supabase
+        .from("weekly_homework_images")
+        .delete()
+        .eq("week_start_day", weekStartDayKey)
+        .eq("grade_code", Number(gradeCode));
+      if (dbErr) throw dbErr;
+
+      setWeekImgUrl("");
+      setWeekImgPath("");
+      setWeekImgFile(null);
+      setOpenWeekImage(false);
+    } catch (err) {
+      console.error("deleteWeekImage error:", err);
+      alert("사진 삭제 중 오류가 났어요.");
+    } finally {
+      setWeekImgDeleting(false);
+    }
   };
 
   const uploadWeekImage = async () => {
@@ -459,6 +599,73 @@ export default function Admin() {
       alert(err?.message ?? "사진 업로드 중 오류가 났어요. (버킷/권한/RLS 확인)");
     } finally {
       setWeekImgUploading(false);
+    }
+  };
+
+  // =========================
+  // 오늘 숙제 이미지 업로드 (최대 2장, weekly-homework 버킷의 hw-imgs/ 경로 사용)
+  // =========================
+  const uploadHwImage = async (file) => {
+    if (!file) return;
+    if (hwImages.length >= 2) {
+      alert("숙제 이미지는 최대 2장까지 올릴 수 있어요.");
+      return;
+    }
+
+    setHwImgUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const safeExt = ext.length <= 5 ? ext : "jpg";
+      const path = `hw-imgs/${Number(gradeCode)}/${dayKey}/${Date.now()}.${safeExt}`;
+
+      const bucket = supabase.storage.from("weekly-homework");
+      const { error: upErr } = await bucket.upload(path, file, {
+        upsert: false,
+        contentType: file.type || "image/jpeg",
+      });
+      if (upErr) throw upErr;
+
+      const { data: pub } = bucket.getPublicUrl(path);
+      const publicUrl = String(pub?.publicUrl ?? "").trim();
+      if (!publicUrl) throw new Error("publicUrl 생성 실패");
+
+      const newImg = { path, url: publicUrl };
+      const nextImages = [...hwImages, newImg];
+      setHwImages(nextImages);
+
+      // 즉시 DB 저장
+      await saveHomework({ silent: true, overrideImages: nextImages });
+      setHwSaveStatus("saved");
+    } catch (err) {
+      console.error("uploadHwImage error:", err);
+      alert(err?.message ?? "이미지 업로드 중 오류가 났어요.");
+      setHwSaveStatus("error");
+    } finally {
+      setHwImgUploading(false);
+    }
+  };
+
+  const deleteHwImage = async (img) => {
+    const ok = window.confirm("이 이미지를 삭제할까요?");
+    if (!ok) return;
+
+    try {
+      // 스토리지에서 파일 삭제
+      if (img?.path) {
+        const { error: storErr } = await supabase.storage.from("weekly-homework").remove([img.path]);
+        if (storErr) console.warn("스토리지 삭제 오류 (무시):", storErr);
+      }
+
+      const nextImages = hwImages.filter((x) => x.path !== img.path);
+      setHwImages(nextImages);
+
+      // 즉시 DB 저장
+      await saveHomework({ silent: true, overrideImages: nextImages });
+      setHwSaveStatus("saved");
+    } catch (err) {
+      console.error("deleteHwImage error:", err);
+      alert("이미지 삭제 중 오류가 났어요.");
+      setHwSaveStatus("error");
     }
   };
 
@@ -772,6 +979,77 @@ export default function Admin() {
     setCalMonth({ y: d.getFullYear(), m: d.getMonth() });
   }, [dayKey]);
 
+  // =============================================
+  // 자동 저장 useEffect
+  // =============================================
+
+  // 말씀 암송 — 1.5초 debounce 자동 저장
+  useEffect(() => {
+    if (!verseInitialized.current) return;
+    if (!String(verseText ?? "").trim()) return; // 내용 없으면 저장 안 함
+
+    setVerseSaveStatus("pending");
+    clearTimeout(verseTimer.current);
+    verseTimer.current = setTimeout(async () => {
+      setVerseSaveStatus("saving");
+      try {
+        const { data: ud } = await supabase.auth.getUser();
+        const { error } = await supabase.from("daily_verses").upsert(
+          {
+            day_key: dayKey,
+            grade_code: Number(gradeCode),
+            ref_text: String(verseRef ?? "").trim() || null,
+            content: String(verseText ?? "").trim(),
+            created_by: ud?.user?.id ?? null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "day_key,grade_code" }
+        );
+        if (error) throw error;
+        setVerseSaveStatus("saved");
+      } catch {
+        setVerseSaveStatus("error");
+      }
+    }, 1500);
+
+    return () => clearTimeout(verseTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verseRef, verseText]);
+
+  // 받아쓰기 — 항목 변경 즉시 자동 저장
+  useEffect(() => {
+    if (!dictInitialized.current) return;
+
+    setDictSaveStatus("saving");
+    const run = async () => {
+      try {
+        await saveDictation({ silent: true, overrideItems: dictItems });
+        setDictSaveStatus("saved");
+      } catch {
+        setDictSaveStatus("error");
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dictItems]);
+
+  // 숙제 항목 — 변경 즉시 자동 저장 (이미지는 별도 처리)
+  useEffect(() => {
+    if (!hwInitialized.current) return;
+
+    setHwSaveStatus("saving");
+    const run = async () => {
+      try {
+        await saveHomework({ silent: true, overrideItems: hwItems });
+        setHwSaveStatus("saved");
+      } catch {
+        setHwSaveStatus("error");
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hwItems]);
+
   if (loading) {
     return (
       <div className="admin">
@@ -907,11 +1185,17 @@ export default function Admin() {
           <div className="admin-title" style={{ marginBottom: 8 }}>
             오늘의 말씀 암송
           </div>
-          <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openVerseInput ? "▾" : "▸"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SaveStatusBadge status={verseSaveStatus} />
+            <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openVerseInput ? "▾" : "▸"}</div>
+          </div>
         </button>
 
         {openVerseInput ? (
           <>
+            <div className="admin-help" style={{ marginBottom: 8 }}>
+              입력하면 1.5초 후 자동으로 저장됩니다.
+            </div>
             <div className="admin-row">
               <span className="admin-label">말씀 범위</span>
               <input
@@ -929,14 +1213,6 @@ export default function Admin() {
               placeholder={"예)\n여호와는 나의 목자시니\n내게 부족함이 없으리로다"}
             />
 
-            <div className="admin-actions">
-              <button className="admin-btn" onClick={saveVerse}>
-                말씀 저장
-              </button>
-              <button className="admin-btn ghost" onClick={loadVerse} title="현재 날짜/학년 말씀을 다시 불러옵니다">
-                말씀 새로고침
-              </button>
-            </div>
           </>
         ) : (
           <div className="admin-help">눌러서 펼치면 입력/수정할 수 있어요.</div>
@@ -984,7 +1260,7 @@ export default function Admin() {
             />
 
             {weekImgUrl ? (
-              <div style={{ marginTop: 10 }}>
+              <div style={{ marginTop: 10, position: "relative" }}>
                 <img
                   src={weekImgUrl}
                   alt="주간 숙제 사진 미리보기"
@@ -997,13 +1273,25 @@ export default function Admin() {
                     background: "#fff",
                   }}
                 />
+                {/* 저장된 사진(weekImgPath가 있을 때)만 삭제 버튼 표시 */}
+                {weekImgPath && !weekImgFile && (
+                  <button
+                    type="button"
+                    className="admin-mini-btn danger"
+                    style={{ marginTop: 8 }}
+                    onClick={deleteWeekImage}
+                    disabled={weekImgDeleting}
+                  >
+                    {weekImgDeleting ? "삭제 중..." : "사진 삭제"}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="admin-help">아직 주간 숙제 사진이 없어요.</div>
             )}
 
             <div className="admin-actions">
-              <button className="admin-btn" type="button" onClick={uploadWeekImage} disabled={weekImgUploading}>
+              <button className="admin-btn" type="button" onClick={uploadWeekImage} disabled={weekImgUploading || !weekImgFile}>
                 {weekImgUploading ? "업로드 중..." : "사진 저장"}
               </button>
 
@@ -1029,13 +1317,16 @@ export default function Admin() {
           <div className="admin-title" style={{ marginBottom: 8 }}>
             오늘의 받아쓰기 입력
           </div>
-          <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openDictationInput ? "▾" : "▸"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SaveStatusBadge status={dictSaveStatus} />
+            <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openDictationInput ? "▾" : "▸"}</div>
+          </div>
         </button>
 
         {openDictationInput ? (
           <>
             <div className="admin-help">
-              줄마다 수정 버튼을 눌러 수정할 수 있게 했습니다. 저장은 마지막에 받아쓰기 저장을 누르면 됩니다.
+              줄마다 수정 버튼을 눌러 수정할 수 있어요. 문장을 추가하거나 삭제하면 자동으로 저장됩니다.
             </div>
 
             <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
@@ -1200,11 +1491,6 @@ export default function Admin() {
               )}
             </div>
 
-            <div className="admin-actions">
-              <button className="admin-btn" onClick={saveDictation}>
-                받아쓰기 저장
-              </button>
-            </div>
           </>
         ) : (
           <div className="admin-help">눌러서 펼치면 입력/수정할 수 있어요.</div>
@@ -1223,15 +1509,19 @@ export default function Admin() {
           <div className="admin-title" style={{ marginBottom: 8 }}>
             오늘 숙제 입력
           </div>
-          <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openHomeworkInput ? "▾" : "▸"}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <SaveStatusBadge status={hwSaveStatus} />
+            <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openHomeworkInput ? "▾" : "▸"}</div>
+          </div>
         </button>
 
         {openHomeworkInput ? (
           <>
             <div className="admin-help">
-              추가를 누르면 아래에 쌓이고, 숙제 저장을 누르면 DB에 저장됩니다. 달력에서 날짜를 바꾸면 해당 날짜/학년 숙제가 자동으로 불러와집니다.
+              항목을 추가/삭제하면 자동으로 저장됩니다. 이미지는 최대 2장까지 첨부할 수 있어요.
             </div>
 
+            {/* 숙제 항목 입력 */}
             <div className="admin-row" style={{ gap: 10, flexWrap: "wrap" }}>
               <input
                 type="text"
@@ -1244,6 +1534,17 @@ export default function Admin() {
                 type="text"
                 value={hwContent}
                 onChange={(e) => setHwContent(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const s = hwSubject.trim();
+                    const c = hwContent.trim();
+                    if (!s || !c) { alert("숙제 항목과 내용을 둘 다 입력해 주세요."); return; }
+                    setHwItems((prev) => [...prev, { subject: s, content: c }]);
+                    setHwSubject("");
+                    setHwContent("");
+                  }
+                }}
                 placeholder="숙제 내용 (예: 30페이지, 20쪽 쓰기, 받아쓰기 3페이지)"
                 style={{ flex: 2, minWidth: 220 }}
               />
@@ -1289,14 +1590,62 @@ export default function Admin() {
               )}
             </div>
 
-            <div className="admin-actions">
-              <button className="admin-btn" onClick={saveHomework}>
-                숙제 저장
-              </button>
-              <button className="admin-btn ghost" onClick={loadHomework} title="현재 날짜/학년 숙제를 다시 불러옵니다">
-                숙제 새로고침
-              </button>
+            {/* 숙제 이미지 업로드 (최대 2장) */}
+            <div style={{ marginTop: 14, borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: 12 }}>
+              <div className="admin-label" style={{ marginBottom: 8 }}>
+                숙제 이미지 ({hwImages.length}/2)
+              </div>
+
+              {hwImages.length < 2 && (
+                <label style={{ display: "inline-block", cursor: hwImgUploading ? "not-allowed" : "pointer" }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    disabled={hwImgUploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = ""; // 같은 파일 재선택 허용
+                      if (f) uploadHwImage(f);
+                    }}
+                  />
+                  <span className="admin-btn" style={{ opacity: hwImgUploading ? 0.6 : 1 }}>
+                    {hwImgUploading ? "업로드 중..." : "이미지 추가"}
+                  </span>
+                </label>
+              )}
+
+              {hwImages.length > 0 && (
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                  {hwImages.map((img, i) => (
+                    <div key={`hwimg-${i}`} style={{ position: "relative", display: "inline-block" }}>
+                      <img
+                        src={img.url}
+                        alt={`숙제 이미지 ${i + 1}`}
+                        style={{
+                          width: 120,
+                          height: 120,
+                          objectFit: "cover",
+                          borderRadius: 10,
+                          border: "1px solid rgba(0,0,0,0.1)",
+                          background: "#f5f5f5",
+                          display: "block",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="admin-mini-btn danger"
+                        style={{ marginTop: 4, width: "100%" }}
+                        onClick={() => deleteHwImage(img)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
           </>
         ) : (
           <div className="admin-help">눌러서 펼치면 입력할 수 있어요.</div>
