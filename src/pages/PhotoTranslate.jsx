@@ -392,6 +392,16 @@ export default function PhotoTranslate() {
             🔄 다시 번역하기
           </button>
         )}
+
+        {/* 구글 번역기 바로가기 */}
+        <a
+          href="https://translate.google.co.kr/?sl=en&tl=ko&op=translate"
+          target="_blank"
+          rel="noreferrer"
+          className="photoGoogleLink"
+        >
+          🌐 구글 번역기로 바로가기
+        </a>
       </div>
     </div>
   );

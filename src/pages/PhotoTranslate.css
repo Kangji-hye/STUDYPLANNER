@@ -276,6 +276,26 @@
   cursor: not-allowed;
 }
 
+/* ─── 구글 번역기 바로가기 ───────────── */
+.photoGoogleLink {
+  display: block;
+  text-align: center;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.photoGoogleLink:hover {
+  background: #f0f4ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
 /* ─── 반응형 ──────────────────────────── */
 @media (max-width: 420px) {
   .photoTitle { font-size: 16px; }

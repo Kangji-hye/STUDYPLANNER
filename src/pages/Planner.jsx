@@ -2426,15 +2426,6 @@ function Planner() {
             🌐구글번역
           </a>
           <span>|</span>
-          <a
-            className="footer-link-secondary"
-            onClick={() => navigate("/photo-translate")}
-            role="button"
-            title="사진 번역기"
-          >
-            📸사진번역
-          </a>
-          <span>|</span>
 
           <a onClick={openHelp}>❓도움말</a>
           <span>|</span>
