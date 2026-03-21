@@ -1,0 +1,284 @@
+/* src/pages/PhotoTranslate.css */
+
+/* ─── 전체 페이지 ─────────────────────── */
+.photoPage {
+  min-height: 100dvh;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── 헤더 ───────────────────────────── */
+.photoHeader {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.photoHeaderLeft,
+.photoHeaderRight {
+  display: flex;
+  align-items: center;
+}
+
+.photoHeaderCenter {
+  text-align: center;
+}
+
+.photoTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.photoSubtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.photoBack {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #475569;
+  white-space: nowrap;
+}
+.photoBack:active {
+  background: #f1f5f9;
+}
+
+/* ─── 본문 ───────────────────────────── */
+.photoBody {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* ─── 업로드 영역 ─────────────────────── */
+.photoUploadArea {
+  border: 2px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.photoUploadArea:hover {
+  border-color: #ff69b4;
+}
+
+.photoUploadPlaceholder {
+  text-align: center;
+  padding: 24px;
+  color: #94a3b8;
+}
+.photoUploadIcon {
+  font-size: 48px;
+  margin-bottom: 10px;
+}
+.photoUploadHint {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.photoPreview {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+}
+
+/* ─── 버튼 행 ─────────────────────────── */
+.photoBtnRow {
+  display: flex;
+  gap: 10px;
+}
+
+.photoActionBtn {
+  flex: 1;
+  padding: 14px 10px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #ff9ec4, #ff69b4);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.3);
+  transition: opacity 0.2s;
+}
+.photoActionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.photoActionBtn:not(:disabled):active {
+  opacity: 0.8;
+}
+
+/* ─── 진행률 ──────────────────────────── */
+.photoProgressBox {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.photoProgressLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.photoProgressBar {
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.photoProgressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff9ec4, #ff69b4);
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* ─── 오류 ───────────────────────────── */
+.photoErrorBox {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 14px;
+  padding: 16px;
+  color: #e11d48;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+/* ─── 섹션 (원문 / 번역) ─────────────── */
+.photoSection {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photoSectionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.photoOcrText {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  resize: vertical;
+  box-sizing: border-box;
+  color: #334155;
+  background: #f8fafc;
+  font-family: inherit;
+}
+.photoOcrText:focus {
+  outline: none;
+  border-color: #ff69b4;
+}
+
+.photoResultBox {
+  background: #fdf4ff;
+  border: 1px solid #f0abfc;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #4a0072;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── 섹션 하단 버튼 ─────────────────── */
+.photoSectionActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.photoMiniBtn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+  transition: background 0.15s;
+}
+.photoMiniBtn:active {
+  background: #e5e7eb;
+}
+.photoMiniBtn.primary {
+  background: linear-gradient(135deg, #ff9ec4, #ff69b4);
+  color: #fff;
+  border-color: transparent;
+}
+.photoMiniBtn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── 초기화 버튼 ────────────────────── */
+.photoResetBtn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  border: 2px solid #ff69b4;
+  background: #fff;
+  color: #ff69b4;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.photoResetBtn:not(:disabled):hover {
+  background: #fff0f6;
+}
+.photoResetBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── 반응형 ──────────────────────────── */
+@media (max-width: 420px) {
+  .photoTitle { font-size: 16px; }
+  .photoActionBtn { font-size: 13px; padding: 12px 8px; }
+  .photoBody { padding: 12px; gap: 12px; }
+}

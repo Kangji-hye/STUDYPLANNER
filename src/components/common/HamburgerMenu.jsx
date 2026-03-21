@@ -167,6 +167,10 @@ export default function HamburgerMenu() {
 
           <div className="hamburger-divider" />
 
+          <button className="hamburger-item" type="button" onClick={() => navigate("/photo-translate")}>
+            📸 사진 번역기
+          </button>
+
           <button className="hamburger-item" type="button" onClick={() => window.open("https://books-tan-three.vercel.app/", "_blank", "noopener,noreferrer")}>
             📷 책 스캐너
           </button>

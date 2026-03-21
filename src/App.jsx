@@ -37,6 +37,7 @@ import EnglishRanking from "./pages/EnglishRanking";
 import Dictation from "./pages/Dictation";
 import RecommendedBooks from "./pages/RecommendedBooks";
 import BookScanner from "./pages/BookScanner";
+import PhotoTranslate from "./pages/PhotoTranslate";
 
 function BootSplashKiller() {
   const location = useLocation();
@@ -197,6 +198,7 @@ const App = () => {
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           </Route>
           <Route path="/dictation" element={<Dictation />} />
+          <Route path="/photo-translate" element={<ProtectedRoute><PhotoTranslate /></ProtectedRoute>} />
 
           <Route path="/" element={<Navigate to="/planner" replace />} />
 
