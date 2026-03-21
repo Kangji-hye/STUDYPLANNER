@@ -125,7 +125,7 @@ export default function PlayRoom() {
         </div>
         <div className="playroom-header-center">
           <div className="playroom-title">
-            {"🎮 놀이방".split("").map((ch, i) => (
+            {Array.from("🎮 놀이방").map((ch, i) => (
               <span key={i} className="playroom-title-char" style={{ animationDelay: `${i * 60}ms` }}>
                 {ch}
               </span>
