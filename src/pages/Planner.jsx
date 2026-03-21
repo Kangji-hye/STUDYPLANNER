@@ -2415,6 +2415,17 @@ function Planner() {
             🍇그레이프시드
           </a>
           <span>|</span>
+          <a
+            className="footer-link-secondary"
+            href="https://translate.google.co.kr/?sl=en&tl=ko&op=translate"
+            target="_blank"
+            rel="noreferrer"
+            role="button"
+            title="구글 번역기 열기"
+          >
+            🌐구글번역
+          </a>
+          <span>|</span>
 
           <a onClick={openHelp}>❓도움말</a>
           <span>|</span>
