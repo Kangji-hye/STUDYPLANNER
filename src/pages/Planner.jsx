@@ -1817,21 +1817,26 @@ function Planner() {
 
   const closeCalendar = () => setShowCalendarModal(false);
 
-  // 푸터: 그레이프시드 열기
+  // 푸터: 그레이프시드 열기 (앱 설치 시 앱 실행, 미설치 시 웹으로)
   const openGrapeSeed = () => {
     const ua = navigator.userAgent.toLowerCase();
     const studentWeb = "https://students.grapeseed.com";
-    const playStore = "https://play.google.com/store/apps/details?id=com.studentrep_rn";
-    const appStore = "https://apps.apple.com/kr/app/grapeseed-student/id1286949700";
     const isAndroid = ua.includes("android");
     const isIOS = ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod");
 
-    window.location.href = studentWeb;
-
-    setTimeout(() => {
-      if (isAndroid) window.location.href = playStore;
-      else if (isIOS) window.location.href = appStore;
-    }, 1500);
+    if (isAndroid) {
+      // Android: intent URL — 앱 있으면 열고, 없으면 웹으로 fallback
+      window.location.href =
+        `intent://students.grapeseed.com#Intent;scheme=https;` +
+        `package=com.studentrep_rn;` +
+        `S.browser_fallback_url=${encodeURIComponent(studentWeb)};end`;
+    } else if (isIOS) {
+      // iOS: Universal Link 시도 — 앱 설치 시 OS가 자동으로 앱 실행, 미설치 시 웹 열림
+      window.open(studentWeb, "_blank", "noopener,noreferrer");
+    } else {
+      // 데스크톱: 새 탭으로 웹 열기
+      window.open(studentWeb, "_blank", "noopener,noreferrer");
+    }
   };
 
   // 렌더
