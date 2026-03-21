@@ -125,7 +125,7 @@ export default function HamburgerMenu() {
           <div className="hamburger-divider" />
 
           <button className="hamburger-item" type="button" onClick={() => navigate("/photo-translate")}>
-            📷 영어 번역기
+            📸 영어 번역기
           </button>
 
           <button className="hamburger-item" onClick={() => go("recommended-books")} role="menuitem">
