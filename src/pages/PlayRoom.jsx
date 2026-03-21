@@ -27,7 +27,7 @@ const GAMES = [
     color: "red",
   },
   {
-    emoji: "✖️",
+    emoji: "9️⃣",
     name: "구구단 놀이",
     desc: "구구단을 빠르게 맞혀요",
     path: "/gugudan",
@@ -62,7 +62,7 @@ const GAMES = [
     color: "yellow",
   },
   {
-    emoji: "✍️",
+    emoji: "⌨️",
     name: "타이핑 연습",
     desc: "빠르고 정확하게 타이핑!",
     path: "/typing",

@@ -82,6 +82,14 @@ export default function PhotoTranslate() {
   const cameraRef = useRef(null);   // 카메라 파일 input
   const workerRef = useRef(null);   // Tesseract worker
 
+  // 페이지 진입 시 카메라 자동 열기
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      cameraRef.current?.click();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   // 컴포넌트 언마운트 시 Tesseract worker 정리
   useEffect(() => {
     return () => {
@@ -238,7 +246,7 @@ export default function PhotoTranslate() {
           </button>
         </div>
         <div className="photoHeaderCenter">
-          <div className="photoTitle">📸 사진 번역기</div>
+          <div className="photoTitle">📷 영어 사진 번역기</div>
           <div className="photoSubtitle">영어 사진을 찍으면 한국어로 번역해줘요</div>
         </div>
         <div className="photoHeaderRight">
@@ -253,7 +261,7 @@ export default function PhotoTranslate() {
             <img src={imgSrc} alt="선택한 사진" className="photoPreview" />
           ) : (
             <div className="photoUploadPlaceholder">
-              <div className="photoUploadIcon">🖼️</div>
+              <div className="photoUploadIcon">📷</div>
               <div className="photoUploadHint">여기를 눌러 사진을 선택하거나</div>
               <div className="photoUploadHint">아래 버튼을 눌러요</div>
             </div>
