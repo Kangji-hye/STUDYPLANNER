@@ -1,50 +1,83 @@
 /* src/pages/PlayRoom.css */
 
-/* ─── 카드 입장 애니메이션 ───────────────── */
+/* ─── 애니메이션 키프레임 ────────────────── */
 @keyframes playroom-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(28px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  0%   { opacity: 0; transform: perspective(600px) translateY(36px) scale(0.88) rotateX(12deg); }
+  70%  { opacity: 1; transform: perspective(600px) translateY(-4px) scale(1.02) rotateX(-2deg); }
+  100% { opacity: 1; transform: perspective(600px) translateY(0) scale(1) rotateX(0deg); }
 }
 
-@keyframes playroom-title-in {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes playroom-title-char {
+  0%   { opacity: 0; transform: translateY(-16px) scale(0.7); }
+  60%  { transform: translateY(4px) scale(1.1); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ─── 전체 페이지 ─────────────────────── */
+@keyframes playroom-particle-float {
+  0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.4; }
+  100% { transform: translateY(-60px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes playroom-ripple {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+}
+
+@keyframes playroom-shine {
+  0%   { left: -80%; opacity: 0; }
+  30%  { opacity: 1; }
+  100% { left: 140%; opacity: 0; }
+}
+
+@keyframes playroom-emoji-idle {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25%       { transform: scale(1.12) rotate(-6deg); }
+  75%       { transform: scale(1.08) rotate(5deg); }
+}
+
+/* ─── 전체 페이지 ────────────────────────── */
 .playroom-page {
   min-height: 100dvh;
-  background: var(--bg, #fff7fb);
+  background: linear-gradient(160deg, #fff0fa 0%, #f5f0ff 50%, #f0f7ff 100%);
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
-/* ─── 헤더 ───────────────────────────── */
+/* ─── 배경 파티클 ────────────────────────── */
+.playroom-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.playroom-particle {
+  position: absolute;
+  bottom: -40px;
+  animation: playroom-particle-float linear infinite;
+  user-select: none;
+  opacity: 0;
+}
+
+/* ─── 헤더 ──────────────────────────────── */
 .playroom-header {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--line, #f1d7e6);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 200, 230, 0.4);
   position: sticky;
   top: 0;
   z-index: 10;
-  animation: playroom-title-in 0.35s ease both;
 }
 
 .playroom-header-left,
@@ -58,49 +91,60 @@
 }
 
 .playroom-back {
-  background: none;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1.5px solid rgba(255, 150, 200, 0.4);
+  border-radius: 12px;
+  padding: 8px 13px;
   font-size: 14px;
   cursor: pointer;
-  color: var(--muted, #50555f);
+  color: #7c4d8a;
+  font-weight: 600;
   white-space: nowrap;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
-.playroom-back:active {
-  background: #f1f5f9;
+.playroom-back:hover  { background: #fff0f8; transform: translateX(-2px); }
+.playroom-back:active { transform: scale(0.95); }
+
+/* ─── 타이틀 글자 애니메이션 ──────────────── */
+.playroom-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #3d1f6e;
+  letter-spacing: -0.3px;
+  display: inline-flex;
+  gap: 0;
 }
 
-.playroom-title {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--text, #2b2b2b);
-  letter-spacing: -0.3px;
+.playroom-title-char {
+  display: inline-block;
+  opacity: 0;
+  animation: playroom-title-char 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .playroom-subtitle {
   font-size: 12px;
-  color: var(--muted, #50555f);
-  margin-top: 2px;
+  color: #9b72b0;
+  margin-top: 3px;
 }
 
-/* ─── 본문 ───────────────────────────── */
+/* ─── 본문 ──────────────────────────────── */
 .playroom-body {
   flex: 1;
-  padding: 20px 16px 32px;
+  padding: 20px 16px 40px;
+  position: relative;
+  z-index: 1;
 }
 
-/* ─── 카드 그리드 ─────────────────────── */
+/* ─── 카드 그리드 ───────────────────────── */
 .playroom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   gap: 16px;
-  max-width: 680px;
+  max-width: 700px;
   margin: 0 auto;
 }
 
-/* ─── 게임 카드 기본 ─────────────────── */
+/* ─── 게임 카드 기본 ────────────────────── */
 .playroom-card {
   position: relative;
   display: flex;
@@ -108,213 +152,163 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 24px 14px 20px;
-  background: var(--card, #fff);
-  border: 2px solid rgba(241, 215, 230, 0.65);
-  border-radius: 22px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07), 0 1px 3px rgba(0, 0, 0, 0.04);
+  padding: 26px 14px 20px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid rgba(255, 200, 230, 0.5);
+  border-radius: 24px;
+  box-shadow:
+    0 2px 8px rgba(180, 100, 200, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.06);
   cursor: pointer;
   text-align: center;
   overflow: hidden;
+  will-change: transform;
 
   /* 입장 애니메이션 */
-  animation: playroom-card-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-
-  /* 호버 트랜지션 */
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-              box-shadow 0.2s ease,
-              border-color 0.2s ease;
+  animation: playroom-card-in 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
-/* 카드 배경 장식 원 */
-.playroom-card::before {
-  content: "";
-  position: absolute;
-  top: -20px;
-  right: -20px;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  opacity: 0.08;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-  background: currentColor;
+/* 호버 상태 */
+.playroom-card.is-hovered {
+  box-shadow:
+    0 16px 40px rgba(180, 100, 200, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(200, 130, 255, 0.5);
 }
 
-.playroom-card:hover::before {
-  transform: scale(1.4);
-  opacity: 0.13;
-}
-
-/* 호버: 위로 떠오름 */
-.playroom-card:not(:disabled):hover {
-  transform: translateY(-7px) scale(1.03);
-  box-shadow: 0 14px 32px rgba(255, 122, 162, 0.22),
-              0 4px 10px rgba(0, 0, 0, 0.08);
-  border-color: var(--primary, #ff7aa2);
-}
-
-/* 터치/클릭: 눌리는 피드백 */
+/* 터치 피드백 */
 .playroom-card:active {
-  transform: scale(0.96) translateY(0px) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
-  transition-duration: 0.08s !important;
+  transform: scale(0.94) !important;
+  transition: transform 0.08s ease !important;
 }
 
-/* ─── 카드 내 요소 ─────────────────────── */
+/* ─── 빛 반사 레이어 ─────────────────────── */
+.playroom-card-shine {
+  position: absolute;
+  top: 0; left: -80%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 80%
+  );
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 24px;
+}
+
+.playroom-card.is-hovered .playroom-card-shine {
+  animation: playroom-shine 0.6s ease forwards;
+}
+
+/* ─── 리플 ──────────────────────────────── */
+.playroom-ripple {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(200, 150, 255, 0.35);
+  pointer-events: none;
+  animation: playroom-ripple 0.6s ease-out forwards;
+}
+
+/* ─── 카드 내 요소 ──────────────────────── */
 .playroom-card-emoji {
-  font-size: 2.6rem;
+  font-size: 2.8rem;
   line-height: 1;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.15));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.playroom-card:hover .playroom-card-emoji {
-  transform: scale(1.18) rotate(-5deg);
+/* 호버 시 이모지 통통 튐 */
+.playroom-card.is-hovered .playroom-card-emoji {
+  animation: playroom-emoji-idle 0.8s ease-in-out infinite;
 }
 
 .playroom-card-name {
   font-size: 15px;
   font-weight: 800;
-  color: var(--text, #2b2b2b);
+  color: #2d1a4a;
   line-height: 1.2;
   margin-top: 2px;
 }
 
 .playroom-card-desc {
-  font-size: 11.5px;
-  color: var(--muted, #50555f);
+  font-size: 11px;
+  color: #8b6ba0;
   line-height: 1.4;
 }
 
 .playroom-card-arrow {
-  font-size: 10px;
-  color: var(--primary, #ff7aa2);
-  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: rgba(180, 100, 255, 0.1);
+  color: #8b4fc8;
   opacity: 0;
-  transform: translateX(-4px);
+  transform: translateY(4px);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.playroom-card:hover .playroom-card-arrow {
+.playroom-card.is-hovered .playroom-card-arrow {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateY(0);
 }
 
-/* ─── 카드 색상 변형 ─────────────────── */
-.playroom-card--gray {
-  background: linear-gradient(150deg, #f8f8f8 0%, #fff 55%);
-  color: #6b7280;
-}
-.playroom-card--gray:hover {
-  border-color: #9ca3af;
-  box-shadow: 0 14px 32px rgba(107, 114, 128, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+/* ─── 카드 색상 변형 ─────────────────────── */
+.playroom-card--gray   { background: linear-gradient(145deg, #f4f4f4 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--gray.is-hovered   { box-shadow: 0 16px 40px rgba(100,100,120,0.2), 0 4px 12px rgba(0,0,0,0.08); border-color: #aaa; }
+.playroom-card--gray   .playroom-card-arrow { background: rgba(100,100,120,0.1); color: #555; }
 
-.playroom-card--blue {
-  background: linear-gradient(150deg, #f0f5ff 0%, #fff 55%);
-  color: #3b82f6;
-}
-.playroom-card--blue:hover {
-  border-color: #93c5fd;
-  box-shadow: 0 14px 32px rgba(59, 130, 246, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--blue   { background: linear-gradient(145deg, #eef4ff 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--blue.is-hovered   { box-shadow: 0 16px 40px rgba(59,130,246,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #93c5fd; }
+.playroom-card--blue   .playroom-card-arrow { background: rgba(59,130,246,0.1); color: #2563eb; }
 
-.playroom-card--red {
-  background: linear-gradient(150deg, #fff5f5 0%, #fff 55%);
-  color: #ef4444;
-}
-.playroom-card--red:hover {
-  border-color: #fca5a5;
-  box-shadow: 0 14px 32px rgba(239, 68, 68, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--red    { background: linear-gradient(145deg, #fff3f3 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--red.is-hovered    { box-shadow: 0 16px 40px rgba(239,68,68,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #fca5a5; }
+.playroom-card--red    .playroom-card-arrow { background: rgba(239,68,68,0.1); color: #dc2626; }
 
-.playroom-card--orange {
-  background: linear-gradient(150deg, #fff8f0 0%, #fff 55%);
-  color: #f97316;
-}
-.playroom-card--orange:hover {
-  border-color: #fdba74;
-  box-shadow: 0 14px 32px rgba(249, 115, 22, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--orange { background: linear-gradient(145deg, #fff7ed 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--orange.is-hovered { box-shadow: 0 16px 40px rgba(249,115,22,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #fdba74; }
+.playroom-card--orange .playroom-card-arrow { background: rgba(249,115,22,0.1); color: #ea6f00; }
 
-.playroom-card--green {
-  background: linear-gradient(150deg, #f0fff4 0%, #fff 55%);
-  color: #22c55e;
-}
-.playroom-card--green:hover {
-  border-color: #86efac;
-  box-shadow: 0 14px 32px rgba(34, 197, 94, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--green  { background: linear-gradient(145deg, #f0fff5 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--green.is-hovered  { box-shadow: 0 16px 40px rgba(34,197,94,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #86efac; }
+.playroom-card--green  .playroom-card-arrow { background: rgba(34,197,94,0.1); color: #16a34a; }
 
-.playroom-card--purple {
-  background: linear-gradient(150deg, #faf5ff 0%, #fff 55%);
-  color: #a855f7;
-}
-.playroom-card--purple:hover {
-  border-color: #d8b4fe;
-  box-shadow: 0 14px 32px rgba(168, 85, 247, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--purple { background: linear-gradient(145deg, #faf5ff 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--purple.is-hovered { box-shadow: 0 16px 40px rgba(168,85,247,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #d8b4fe; }
+.playroom-card--purple .playroom-card-arrow { background: rgba(168,85,247,0.1); color: #9333ea; }
 
-.playroom-card--yellow {
-  background: linear-gradient(150deg, #fffbeb 0%, #fff 55%);
-  color: #eab308;
-}
-.playroom-card--yellow:hover {
-  border-color: #fde047;
-  box-shadow: 0 14px 32px rgba(234, 179, 8, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--yellow { background: linear-gradient(145deg, #fffbeb 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--yellow.is-hovered { box-shadow: 0 16px 40px rgba(234,179,8,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #fde047; }
+.playroom-card--yellow .playroom-card-arrow { background: rgba(234,179,8,0.1); color: #ca8a04; }
 
-.playroom-card--pink {
-  background: linear-gradient(150deg, #fff0f6 0%, #fff 55%);
-  color: #ec4899;
-}
-.playroom-card--pink:hover {
-  border-color: #f9a8d4;
-  box-shadow: 0 14px 32px rgba(236, 72, 153, 0.18),
-              0 4px 10px rgba(0, 0, 0, 0.07);
-}
+.playroom-card--pink   { background: linear-gradient(145deg, #fff0f8 0%, rgba(255,255,255,0.9) 60%); }
+.playroom-card--pink.is-hovered   { box-shadow: 0 16px 40px rgba(236,72,153,0.22), 0 4px 12px rgba(0,0,0,0.08); border-color: #f9a8d4; }
+.playroom-card--pink   .playroom-card-arrow { background: rgba(236,72,153,0.1); color: #db2777; }
 
-/* ─── 반응형 ──────────────────────────── */
+/* ─── 반응형 ────────────────────────────── */
 @media (max-width: 480px) {
   .playroom-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-
   .playroom-card {
     padding: 20px 10px 16px;
-    border-radius: 18px;
+    border-radius: 20px;
   }
-
-  .playroom-card-emoji {
-    font-size: 2.2rem;
-  }
-
-  .playroom-card-name {
-    font-size: 13px;
-  }
-
-  .playroom-card-desc {
-    font-size: 10.5px;
-  }
-
-  .playroom-title {
-    font-size: 17px;
-  }
+  .playroom-card-emoji { font-size: 2.4rem; }
+  .playroom-card-name  { font-size: 13px; }
+  .playroom-card-desc  { font-size: 10.5px; }
+  .playroom-title      { font-size: 18px; }
 }
 
 @media (max-width: 360px) {
-  .playroom-grid {
-    gap: 10px;
-  }
-  .playroom-card-emoji {
-    font-size: 2rem;
-  }
+  .playroom-grid { gap: 10px; }
+  .playroom-card-emoji { font-size: 2rem; }
 }
