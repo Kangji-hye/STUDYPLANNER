@@ -181,7 +181,8 @@ function Planner() {
   const [homeworkItems, setHomeworkItems] = useState([]);
   const [homeworkImages, setHomeworkImages] = useState([]); // 오늘 숙제 이미지 [{path, url}]
   const [hasDictation, setHasDictation] = useState(null); // null=로딩중, true=있음, false=없음
-  const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
+  const [weekHwImgUrl, setWeekHwImgUrl] = useState("");   // 슬롯 1: 일주일 전체숙제
+  const [weekHwImgUrl2, setWeekHwImgUrl2] = useState(""); // 슬롯 2: 주간학습안내
   // 이미지 뷰어 모달 (주간 숙제 + 오늘 숙제 이미지 공용)
   const [imgViewerUrl, setImgViewerUrl] = useState("");
   const [imgViewerOpen, setImgViewerOpen] = useState(false);
@@ -1746,7 +1747,7 @@ function Planner() {
 
         const { data: imgRow, error: imgErr } = await supabase
           .from("weekly_homework_images")
-          .select("image_url")
+          .select("image_url, image_url_2")
           .eq("week_start_day", weekStart)
           .eq("grade_code", 2)
           .maybeSingle();
@@ -1754,8 +1755,10 @@ function Planner() {
         if (imgErr) {
           console.error("load weekly_homework_images error:", imgErr);
           setWeekHwImgUrl("");
+          setWeekHwImgUrl2("");
         } else {
           setWeekHwImgUrl(String(imgRow?.image_url ?? ""));
+          setWeekHwImgUrl2(String(imgRow?.image_url_2 ?? ""));
         }
       } catch (err) {
         console.error("load daily_homeworks error:", err);
@@ -2263,7 +2266,16 @@ function Planner() {
               className="weekly-hw-btn"
               onClick={() => { setImgViewerUrl(weekHwImgUrl); setImgViewerOpen(true); }}
             >
-              🖼️ 일주일 전체 숙제
+              🖼️ 일주일 전체숙제
+            </button>
+          )}
+          {weekHwImgUrl2 && (
+            <button
+              type="button"
+              className="weekly-hw-btn"
+              onClick={() => { setImgViewerUrl(weekHwImgUrl2); setImgViewerOpen(true); }}
+            >
+              📋 주간학습안내
             </button>
           )}
 

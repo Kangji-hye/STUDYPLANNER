@@ -465,11 +465,18 @@ export default function Admin() {
   // =========================
   // 주간 숙제 사진 업로드
   // =========================
+  // 슬롯 1 — 일주일 전체숙제
   const [weekImgFile, setWeekImgFile] = useState(null);
   const [weekImgUrl, setWeekImgUrl] = useState("");
-  const [weekImgPath, setWeekImgPath] = useState(""); // 스토리지 경로 (삭제용)
+  const [weekImgPath, setWeekImgPath] = useState("");
   const [weekImgUploading, setWeekImgUploading] = useState(false);
   const [weekImgDeleting, setWeekImgDeleting] = useState(false);
+  // 슬롯 2 — 주간학습안내
+  const [weekImgFile2, setWeekImgFile2] = useState(null);
+  const [weekImgUrl2, setWeekImgUrl2] = useState("");
+  const [weekImgPath2, setWeekImgPath2] = useState("");
+  const [weekImgUploading2, setWeekImgUploading2] = useState(false);
+  const [weekImgDeleting2, setWeekImgDeleting2] = useState(false);
 
   // =========================
   // 오늘 숙제 이미지 (최대 2장)
@@ -497,49 +504,41 @@ export default function Admin() {
   const loadWeekImage = async () => {
     const { data, error } = await supabase
       .from("weekly_homework_images")
-      .select("image_url, image_path")
+      .select("image_url, image_path, image_url_2, image_path_2")
       .eq("week_start_day", weekStartDayKey)
       .eq("grade_code", Number(gradeCode))
       .maybeSingle();
 
     if (error) {
       console.error("loadWeekImage error:", error);
-      setWeekImgUrl("");
-      setWeekImgPath("");
+      setWeekImgUrl(""); setWeekImgPath("");
+      setWeekImgUrl2(""); setWeekImgPath2("");
       return false;
     }
 
-    const url = String(data?.image_url ?? "");
-    const path = String(data?.image_path ?? "");
-    setWeekImgUrl(url);
-    setWeekImgPath(path);
-    return Boolean(url.trim());
+    setWeekImgUrl(String(data?.image_url ?? ""));
+    setWeekImgPath(String(data?.image_path ?? ""));
+    setWeekImgUrl2(String(data?.image_url_2 ?? ""));
+    setWeekImgPath2(String(data?.image_path_2 ?? ""));
+    return Boolean(String(data?.image_url ?? "").trim()) || Boolean(String(data?.image_url_2 ?? "").trim());
   };
 
   const deleteWeekImage = async () => {
-    const ok = window.confirm("주간 숙제 사진을 삭제할까요?\n삭제하면 되돌릴 수 없어요.");
+    const ok = window.confirm("슬롯 1 사진을 삭제할까요?\n삭제하면 되돌릴 수 없어요.");
     if (!ok) return;
-
     setWeekImgDeleting(true);
     try {
-      // 스토리지에서 파일 삭제
       if (weekImgPath) {
         const { error: storErr } = await supabase.storage.from("weekly-homework").remove([weekImgPath]);
         if (storErr) console.warn("스토리지 삭제 오류 (무시):", storErr);
       }
-
-      // DB 레코드 삭제
       const { error: dbErr } = await supabase
         .from("weekly_homework_images")
-        .delete()
+        .update({ image_url: null, image_path: null, updated_at: new Date().toISOString() })
         .eq("week_start_day", weekStartDayKey)
         .eq("grade_code", Number(gradeCode));
       if (dbErr) throw dbErr;
-
-      setWeekImgUrl("");
-      setWeekImgPath("");
-      setWeekImgFile(null);
-      setOpenWeekImage(false);
+      setWeekImgUrl(""); setWeekImgPath(""); setWeekImgFile(null);
     } catch (err) {
       console.error("deleteWeekImage error:", err);
       alert("사진 삭제 중 오류가 났어요.");
@@ -548,57 +547,83 @@ export default function Admin() {
     }
   };
 
-  const uploadWeekImage = async (fileArg) => {
-    const file = fileArg ?? weekImgFile;
-    if (!file) {
-      alert("올릴 사진을 먼저 선택해 주세요.");
-      return;
-    }
-
-    setWeekImgUploading(true);
-
+  const deleteWeekImage2 = async () => {
+    const ok = window.confirm("슬롯 2 사진을 삭제할까요?\n삭제하면 되돌릴 수 없어요.");
+    if (!ok) return;
+    setWeekImgDeleting2(true);
     try {
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const safeExt = ext.length <= 5 ? ext : "jpg";
-
-      const path = `${Number(gradeCode)}/${weekStartDayKey}/${Date.now()}.${safeExt}`;
-
-      const bucket = supabase.storage.from("weekly-homework");
-
-      const { error: upErr } = await bucket.upload(path, file, {
-        upsert: true,
-        contentType: file.type || "image/jpeg",
-      });
-      if (upErr) throw upErr;
-
-      const { data: pub } = bucket.getPublicUrl(path);
-      const publicUrl = String(pub?.publicUrl ?? "").trim();
-      if (!publicUrl) throw new Error("publicUrl 생성 실패 (버킷 공개 설정 확인)");
-
+      if (weekImgPath2) {
+        const { error: storErr } = await supabase.storage.from("weekly-homework").remove([weekImgPath2]);
+        if (storErr) console.warn("스토리지 삭제 오류 (무시):", storErr);
+      }
       const { error: dbErr } = await supabase
         .from("weekly_homework_images")
-        .upsert(
-          {
-            week_start_day: weekStartDayKey,
-            grade_code: Number(gradeCode),
-            image_path: path,
-            image_url: publicUrl,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "week_start_day,grade_code" }
-        );
+        .update({ image_url_2: null, image_path_2: null, updated_at: new Date().toISOString() })
+        .eq("week_start_day", weekStartDayKey)
+        .eq("grade_code", Number(gradeCode));
       if (dbErr) throw dbErr;
+      setWeekImgUrl2(""); setWeekImgPath2(""); setWeekImgFile2(null);
+    } catch (err) {
+      console.error("deleteWeekImage2 error:", err);
+      alert("사진 삭제 중 오류가 났어요.");
+    } finally {
+      setWeekImgDeleting2(false);
+    }
+  };
 
-      alert(`주간 숙제 사진을 저장했어요! (주 시작: ${weekStartDayKey} / ${gradeLabel})`);
+  // 공통 업로드 헬퍼
+  const _doUploadWeek = async (file, slot) => {
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const safeExt = ext.length <= 5 ? ext : "jpg";
+    const path = `${Number(gradeCode)}/${weekStartDayKey}/${slot}_${Date.now()}.${safeExt}`;
+    const bucket = supabase.storage.from("weekly-homework");
+    const { error: upErr } = await bucket.upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+    if (upErr) throw upErr;
+    const { data: pub } = bucket.getPublicUrl(path);
+    const publicUrl = String(pub?.publicUrl ?? "").trim();
+    if (!publicUrl) throw new Error("publicUrl 생성 실패");
+    return { path, publicUrl };
+  };
+
+  const uploadWeekImage = async (fileArg) => {
+    const file = fileArg ?? weekImgFile;
+    if (!file) return;
+    setWeekImgUploading(true);
+    try {
+      const { path, publicUrl } = await _doUploadWeek(file, "s1");
+      const { error: dbErr } = await supabase
+        .from("weekly_homework_images")
+        .upsert({ week_start_day: weekStartDayKey, grade_code: Number(gradeCode), image_path: path, image_url: publicUrl, updated_at: new Date().toISOString() },
+          { onConflict: "week_start_day,grade_code" });
+      if (dbErr) throw dbErr;
       setWeekImgFile(null);
-
-      const has = await loadWeekImage();
-      setOpenWeekImage(Boolean(has));
+      await loadWeekImage();
     } catch (err) {
       console.error("uploadWeekImage error:", err);
-      alert(err?.message ?? "사진 업로드 중 오류가 났어요. (버킷/권한/RLS 확인)");
+      alert(err?.message ?? "사진 업로드 중 오류가 났어요.");
     } finally {
       setWeekImgUploading(false);
+    }
+  };
+
+  const uploadWeekImage2 = async (fileArg) => {
+    const file = fileArg ?? weekImgFile2;
+    if (!file) return;
+    setWeekImgUploading2(true);
+    try {
+      const { path, publicUrl } = await _doUploadWeek(file, "s2");
+      const { error: dbErr } = await supabase
+        .from("weekly_homework_images")
+        .upsert({ week_start_day: weekStartDayKey, grade_code: Number(gradeCode), image_path_2: path, image_url_2: publicUrl, updated_at: new Date().toISOString() },
+          { onConflict: "week_start_day,grade_code" });
+      if (dbErr) throw dbErr;
+      setWeekImgFile2(null);
+      await loadWeekImage();
+    } catch (err) {
+      console.error("uploadWeekImage2 error:", err);
+      alert(err?.message ?? "사진 업로드 중 오류가 났어요.");
+    } finally {
+      setWeekImgUploading2(false);
     }
   };
 
@@ -1237,70 +1262,61 @@ export default function Admin() {
         {openWeekImage ? (
           <>
             <div className="admin-help">
-              이번 주 월요일 기준(주 시작일)로 1장만 저장됩니다. 같은 주에 다시 올리면 사진이 교체돼요. (주 시작일:{" "}
-              {weekStartDayKey})
+              주 시작일 기준으로 저장됩니다. 같은 주에 다시 올리면 사진이 교체돼요. (주 시작일: {weekStartDayKey})
             </div>
 
+            {/* ── 슬롯 1: 일주일 전체숙제 ── */}
+            <div className="admin-subtitle" style={{ fontWeight: 700, marginTop: 10, marginBottom: 4 }}>🖼️ 슬롯 1 — 일주일 전체숙제</div>
             <input
-              type="file"
-              accept="image/*"
+              type="file" accept="image/*"
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-
+                const f = e.target.files?.[0]; if (!f) return;
                 setWeekImgFile(f);
-
-                try {
-                  const url = URL.createObjectURL(f);
-                  setWeekImgUrl(url);
-                } catch {
-                  //
-                }
-
-                // 파일 선택 즉시 자동 업로드
+                try { setWeekImgUrl(URL.createObjectURL(f)); } catch { /**/ }
                 uploadWeekImage(f);
               }}
             />
-
             {weekImgUrl ? (
-              <div style={{ marginTop: 10, position: "relative" }}>
-                <img
-                  src={weekImgUrl}
-                  alt="주간 숙제 사진 미리보기"
-                  style={{
-                    width: "100%",
-                    maxHeight: 420,
-                    objectFit: "contain",
-                    borderRadius: 14,
-                    border: "1px solid rgba(0,0,0,0.08)",
-                    background: "#fff",
-                  }}
-                />
-                {/* 저장된 사진(weekImgPath가 있을 때)만 삭제 버튼 표시 */}
+              <div style={{ marginTop: 8, position: "relative" }}>
+                <img src={weekImgUrl} alt="슬롯1 미리보기" style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", background: "#fff" }} />
                 {weekImgPath && !weekImgFile && (
-                  <button
-                    type="button"
-                    className="admin-mini-btn danger"
-                    style={{ marginTop: 8 }}
-                    onClick={deleteWeekImage}
-                    disabled={weekImgDeleting}
-                  >
+                  <button type="button" className="admin-mini-btn danger" style={{ marginTop: 6 }} onClick={deleteWeekImage} disabled={weekImgDeleting}>
                     {weekImgDeleting ? "삭제 중..." : "사진 삭제"}
                   </button>
                 )}
               </div>
             ) : (
-              <div className="admin-help">아직 주간 숙제 사진이 없어요.</div>
+              <div className="admin-help">아직 슬롯 1 사진이 없어요.</div>
             )}
+            {weekImgUploading && <span className="admin-help" style={{ color: "#888" }}>업로드 중...</span>}
 
-            <div className="admin-actions">
-              {weekImgUploading && (
-                <span className="admin-help" style={{ color: "#888" }}>업로드 중...</span>
-              )}
+            {/* ── 슬롯 2: 주간학습안내 ── */}
+            <div className="admin-subtitle" style={{ fontWeight: 700, marginTop: 16, marginBottom: 4 }}>📋 슬롯 2 — 주간학습안내</div>
+            <input
+              type="file" accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0]; if (!f) return;
+                setWeekImgFile2(f);
+                try { setWeekImgUrl2(URL.createObjectURL(f)); } catch { /**/ }
+                uploadWeekImage2(f);
+              }}
+            />
+            {weekImgUrl2 ? (
+              <div style={{ marginTop: 8, position: "relative" }}>
+                <img src={weekImgUrl2} alt="슬롯2 미리보기" style={{ width: "100%", maxHeight: 320, objectFit: "contain", borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", background: "#fff" }} />
+                {weekImgPath2 && !weekImgFile2 && (
+                  <button type="button" className="admin-mini-btn danger" style={{ marginTop: 6 }} onClick={deleteWeekImage2} disabled={weekImgDeleting2}>
+                    {weekImgDeleting2 ? "삭제 중..." : "사진 삭제"}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="admin-help">아직 슬롯 2 사진이 없어요.</div>
+            )}
+            {weekImgUploading2 && <span className="admin-help" style={{ color: "#888" }}>업로드 중...</span>}
 
-              <button className="admin-btn ghost" type="button" onClick={loadWeekImage}>
-                사진 새로고침
-              </button>
+            <div className="admin-actions" style={{ marginTop: 12 }}>
+              <button className="admin-btn ghost" type="button" onClick={loadWeekImage}>사진 새로고침</button>
             </div>
           </>
         ) : (
