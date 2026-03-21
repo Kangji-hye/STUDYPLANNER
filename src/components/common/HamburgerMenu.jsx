@@ -129,7 +129,7 @@ export default function HamburgerMenu() {
           </button>
 
           <button className="hamburger-item" onClick={() => go("recommended-books")} role="menuitem">
-            📚 추천도서
+            📖 추천도서
           </button>
 
           <button className="hamburger-item" type="button" onClick={() => window.open("https://books-tan-three.vercel.app/", "_blank", "noopener,noreferrer")}>
