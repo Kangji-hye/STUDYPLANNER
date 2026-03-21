@@ -114,19 +114,9 @@ export default function HamburgerMenu() {
             😊 마이페이지
           </button>
 
-          <button className="hamburger-item" onClick={() => go("recommended-books")} role="menuitem">
-            📚 추천도서
-          </button>
-
           <button className="hamburger-item" onClick={() => go("ranking")} role="menuitem">
             🏆 랭킹보기
           </button>
-
-          <button className="hamburger-item" onClick={() => go("share")} role="menuitem">
-            🔗 공유하기
-          </button>
-
-          <div className="hamburger-divider" />
 
           <button className="hamburger-item" type="button" onClick={() => navigate("/playroom")}>
             🎮 놀이방
@@ -138,10 +128,17 @@ export default function HamburgerMenu() {
             📸 사진 번역기
           </button>
 
+          <button className="hamburger-item" onClick={() => go("recommended-books")} role="menuitem">
+            📚 추천도서
+          </button>
+
           <button className="hamburger-item" type="button" onClick={() => window.open("https://books-tan-three.vercel.app/", "_blank", "noopener,noreferrer")}>
             📷 책 스캐너
           </button>
-          <div className="hamburger-divider" />
+
+          <button className="hamburger-item" onClick={() => go("share")} role="menuitem">
+            🔗 공유하기
+          </button>
 
           <button className="hamburger-item danger" onClick={() => go("logout")} role="menuitem">
             🚪 로그아웃
