@@ -128,41 +128,8 @@ export default function HamburgerMenu() {
 
           <div className="hamburger-divider" />
 
-          <button className="hamburger-item"  type="button" onClick={() => navigate("/gugudan")}>
-            ✖️ 구구단 놀이
-          </button>
-
-          <button
-            className="hamburger-item" type="button" onClick={() => navigate("/wordchain")}>
-            🎯 한글끝말잇기
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/english-word-game")}>
-            🔠 영어 놀이
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/hanja")} >
-            🈶 한자 놀이
-          </button>
-
-          <button className="hamburger-item"  type="button" onClick={() => navigate("/bible-quiz")}>
-            📖 성경퀴즈
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/typing")}>
-           ✍️ 타이핑 연습
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/omok")}>
-            ⚫ 오목
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/baduk")}>
-            ⚪ 바둑
-          </button>
-
-          <button className="hamburger-item" type="button" onClick={() => navigate("/baduk-battle")}>
-            ⚔️ 바둑대전
+          <button className="hamburger-item" type="button" onClick={() => navigate("/playroom")}>
+            🎮 놀이방
           </button>
 
           <div className="hamburger-divider" />
