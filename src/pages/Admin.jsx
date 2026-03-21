@@ -1229,7 +1229,7 @@ export default function Admin() {
           aria-expanded={openWeekImage}
         >
           <div className="admin-title" style={{ marginBottom: 8 }}>
-            일주일 숙제 사진 업로드
+            주간학습 안내 / 숙제
           </div>
           <div style={{ fontSize: 18, opacity: 0.8, paddingBottom: 6 }}>{openWeekImage ? "▾" : "▸"}</div>
         </button>

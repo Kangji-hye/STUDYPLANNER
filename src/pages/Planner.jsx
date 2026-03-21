@@ -180,6 +180,7 @@ function Planner() {
 
   const [homeworkItems, setHomeworkItems] = useState([]);
   const [homeworkImages, setHomeworkImages] = useState([]); // 오늘 숙제 이미지 [{path, url}]
+  const [hasDictation, setHasDictation] = useState(null); // null=로딩중, true=있음, false=없음
   const [weekHwImgUrl, setWeekHwImgUrl] = useState("");
   // 이미지 뷰어 모달 (주간 숙제 + 오늘 숙제 이미지 공용)
   const [imgViewerUrl, setImgViewerUrl] = useState("");
@@ -1772,6 +1773,25 @@ function Planner() {
     }
   }, [me?.id, selectedDayKey, profile?.grade_code]);
 
+  // 받아쓰기 유무 확인
+  useEffect(() => {
+    const gradeCode = profile?.grade_code;
+    if (!gradeCode || !selectedDayKey) {
+      setHasDictation(false);
+      return;
+    }
+    let alive = true;
+    supabase
+      .from("dictation_items")
+      .select("id", { count: "exact", head: true })
+      .eq("grade_code", gradeCode)
+      .eq("ymd", selectedDayKey)
+      .then(({ count }) => {
+        if (alive) setHasDictation((count ?? 0) > 0);
+      });
+    return () => { alive = false; };
+  }, [selectedDayKey, profile?.grade_code]);
+
   const kidIconSrc = profile?.is_male ? "/icon_boy.png" : "/icon_girl.png";
   const kidAlt = profile?.is_male ? "남아" : "여아";
   const kidName = profile?.nickname ?? "닉네임";
@@ -2197,8 +2217,8 @@ function Planner() {
             )}
           </div>
 
-          <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)}>
-            ✍️ 오늘의 받아쓰기
+          <button type="button" onClick={() => navigate(`/dictation?ymd=${selectedDayKey}`)} style={{ backgroundColor: "#ff69b4", color: "#fff", borderColor: "#ff69b4" }}>
+            ✍️ 오늘의 받아쓰기{hasDictation === false ? " (없음)" : ""}
           </button>
 
           {/* 오늘 숙제 이미지 썸네일 */}
