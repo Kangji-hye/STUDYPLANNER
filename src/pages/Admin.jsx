@@ -548,8 +548,9 @@ export default function Admin() {
     }
   };
 
-  const uploadWeekImage = async () => {
-    if (!weekImgFile) {
+  const uploadWeekImage = async (fileArg) => {
+    const file = fileArg ?? weekImgFile;
+    if (!file) {
       alert("올릴 사진을 먼저 선택해 주세요.");
       return;
     }
@@ -557,7 +558,6 @@ export default function Admin() {
     setWeekImgUploading(true);
 
     try {
-      const file = weekImgFile;
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const safeExt = ext.length <= 5 ? ext : "jpg";
 
@@ -1256,6 +1256,9 @@ export default function Admin() {
                 } catch {
                   //
                 }
+
+                // 파일 선택 즉시 자동 업로드
+                uploadWeekImage(f);
               }}
             />
 
@@ -1291,9 +1294,9 @@ export default function Admin() {
             )}
 
             <div className="admin-actions">
-              <button className="admin-btn" type="button" onClick={uploadWeekImage} disabled={weekImgUploading || !weekImgFile}>
-                {weekImgUploading ? "업로드 중..." : "사진 저장"}
-              </button>
+              {weekImgUploading && (
+                <span className="admin-help" style={{ color: "#888" }}>업로드 중...</span>
+              )}
 
               <button className="admin-btn ghost" type="button" onClick={loadWeekImage}>
                 사진 새로고침
