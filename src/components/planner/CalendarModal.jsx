@@ -53,16 +53,15 @@ export default function CalendarModal({
       const DROPDOWN_W = 340; // 드롭다운 너비 (CSS와 맞춰야 함)
       const GAP = 6;           // 버튼과의 간격(px)
 
-      // 기본: 버튼 왼쪽 정렬, 버튼 아래
-      let left = btn.left;
+      // 디바이스(뷰포트) 가로 중앙 정렬
+      let left = (window.innerWidth - DROPDOWN_W) / 2;
       let top  = btn.bottom + GAP;
 
-      // 오른쪽 화면 넘침 보정
+      // 화면 밖 넘침 보정
+      if (left < 8) left = 8;
       if (left + DROPDOWN_W > window.innerWidth - 8) {
         left = window.innerWidth - DROPDOWN_W - 8;
       }
-      // 왼쪽 화면 넘침 보정
-      if (left < 8) left = 8;
 
       setPos({ top, left });
     };

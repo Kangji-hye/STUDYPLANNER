@@ -8,6 +8,7 @@ import {
   lazy,
   Suspense,
 } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import confetti from "canvas-confetti";
 import TodoItem from "../components/TodoItem";
@@ -2285,7 +2286,8 @@ function Planner() {
           )}
 
           {/* 이미지 뷰어 모달 (주간 숙제 + 오늘 숙제 이미지 공용) */}
-          {imgViewerOpen && (
+          {/* createPortal: 부모 transform 영향 없이 뷰포트 정중앙에 표시 */}
+          {imgViewerOpen && createPortal(
             <div
               className="weekly-hw-overlay"
               role="dialog"
@@ -2305,7 +2307,8 @@ function Planner() {
                   닫기
                 </button>
               </div>
-            </div>
+            </div>,
+            document.body  // body에 직접 붙여서 뷰포트 중앙에 표시
           )}
         </div>
       )}
