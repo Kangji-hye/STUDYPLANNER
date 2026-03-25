@@ -2361,6 +2361,7 @@ function Planner() {
         <CalendarModal
           open={showCalendarModal}
           onClose={closeCalendar}
+          anchorRef={refCalendarBtn}
           selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           calMonth={calMonth}

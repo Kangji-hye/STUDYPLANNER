@@ -1,11 +1,27 @@
 /* =========================
-   Planner: 달력 모달 + 요일 색 + 도장
+   Planner: 달력 드롭다운 + 요일 색 + 도장
    ========================= */
 
-/* 모달 안 달력 */
-.calendar-modal {
-  width: min(520px, 100%);
-  margin: 20px auto 0;
+/* ── 투명 오버레이 (바깥 클릭 닫기) ── */
+.cal-dropdown-overlay {
+  position: fixed;
+  inset: 0;          /* top/right/bottom/left 모두 0 */
+  z-index: 900;
+  background: transparent;
+}
+
+/* ── 달력 드롭다운 본체 ── */
+.cal-dropdown {
+  position: fixed;   /* fixed: 버튼 위치 기준으로 화면에 고정 */
+  z-index: 901;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+  padding: 14px 14px 12px;
 }
 
 /* 달력 상단 (월/이동) */
