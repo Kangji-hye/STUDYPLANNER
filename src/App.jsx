@@ -20,6 +20,10 @@ import GugudanGame from "./pages/GugudanGame";
 import OmokGame from "./pages/OmokGame";
 import BadukGame from "./pages/BadukGame";
 import BadukBattle from "./pages/BadukBattle";
+import OmokBattle from "./pages/OmokBattle";
+import OmokBattleRanking from "./pages/OmokBattleRanking";
+import ChessBattle from "./pages/ChessBattle";
+import ChessBattleRanking from "./pages/ChessBattleRanking";
 import EnglishWordGame from "./pages/EnglishWordGame";
 import WordChain from './pages/WordChain';
 import WordChainRanking from './pages/WordChainRanking';
@@ -138,6 +142,10 @@ const App = () => {
             <Route path="/baduk" element={<ProtectedRoute><GameGuard><BadukGame /></GameGuard></ProtectedRoute>} />
             <Route path="/baduk-battle" element={<ProtectedRoute><GameGuard><BadukBattle /></GameGuard></ProtectedRoute>} />
             <Route path="/baduk-battle-ranking" element={<ProtectedRoute><BadukBattleRanking /></ProtectedRoute>} />
+            <Route path="/omok-battle" element={<ProtectedRoute><GameGuard><OmokBattle /></GameGuard></ProtectedRoute>} />
+            <Route path="/omok-battle-ranking" element={<ProtectedRoute><OmokBattleRanking /></ProtectedRoute>} />
+            <Route path="/chess-battle" element={<ProtectedRoute><GameGuard><ChessBattle /></GameGuard></ProtectedRoute>} />
+            <Route path="/chess-battle-ranking" element={<ProtectedRoute><ChessBattleRanking /></ProtectedRoute>} />
             <Route
               path="/hanja-ranking"
               element={

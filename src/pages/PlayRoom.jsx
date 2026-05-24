@@ -8,6 +8,8 @@ const GAMES = [
   { emoji: "⚫", name: "오목",       desc: "5개를 먼저 연결하면 승리!", path: "/omok",              color: "gray"   },
   { emoji: "⚪", name: "바둑 (AI)",  desc: "AI와 맞붙는 바둑 대결",    path: "/baduk",             color: "blue"   },
   { emoji: "⚔️", name: "바둑대전",  desc: "친구와 실시간 바둑 대전",   path: "/baduk-battle",      color: "red"    },
+  { emoji: "⚫", name: "오목대전",   desc: "친구와 실시간 오목 대전!",  path: "/omok-battle",       color: "gray"   },
+  { emoji: "♟",  name: "체스대전",   desc: "친구와 실시간 체스 대결!",  path: "/chess-battle",      color: "purple" },
   { emoji: "9️⃣", name: "구구단 놀이",desc: "구구단을 빠르게 맞혀요",   path: "/gugudan",           color: "orange" },
   { emoji: "🎯", name: "끝말잇기",   desc: "한글 끝말잇기로 어휘력 UP", path: "/wordchain",         color: "green"  },
   { emoji: "🔠", name: "영어 놀이",  desc: "영어 단어를 맞혀 보세요",   path: "/english-word-game", color: "blue"   },

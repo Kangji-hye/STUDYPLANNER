@@ -1,0 +1,341 @@
+/* OmokBattle.css */
+
+.omok-battle-page {
+  min-height: 100vh;
+  background: var(--bg, #f8f9fa);
+  padding: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 헤더 */
+.omok-battle-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  background: var(--card, #fff);
+  border-bottom: 1px solid var(--line, #eee);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.omok-battle-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text, #222);
+}
+
+.omok-battle-back {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line, #ddd);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text, #444);
+}
+
+.omok-battle-menu { display: flex; }
+
+/* 버튼 공통 */
+.omok-battle-btn {
+  padding: 10px 22px;
+  border-radius: 20px;
+  border: 1.5px solid var(--line, #ddd);
+  background: var(--card, #fff);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text, #333);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.omok-battle-btn.primary {
+  background: #2d2d2d;
+  color: #fff;
+  border-color: #2d2d2d;
+}
+
+.omok-battle-btn.primary:hover { background: #111; }
+.omok-battle-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.omok-create-btn {
+  margin: 20px auto 0;
+  display: block;
+  font-size: 1rem;
+  padding: 12px 36px;
+}
+
+/* 재접속 배너 */
+.omok-rejoin-banner {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  background: #fff8e1;
+  border: 1.5px solid #ffe082;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.omok-rejoin-text { font-size: 0.9rem; font-weight: 600; color: #7a5800; }
+
+/* 에러 */
+.omok-battle-error {
+  color: #e53935;
+  font-size: 0.85rem;
+  margin: 8px auto 0;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* 방 목록 */
+.omok-rooms-section {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  margin: 16px auto 0;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #eee);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow, 0 2px 10px rgba(0,0,0,.06));
+}
+
+.omok-rooms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.omok-rooms-title { font-size: 0.95rem; font-weight: 700; color: var(--text, #222); }
+.omok-rooms-refresh { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px; }
+.omok-rooms-empty { font-size: 0.85rem; color: var(--muted, #999); text-align: center; padding: 12px 0; margin: 0; }
+
+.omok-rooms-list { display: flex; flex-direction: column; gap: 8px; }
+
+.omok-room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg, #f8f9fa);
+  border-radius: 12px;
+  gap: 8px;
+}
+
+.omok-room-info { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.omok-room-name { font-size: 0.88rem; font-weight: 600; color: var(--text, #333); }
+
+.omok-room-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  width: fit-content;
+}
+
+.omok-room-badge.waiting { background: #e8f5e9; color: #2e7d32; }
+.omok-room-badge.playing { background: #fff3e0; color: #e65100; }
+
+.omok-my-room { font-size: 0.78rem; color: var(--muted, #aaa); }
+.omok-join-btn, .omok-watch-btn { padding: 7px 16px; font-size: 0.82rem; }
+.omok-vs { font-size: 0.78rem; color: var(--muted, #aaa); margin: 0 3px; }
+
+/* 대기 화면 */
+.omok-battle-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 12px;
+}
+
+.omok-battle-waiting-title { font-size: 1.1rem; font-weight: 700; color: var(--text, #222); margin: 0; }
+.omok-battle-room-name {
+  font-size: 1rem; font-weight: 700;
+  background: var(--card, #fff);
+  border: 1.5px solid var(--line, #eee);
+  border-radius: 16px;
+  padding: 10px 24px;
+  color: var(--text, #333);
+}
+.omok-battle-waiting-hint { font-size: 0.82rem; color: var(--muted, #999); margin: 0; text-align: center; }
+
+/* 플레이어 배너 */
+.omok-battle-players-banner {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 14px auto 0;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #eee);
+  border-radius: 16px;
+  box-shadow: var(--shadow, 0 2px 10px rgba(0,0,0,.06));
+}
+
+.omok-battle-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.omok-battle-player.active-turn {
+  background: rgba(45, 45, 45, 0.08);
+  outline: 2px solid rgba(45, 45, 45, 0.3);
+}
+
+.omok-battle-stone-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.omok-battle-stone-icon.black {
+  background: #111;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.omok-battle-stone-icon.white {
+  background: #fff;
+  border: 2px solid #ccc;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.omok-battle-player-name { font-size: 0.85rem; font-weight: 700; color: var(--text, #222); }
+.omok-battle-vs { font-size: 0.9rem; font-weight: 700; color: var(--muted, #999); }
+
+/* 상태 메시지 */
+.omok-battle-msg {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #333);
+  text-align: center;
+  margin: 10px 0;
+  min-height: 22px;
+}
+
+/* 오목판 */
+.omok-battle-board {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #c9a06a;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.12);
+  margin: 6px auto 0;
+  --cell: clamp(20px, 4.8vw, 28px);
+}
+
+.omok-battle-rowline {
+  display: flex;
+  gap: 0;
+}
+
+.omok-battle-cell {
+  width: var(--cell);
+  height: var(--cell);
+  border: 1px solid rgba(0,0,0,0.22);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s;
+  position: relative;
+}
+
+.omok-battle-cell:hover { background: rgba(255,255,255,0.15); }
+.omok-battle-cell:disabled { cursor: default; }
+
+.omok-battle-cell.last {
+  outline: 2px solid rgba(255, 213, 79, 0.9);
+  outline-offset: -1px;
+  z-index: 1;
+}
+
+/* 돌 */
+.omok-battle-stone {
+  width: calc(var(--cell) * 0.72);
+  height: calc(var(--cell) * 0.72);
+  border-radius: 50%;
+  display: block;
+  pointer-events: none;
+}
+
+.omok-battle-stone.black {
+  background: radial-gradient(circle at 35% 35%, #555 0%, #111 70%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.omok-battle-stone.white {
+  background: radial-gradient(circle at 35% 35%, #fff 0%, #ddd 80%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.omok-battle-stone.last-stone {
+  box-shadow: 0 0 0 2px #ffd54f, 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* 액션 버튼 */
+.omok-battle-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.omok-battle-resign {
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: 1.5px solid #e53935;
+  background: transparent;
+  color: #e53935;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.omok-battle-resign:hover { background: #ffebee; }
+
+/* 결과 화면 */
+.omok-battle-finish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+}
+
+.omok-battle-finish-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text, #222);
+  text-align: center;
+}
+
+.omok-battle-finish-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}

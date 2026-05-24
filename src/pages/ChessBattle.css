@@ -1,0 +1,448 @@
+/* ChessBattle.css */
+
+.chess-battle-page {
+  min-height: 100vh;
+  background: var(--bg, #f8f9fa);
+  padding: 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 헤더 */
+.chess-battle-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  background: var(--card, #fff);
+  border-bottom: 1px solid var(--line, #eee);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.chess-battle-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text, #222);
+}
+
+.chess-battle-back {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line, #ddd);
+  background: transparent;
+  cursor: pointer;
+  color: var(--text, #444);
+}
+
+.chess-battle-menu { display: flex; }
+
+/* 버튼 공통 */
+.chess-battle-btn {
+  padding: 10px 22px;
+  border-radius: 20px;
+  border: 1.5px solid var(--line, #ddd);
+  background: var(--card, #fff);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text, #333);
+  transition: background 0.15s;
+}
+
+.chess-battle-btn.primary {
+  background: #5c3d11;
+  color: #fff;
+  border-color: #5c3d11;
+}
+
+.chess-battle-btn.primary:hover { background: #3e2808; }
+.chess-battle-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.chess-create-btn {
+  margin: 20px auto 0;
+  display: block;
+  font-size: 1rem;
+  padding: 12px 36px;
+}
+
+/* 재접속 배너 */
+.chess-rejoin-banner {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  background: #fff8e1;
+  border: 1.5px solid #ffe082;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chess-rejoin-text { font-size: 0.9rem; font-weight: 600; color: #7a5800; }
+
+/* 에러 */
+.chess-battle-error {
+  color: #e53935;
+  font-size: 0.85rem;
+  margin: 8px auto 0;
+  text-align: center;
+  max-width: 400px;
+}
+
+/* 방 목록 */
+.chess-rooms-section {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  margin: 16px auto 0;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #eee);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: var(--shadow, 0 2px 10px rgba(0,0,0,.06));
+}
+
+.chess-rooms-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.chess-rooms-title { font-size: 0.95rem; font-weight: 700; color: var(--text, #222); }
+.chess-rooms-refresh { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px; }
+.chess-rooms-empty { font-size: 0.85rem; color: var(--muted, #999); text-align: center; padding: 12px 0; margin: 0; }
+.chess-rooms-list { display: flex; flex-direction: column; gap: 8px; }
+
+.chess-room-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--bg, #f8f9fa);
+  border-radius: 12px;
+  gap: 8px;
+}
+
+.chess-room-info { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.chess-room-name { font-size: 0.88rem; font-weight: 600; color: var(--text, #333); }
+
+.chess-room-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  width: fit-content;
+}
+
+.chess-room-badge.waiting { background: #e8f5e9; color: #2e7d32; }
+.chess-room-badge.playing { background: #fff3e0; color: #e65100; }
+
+.chess-my-room { font-size: 0.78rem; color: var(--muted, #aaa); }
+.chess-join-btn, .chess-watch-btn { padding: 7px 16px; font-size: 0.82rem; }
+.chess-vs { font-size: 0.78rem; color: var(--muted, #aaa); margin: 0 3px; }
+
+/* 대기 화면 */
+.chess-battle-waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 12px;
+}
+
+.chess-battle-waiting-title { font-size: 1.1rem; font-weight: 700; color: var(--text, #222); margin: 0; }
+.chess-battle-room-name {
+  font-size: 1rem; font-weight: 700;
+  background: var(--card, #fff);
+  border: 1.5px solid var(--line, #eee);
+  border-radius: 16px;
+  padding: 10px 24px;
+  color: var(--text, #333);
+}
+.chess-battle-waiting-hint { font-size: 0.82rem; color: var(--muted, #999); margin: 0; text-align: center; }
+
+/* 플레이어 배너 */
+.chess-battle-players-banner {
+  width: calc(100% - 32px);
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 14px auto 0;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #eee);
+  border-radius: 16px;
+  box-shadow: var(--shadow, 0 2px 10px rgba(0,0,0,.06));
+}
+
+.chess-battle-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 12px;
+  transition: background 0.2s;
+}
+
+.chess-battle-player.active-turn {
+  background: rgba(92, 61, 17, 0.08);
+  outline: 2px solid rgba(92, 61, 17, 0.3);
+}
+
+.chess-color-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: #f0d9b5;
+  border: 2px solid #b58863;
+  color: #5c3d11;
+}
+
+.chess-battle-player-name { font-size: 0.85rem; font-weight: 700; color: var(--text, #222); }
+.chess-battle-vs { font-size: 0.9rem; font-weight: 700; color: var(--muted, #999); }
+
+/* 상태 메시지 */
+.chess-battle-msg {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #333);
+  text-align: center;
+  margin: 8px 0 4px;
+}
+
+/* 체크 경고 */
+.chess-check-msg {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #c62828;
+  text-align: center;
+  padding: 6px 16px;
+  background: #ffebee;
+  border-radius: 99px;
+  margin: 4px 0;
+}
+
+/* 체스판 래퍼 */
+.chess-battle-board-wrap {
+  position: relative;
+  margin: 4px auto 0;
+}
+
+/* 체스판 */
+.chess-battle-board {
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #8b7355;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  --chess-cell: clamp(36px, 10vw, 52px);
+}
+
+.chess-battle-row { display: flex; }
+
+.chess-battle-cell {
+  width: var(--chess-cell);
+  height: var(--chess-cell);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  padding: 0;
+  border: none;
+  outline: none;
+  transition: filter 0.1s;
+}
+
+.chess-battle-cell.light { background: #f0d9b5; }
+.chess-battle-cell.dark  { background: #b58863; }
+
+/* 선택된 칸 */
+.chess-battle-cell.selected {
+  background: #b9ca43 !important;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,0.15);
+}
+
+/* 마지막 이동 칸 */
+.chess-battle-cell.light.last-move { background: #cdd16f; }
+.chess-battle-cell.dark.last-move  { background: #a9a84b; }
+
+/* 이동 가능 칸 — 점 표시 */
+.chess-move-dot {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 적 기물 잡기 가능 — 테두리 링 */
+.chess-battle-cell.capturable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 3px rgba(0,0,0,0.3);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 기물 */
+.chess-piece {
+  font-size: calc(var(--chess-cell) * 0.72);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+.chess-piece--w { color: #fffde7; text-shadow: 0 0 2px #000, 0 1px 3px rgba(0,0,0,0.5); }
+.chess-piece--b { color: #1a1a1a; text-shadow: 0 0 2px rgba(255,255,255,0.3); }
+
+/* 좌표 레이블 */
+.chess-labels-col {
+  position: absolute;
+  left: -18px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chess-labels-col span, .chess-labels-row span {
+  font-size: 0.65rem;
+  color: var(--muted, #999);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: var(--chess-cell);
+}
+
+.chess-labels-row {
+  display: flex;
+  margin-top: 2px;
+  padding-left: 0;
+}
+
+.chess-labels-row span { width: var(--chess-cell); height: 18px; }
+
+/* 액션 */
+.chess-battle-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.chess-battle-resign {
+  padding: 10px 24px;
+  border-radius: 20px;
+  border: 1.5px solid #e53935;
+  background: transparent;
+  color: #e53935;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chess-battle-resign:hover { background: #ffebee; }
+
+/* 프로모션 모달 */
+.chess-promotion-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.chess-promotion-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 260px;
+}
+
+.chess-promotion-title { font-size: 1rem; font-weight: 700; color: #333; margin: 0; }
+
+.chess-promotion-choices {
+  display: flex;
+  gap: 12px;
+}
+
+.chess-promotion-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 2px solid #e0e0e0;
+  background: #fafafa;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 2rem;
+}
+
+.chess-promotion-btn:hover {
+  border-color: #b58863;
+  background: #fff8f0;
+}
+
+.chess-promotion-label { font-size: 0.72rem; font-weight: 600; color: #555; }
+
+/* 결과 화면 */
+.chess-battle-finish {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 20px;
+}
+
+.chess-battle-finish-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text, #222);
+  text-align: center;
+}
+
+.chess-battle-finish-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 420px) {
+  .chess-battle-board { --chess-cell: clamp(32px, 9vw, 40px); }
+  .chess-piece { font-size: calc(var(--chess-cell) * 0.68); }
+}
