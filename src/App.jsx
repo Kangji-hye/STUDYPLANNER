@@ -24,6 +24,8 @@ import OmokBattle from "./pages/OmokBattle";
 import OmokBattleRanking from "./pages/OmokBattleRanking";
 import ChessBattle from "./pages/ChessBattle";
 import ChessBattleRanking from "./pages/ChessBattleRanking";
+import ChessGame from "./pages/ChessGame";
+import ChessRanking from "./pages/ChessRanking";
 import EnglishWordGame from "./pages/EnglishWordGame";
 import WordChain from './pages/WordChain';
 import WordChainRanking from './pages/WordChainRanking';
@@ -144,6 +146,8 @@ const App = () => {
             <Route path="/baduk-battle-ranking" element={<ProtectedRoute><BadukBattleRanking /></ProtectedRoute>} />
             <Route path="/omok-battle" element={<ProtectedRoute><GameGuard><OmokBattle /></GameGuard></ProtectedRoute>} />
             <Route path="/omok-battle-ranking" element={<ProtectedRoute><OmokBattleRanking /></ProtectedRoute>} />
+            <Route path="/chess" element={<ProtectedRoute><GameGuard><ChessGame /></GameGuard></ProtectedRoute>} />
+            <Route path="/chess-ranking" element={<ProtectedRoute><ChessRanking /></ProtectedRoute>} />
             <Route path="/chess-battle" element={<ProtectedRoute><GameGuard><ChessBattle /></GameGuard></ProtectedRoute>} />
             <Route path="/chess-battle-ranking" element={<ProtectedRoute><ChessBattleRanking /></ProtectedRoute>} />
             <Route

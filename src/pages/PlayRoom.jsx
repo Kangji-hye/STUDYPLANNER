@@ -7,6 +7,7 @@ import "./PlayRoom.css";
 const GAMES = [
   { emoji: "⚫", name: "오목",       desc: "5개를 먼저 연결하면 승리!", path: "/omok",              color: "gray"   },
   { emoji: "⚪", name: "바둑 (AI)",  desc: "AI와 맞붙는 바둑 대결",    path: "/baduk",             color: "blue"   },
+  { emoji: "♔",  name: "체스 (AI)", desc: "AI와 체스 대결에 도전!",   path: "/chess",             color: "purple" },
   { emoji: "⚔️", name: "바둑대전",  desc: "친구와 실시간 바둑 대전",   path: "/baduk-battle",      color: "red"    },
   { emoji: "⚫", name: "오목대전",   desc: "친구와 실시간 오목 대전!",  path: "/omok-battle",       color: "gray"   },
   { emoji: "♟",  name: "체스대전",   desc: "친구와 실시간 체스 대결!",  path: "/chess-battle",      color: "purple" },
